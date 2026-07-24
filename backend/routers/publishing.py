@@ -14,6 +14,8 @@ from backend.core.proofreader import full_proofread, grammar_check, originality_
 from backend.core.beta_reader import beta_read
 from backend.core.format_checker import check_kdp_requirements
 from backend.core.launch_page import generate_launch_page
+from backend.core.publish_validators import validate_kdp, validate_apple_books, validate_epub, validate_metadata
+from backend.core.publish_prep import PREPARERS
 
 router = APIRouter()
 
@@ -140,6 +142,83 @@ def api_generate_metadata(job_id: str):
         "google_play": generate_google_play_metadata(ebook_dict),
         "polish": generate_polish_metadata(ebook_dict),
     }
+
+
+def _job_metadata(job: dict) -> dict:
+    """Build a platform-metadata dict from a finished job's book_data."""
+    book_data = job.get("book_data")
+    if isinstance(book_data, str):
+        try:
+            book_data = json.loads(book_data)
+        except (TypeError, ValueError):
+            book_data = {}
+    book_data = book_data or {}
+    return {
+        "title": book_data.get("title") or job.get("topic", "Book"),
+        "author": book_data.get("author") or "AI Design Engine",
+        "description": book_data.get("summary", ""),
+        "language": book_data.get("language", "pl"),
+        "keywords": book_data.get("keywords", []),
+        "category": book_data.get("category", ""),
+        "isbn": book_data.get("isbn", ""),
+        "publicationDate": book_data.get("publicationDate", ""),
+    }
+
+
+# ─── Platform compliance validators (ported from Kiro eBook Studio) ──
+@router.get("/api/publish/validate/{job_id}")
+def api_publish_validate(job_id: str, platform: str = "metadata", cover_path: str = None):
+    """Validate a job's outputs against a store's technical requirements.
+
+    platform: metadata | amazon-kdp | apple-books | epub
+    """
+    job = get_job(job_id)
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+
+    metadata = _job_metadata(job)
+    try:
+        if platform == "metadata":
+            return validate_metadata(metadata)
+        if platform == "amazon-kdp":
+            return validate_kdp(metadata, cover_path=cover_path, epub_path=job.get("epub_path"), pdf_path=job.get("output_path"))
+        if platform == "apple-books":
+            return validate_apple_books(metadata, cover_path=cover_path, epub_path=job.get("epub_path"))
+        if platform == "epub":
+            return validate_epub(job.get("epub_path"))
+        return JSONResponse({"error": f"Unknown platform: {platform}"}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ─── Platform packaging (ported from Kiro eBook Studio) ──────────────
+@router.post("/api/publish/prepare/{job_id}")
+def api_publish_prepare(job_id: str, platform: str, cover_path: str = None):
+    """Prepare a store-ready package: copies EPUB/PDF, resizes the cover to
+    the store's required dimensions, writes metadata + validation JSON.
+
+    platform: amazon-kdp | apple-books | kobo | google-play
+    """
+    job = get_job(job_id)
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+    if job["status"] != "done":
+        return JSONResponse({"error": "Job not ready"}, status_code=400)
+
+    preparer = PREPARERS.get(platform)
+    if not preparer:
+        return JSONResponse({"error": f"Unknown platform: {platform}. Use one of: {', '.join(PREPARERS)}"}, status_code=400)
+
+    metadata = _job_metadata(job)
+    output_dir = os.path.join(OUTPUT_DIR, "platforms", platform, job_id)
+    kwargs = {"epub_path": job.get("epub_path"), "cover_path": cover_path}
+    if platform in ("amazon-kdp", "google-play"):
+        kwargs["pdf_path"] = job.get("output_path")
+
+    try:
+        return preparer(metadata, output_dir, **kwargs)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 # ─── AI Proofreader ──────────────────────────────────────────────────

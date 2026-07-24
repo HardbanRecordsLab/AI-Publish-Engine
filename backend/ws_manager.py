@@ -3,6 +3,7 @@ import time
 from threading import Lock
 from typing import Dict, Set, Optional
 from fastapi import WebSocket
+from loguru import logger
 
 
 class ConnectionManager:
@@ -45,16 +46,34 @@ manager = ConnectionManager()
 _progress_store: Dict[str, dict] = {}
 _progress_lock = Lock()
 
+# The FastAPI/uvicorn event loop, captured at startup (see main.py) so worker
+# threads can schedule a broadcast onto it via run_coroutine_threadsafe.
+# Previously this called asyncio.run(...) per-update, which spins up (and
+# tears down) a brand-new event loop on every single progress tick, and
+# silently swallowed the RuntimeError it raises when called from a thread
+# that already has a running loop — i.e. the broadcast would vanish with no
+# log line if this were ever called from async code instead of a worker
+# thread.
+_main_loop: Optional[asyncio.AbstractEventLoop] = None
+
+
+def set_event_loop(loop: asyncio.AbstractEventLoop) -> None:
+    global _main_loop
+    _main_loop = loop
+
 
 def update_progress(job_id: str, status: str, progress: int, **extra):
-    """Called from worker threads to publish progress updates."""
+    """Called from worker threads (or async code) to publish progress updates."""
     data = {"job_id": job_id, "status": status, "progress": progress, "timestamp": time.time(), **extra}
     with _progress_lock:
         _progress_store[job_id] = data
+    if _main_loop is None:
+        logger.warning(f"update_progress({job_id}): no event loop registered, WS broadcast skipped")
+        return
     try:
-        asyncio.run(manager.broadcast(job_id, data))
-    except RuntimeError:
-        pass  # no event loop in this thread
+        asyncio.run_coroutine_threadsafe(manager.broadcast(job_id, data), _main_loop)
+    except RuntimeError as e:
+        logger.warning(f"update_progress({job_id}): failed to schedule WS broadcast: {e}")
 
 
 def get_progress(job_id: str) -> Optional[dict]:

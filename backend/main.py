@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -10,13 +11,8 @@ from loguru import logger
 
 from backend.limiter import limiter
 from backend.config import settings
+from backend import ws_manager
 from backend.routers import health_router, templates_router, jobs_router, admin_router, publishing_router, editor_router, series_router, auth_router, design_tokens_router, stats_router
-
-app = FastAPI(title="AI Design Engine")
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-_cors = settings.cors_origins.split(",") if settings.cors_origins else ["*"]
-app.add_middleware(CORSMiddleware, allow_origins=_cors, allow_methods=["*"], allow_headers=["*"])
 
 
 async def _stale_job_watchdog():
@@ -34,9 +30,26 @@ async def _stale_job_watchdog():
         await asyncio.sleep(60)
 
 
-@app.on_event("startup")
-async def _start_watchdog():
-    asyncio.create_task(_stale_job_watchdog())
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ws_manager.set_event_loop(asyncio.get_running_loop())
+    watchdog_task = asyncio.create_task(_stale_job_watchdog())
+    try:
+        yield
+    finally:
+        watchdog_task.cancel()
+
+
+app = FastAPI(title="AI Design Engine", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+_cors = settings.cors_origins.split(",") if settings.cors_origins else ["*"]
+if _cors == ["*"]:
+    logger.warning(
+        "CORS_ORIGINS is not set — allowing all origins ('*'). "
+        "Set CORS_ORIGINS in .env to a comma-separated allowlist before running in production."
+    )
+app.add_middleware(CORSMiddleware, allow_origins=_cors, allow_methods=["*"], allow_headers=["*"])
 
 
 @app.exception_handler(Exception)

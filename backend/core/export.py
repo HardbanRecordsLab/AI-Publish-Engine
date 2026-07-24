@@ -1,5 +1,7 @@
 import os
 import re
+import shutil
+import subprocess
 from datetime import datetime
 from ebooklib import epub
 from docx import Document
@@ -492,30 +494,35 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
     return output_path
 
 
-def export_mobi(html_content: str, output_path: str, title: str = "Ebook", author: str = "AI Design Engine") -> str:
-    """Export to MOBI via Calibre's ebook-convert (must be installed)."""
-    import tempfile
-    epub_path = output_path.replace(".mobi", ".epub")
-    export_epub(html_content, epub_path, title, author)
-    mobi_path = output_path
+def export_mobi(epub_path: str, output_path: str) -> str:
+    """Convert an already-built EPUB to MOBI via Calibre's ebook-convert (must be installed).
+
+    Takes an existing EPUB path rather than rebuilding one from HTML, so this
+    always produces the same chapter/theme structure as the canonical EPUB
+    output (build_epub) instead of maintaining a second, divergent converter.
+    """
+    if not epub_path or not os.path.exists(epub_path):
+        raise RuntimeError(f"Source EPUB not found: {epub_path}")
     try:
-        import subprocess
         result = subprocess.run(
-            ["ebook-convert", epub_path, mobi_path],
+            ["ebook-convert", epub_path, output_path],
             capture_output=True, text=True, timeout=120,
         )
         if result.returncode != 0:
             raise RuntimeError(f"ebook-convert failed: {result.stderr[:200]}")
-        return mobi_path
+        return output_path
     except FileNotFoundError:
         raise RuntimeError("Calibre not installed. Install it via: apt install calibre")
+    except RuntimeError:
+        raise
     except Exception as e:
         raise RuntimeError(f"MOBI conversion failed: {e}")
 
 
-def generate_kdp_package(html_content: str, output_dir: str, title: str = "Ebook",
+def generate_kdp_package(epub_path: str, html_content: str, output_dir: str, title: str = "Ebook",
                           author: str = "AI Design Engine", trim_size: str = "6x9") -> dict:
-    """Generate KDP-ready package: print PDF + EPUB + metadata."""
+    """Generate KDP-ready package: print PDF (rendered fresh at the given trim
+    size) + EPUB (copied from the already-built epub_path) + metadata."""
     import json
     from backend.core.pdf import html_to_print_pdf, TRIM_SIZES
     os.makedirs(output_dir, exist_ok=True)
@@ -525,13 +532,15 @@ def generate_kdp_package(html_content: str, output_dir: str, title: str = "Ebook
     # Generate print PDF
     try:
         html_to_print_pdf(html_content, print_pdf, trim_size)
-    except Exception as e:
+    except Exception:
         print_pdf = None
 
-    # Generate EPUB
+    # Copy the existing EPUB (already built by build_epub for this job)
     try:
-        export_epub(html_content, epub_file, title, author)
-    except Exception as e:
+        if not epub_path or not os.path.exists(epub_path):
+            raise FileNotFoundError(f"Source EPUB not found: {epub_path}")
+        shutil.copy2(epub_path, epub_file)
+    except Exception:
         epub_file = None
 
     # Generate KDP metadata file

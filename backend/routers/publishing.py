@@ -1,10 +1,11 @@
 """Endpoints for AI Marketing Suite, Multi-language, Book Coach, Direct Publishing."""
 import json
 import os
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from backend.config import settings
+from backend.limiter import limiter
 from backend.core.jobs import get_job
 from backend.core.marketing import generate_all_marketing
 from backend.core.translator import translate_book, SUPPORTED_LANGUAGES
@@ -25,7 +26,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ─── Marketing Suite ────────────────────────────────────────────────
 @router.post("/api/marketing/generate/{job_id}")
-def api_generate_marketing(job_id: str):
+@limiter.limit("10/minute")
+def api_generate_marketing(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -50,7 +52,8 @@ def api_languages():
 
 
 @router.post("/api/translate/{job_id}")
-async def api_translate(job_id: str, languages: str = "pl,de,fr,es"):
+@limiter.limit("5/minute")
+async def api_translate(request: Request, job_id: str, languages: str = "pl,de,fr,es"):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -94,14 +97,16 @@ _coach_sessions = {}
 
 
 @router.post("/api/coach/start")
-def api_coach_start():
+@limiter.limit("10/minute")
+def api_coach_start(request: Request):
     session = start_interview()
     _coach_sessions[session["session_id"]] = session
     return session
 
 
 @router.post("/api/coach/answer")
-def api_coach_answer(session_id: str, answer: str):
+@limiter.limit("20/minute")
+def api_coach_answer(request: Request, session_id: str, answer: str):
     session = _coach_sessions.get(session_id)
     if not session:
         return JSONResponse({"error": "Session not found"}, status_code=404)
@@ -223,7 +228,8 @@ def api_publish_prepare(job_id: str, platform: str, cover_path: str = None):
 
 # ─── AI Proofreader ──────────────────────────────────────────────────
 @router.post("/api/proofread/{job_id}")
-def api_proofread(job_id: str, provider: str = None):
+@limiter.limit("10/minute")
+def api_proofread(request: Request, job_id: str, provider: str = None):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -244,7 +250,8 @@ def api_proofread(job_id: str, provider: str = None):
 
 
 @router.post("/api/proofread/{job_id}/chapter/{chapter_index}")
-def api_proofread_chapter(job_id: str, chapter_index: int, provider: str = None):
+@limiter.limit("20/minute")
+def api_proofread_chapter(request: Request, job_id: str, chapter_index: int, provider: str = None):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -279,7 +286,8 @@ def api_proofread_chapter(job_id: str, chapter_index: int, provider: str = None)
 
 # ─── AI Beta Reader ──────────────────────────────────────────────────
 @router.post("/api/beta-read/{job_id}")
-def api_beta_read(job_id: str, provider: str = None):
+@limiter.limit("10/minute")
+def api_beta_read(request: Request, job_id: str, provider: str = None):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)

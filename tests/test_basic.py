@@ -53,14 +53,24 @@ def test_themes():
     assert "--color-accent: #4A4A4A" in css
 
 
-def test_theme_custom():
-    theme = get_theme("modern")
-    assert theme["id"] == "modern"
-    assert theme["colors"]["accent"] == "#6366F1"
+def test_theme_registry_consistency():
+    """Every listed theme must resolve to itself (no silent fallback to
+    'minimal') and expose a complete, well-formed color palette.
 
-    theme = get_theme("wellness")
-    assert theme["id"] == "wellness"
-    assert theme["colors"]["accent"] == "#22C55E"
+    Regression test for a bug where 5 themes had cover-icon entries but no
+    actual templates/themes/<name>/theme.css, so get_theme() silently
+    returned "minimal" instead of raising or 404ing.
+    """
+    required_colors = {
+        "background", "surface", "text", "heading", "accent",
+        "secondary", "muted", "border", "highlight",
+        "success", "warning", "error", "info",
+    }
+    for summary in list_themes():
+        theme_id = summary["id"]
+        theme = get_theme(theme_id)
+        assert theme["id"] == theme_id, f"get_theme({theme_id!r}) silently fell back to {theme['id']!r}"
+        assert required_colors.issubset(theme["colors"].keys()), f"{theme_id} missing color keys: {required_colors - theme['colors'].keys()}"
 
 
 def test_theme_fallback():
@@ -77,8 +87,8 @@ if __name__ == "__main__":
     print("OK test_get_all_jobs")
     test_themes()
     print("OK test_themes")
-    test_theme_custom()
-    print("OK test_theme_custom")
+    test_theme_registry_consistency()
+    print("OK test_theme_registry_consistency")
     test_theme_fallback()
     print("OK test_theme_fallback")
     print("\nAll tests passed")

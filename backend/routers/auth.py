@@ -10,6 +10,7 @@ from loguru import logger
 
 from backend.core.database import get_conn
 from backend.config import settings
+from backend.limiter import limiter
 
 router = APIRouter()
 
@@ -101,7 +102,8 @@ class LoginResponse(BaseModel):
 
 
 @router.post("/api/admin/login")
-def admin_login(body: LoginRequest):
+@limiter.limit("5/minute")
+def admin_login(request: Request, body: LoginRequest):
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:

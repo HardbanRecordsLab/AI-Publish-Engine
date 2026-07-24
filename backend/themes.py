@@ -12,9 +12,11 @@ _COVER_ICONS = {
     "cookbook": "mdi:silverware-fork-knife", "travel": "mdi:compass", "real_estate": "mdi:home-city",
     "music": "mdi:music-note", "startup": "mdi:rocket-launch", "cyberpunk": "mdi:lightning-bolt",
     "retro": "mdi:record-player", "future": "mdi:wave",
-    "modern": "mdi:palette-swatch", "academic": "mdi:school", "creative": "mdi:palette",
-    "technical": "mdi:cog", "wellness": "mdi:leaf",
 }
+# NOTE: "modern", "academic", "creative", "technical" and "wellness" used to
+# have entries here but have no matching templates/themes/<name>/theme.css —
+# get_theme() silently falls back to "minimal" for them. Removed rather than
+# left dangling; add them back once (if) real theme.css files are authored.
 
 _THEMES = {}
 _SPACING = {}

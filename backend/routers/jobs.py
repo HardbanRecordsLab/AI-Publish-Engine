@@ -17,6 +17,11 @@ from backend.core.ai import PROVIDERS
 router = APIRouter()
 
 VALID_EXTENSIONS = (".txt", ".md", ".docx", ".pdf")
+OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", settings.output_dir)
+
+
+def _mobi_path(job_id: str) -> str:
+    return os.path.join(OUTPUT_DIR, f"{job_id}.mobi")
 
 
 def _queue_job(job_id: str, text: str, style: str, provider: str = None,
@@ -154,7 +159,10 @@ def download(job_id: str, format: str = Query("pdf", pattern="^(pdf|epub|docx|we
         "epub": job.get("epub_path"),
         "docx": job.get("docx_path"),
         "website": job.get("website_path"),
-        "mobi": job.get("mobi_path"),
+        # MOBI isn't part of the main pipeline (job table has no mobi_path
+        # column) — it's generated on demand by POST .../mobi and cached on
+        # disk at this conventional path; reuse it here if it already exists.
+        "mobi": _mobi_path(job_id) if os.path.exists(_mobi_path(job_id)) else None,
     }
     media_types = {
         "pdf": "application/pdf",
@@ -166,6 +174,8 @@ def download(job_id: str, format: str = Query("pdf", pattern="^(pdf|epub|docx|we
     ext = {"pdf": "pdf", "epub": "epub", "docx": "docx", "website": "html", "mobi": "mobi"}
     path = paths.get(format)
     if not path or not os.path.exists(path):
+        if format == "mobi":
+            return JSONResponse({"error": "MOBI not generated yet — call POST /api/download/{job_id}/mobi first"}, status_code=400)
         return JSONResponse({"error": f"{format.upper()} not available"}, status_code=400)
     return FileResponse(
         path,
@@ -194,9 +204,8 @@ def download_print(job_id: str, trim_size: str = Query("6x9"), isbn: str = Query
     html = job.get("html", "")
     if not html:
         return JSONResponse({"error": "No HTML content available"}, status_code=400)
-    output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs")
-    os.makedirs(output_dir, exist_ok=True)
-    print_path = os.path.join(output_dir, f"{job_id}_print.pdf")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    print_path = os.path.join(OUTPUT_DIR, f"{job_id}_print.pdf")
     try:
         html_to_print_pdf(html, print_path, trim_size, isbn)
     except Exception as e:
@@ -211,15 +220,14 @@ def download_mobi(job_id: str):
         return JSONResponse({"error": "Job not found"}, status_code=404)
     if job["status"] != "done":
         return JSONResponse({"error": "Job not ready yet"}, status_code=400)
-    html = job.get("html", "")
-    if not html:
-        return JSONResponse({"error": "No HTML content available"}, status_code=400)
+    epub_path = job.get("epub_path")
+    if not epub_path or not os.path.exists(epub_path):
+        return JSONResponse({"error": "No EPUB available to convert — generate the ebook first"}, status_code=400)
     from backend.core.export import export_mobi
-    output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs")
-    os.makedirs(output_dir, exist_ok=True)
-    mobi_path = os.path.join(output_dir, f"{job_id}.mobi")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    mobi_path = _mobi_path(job_id)
     try:
-        export_mobi(html, mobi_path, title=job.get("topic", "Ebook"), author=job.get("style", "AI Design Engine"))
+        export_mobi(epub_path, mobi_path)
     except RuntimeError as e:
         return JSONResponse({"error": str(e)}, status_code=500)
     except Exception as e:
@@ -241,8 +249,8 @@ def download_kdp_package(job_id: str, trim_size: str = Query("6x9")):
     from backend.core.pdf import TRIM_SIZES
     if trim_size not in TRIM_SIZES:
         return JSONResponse({"error": f"Invalid trim size. Valid: {', '.join(TRIM_SIZES.keys())}"}, status_code=400)
-    output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs", f"{job_id}_kdp")
-    result = generate_kdp_package(html, output_dir, title=job.get("topic", "Ebook"))
+    output_dir = os.path.join(OUTPUT_DIR, f"{job_id}_kdp")
+    result = generate_kdp_package(job.get("epub_path"), html, output_dir, title=job.get("topic", "Ebook"), trim_size=trim_size)
     return result
 
 

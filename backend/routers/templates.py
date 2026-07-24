@@ -124,7 +124,7 @@ def get_topics():
 def generate_theme_from_description(description: str):
     if not description or len(description) < 3:
         return JSONResponse({"error": "Description too short"}, status_code=400)
-    existing_ids = ", ".join(f'"{k}"' for k in THEMES.keys())
+    existing_ids = ", ".join(f'"{t["id"]}"' for t in list_themes())
     system = "You are a professional UI designer. Return only valid JSON."
     user = f"""Generate a complete ebook design theme based on this description: "{description}"
 

@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
 from backend.models.content_block import ContentBlock
 
 
@@ -13,33 +16,33 @@ class PipelineContext(BaseModel):
     job_id: str
     text: str
     style: str
-    provider: Optional[str] = None
+    provider: str | None = None
     content_type: str = "ebook"
     audience: str = ""
     tone: str = ""
     chapters: str = ""
     keywords: str = ""
     language: str = ""
-    document: Optional[ContentBlock] = None
-    design: Dict[str, Any] = Field(default_factory=dict)
-    infographics: List[Dict[str, Any]] = Field(default_factory=list)
-    ebook_dict: Dict[str, Any] = Field(default_factory=dict)
-    html: Optional[str] = None
-    output_paths: Dict[str, str] = Field(default_factory=dict)
+    document: ContentBlock | None = None
+    design: dict[str, Any] = Field(default_factory=dict)
+    infographics: list[dict[str, Any]] = Field(default_factory=list)
+    ebook_dict: dict[str, Any] = Field(default_factory=dict)
+    html: str | None = None
+    output_paths: dict[str, str] = Field(default_factory=dict)
     progress: int = 0
-    error: Optional[str] = None
-    research: Dict[str, Any] = Field(default_factory=dict)
-    fact_check: List[Dict[str, Any]] = Field(default_factory=list)
-    qa_report: Dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
+    research: dict[str, Any] = Field(default_factory=dict)
+    fact_check: list[dict[str, Any]] = Field(default_factory=list)
+    qa_report: dict[str, Any] = Field(default_factory=dict)
     introduction: str = ""
     author_bio: str = ""
-    references: List[str] = Field(default_factory=list)
-    glossary_terms: List[Dict[str, str]] = Field(default_factory=list)
+    references: list[str] = Field(default_factory=list)
+    glossary_terms: list[dict[str, str]] = Field(default_factory=list)
     back_cover_blurb: str = ""
     back_cover_tagline: str = ""
     cover_svg: str = ""
     cover_image: str = ""
-    chapter_illustrations: List[Dict[str, Any]] = Field(default_factory=list)
+    chapter_illustrations: list[dict[str, Any]] = Field(default_factory=list)
     accent_color: str = ""
     bg_color: str = ""
     heading_font: str = ""

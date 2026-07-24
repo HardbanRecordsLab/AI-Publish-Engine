@@ -1,6 +1,8 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional
+
+from typing import Any
 from uuid import uuid4
+
 from pydantic import BaseModel, Field
 
 
@@ -9,24 +11,24 @@ class ContentBlock(BaseModel):
 
     type: str
     id: str = Field(default_factory=lambda: uuid4().hex[:8])
-    data: Dict[str, Any] = Field(default_factory=dict)
-    children: List[ContentBlock] = Field(default_factory=list)
-    meta: Dict[str, Any] = Field(default_factory=dict)
+    data: dict[str, Any] = Field(default_factory=dict)
+    children: list[ContentBlock] = Field(default_factory=list)
+    meta: dict[str, Any] = Field(default_factory=dict)
 
     def add(self, block: ContentBlock) -> ContentBlock:
         self.children.append(block)
         return self
 
-    def first(self, block_type: str) -> Optional[ContentBlock]:
+    def first(self, block_type: str) -> ContentBlock | None:
         for c in self.children:
             if c.type == block_type:
                 return c
         return None
 
-    def all(self, block_type: str) -> List[ContentBlock]:
+    def all(self, block_type: str) -> list[ContentBlock]:
         return [c for c in self.children if c.type == block_type]
 
-    def to_ebook_dict(self) -> Dict[str, Any]:
+    def to_ebook_dict(self) -> dict[str, Any]:
         """Rebuild legacy ebook dict for backward compat with builder/export."""
         if self.type == "document":
             return {

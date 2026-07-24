@@ -1,8 +1,6 @@
 """Multi-language publishing — translate + regenerate books in N languages."""
-import os
-import json
-from backend.core.ai import _try_providers
 from backend.config import settings
+from backend.core.ai import _try_providers
 
 SUPPORTED_LANGUAGES = {
     "en": "English", "pl": "Polish", "de": "German", "fr": "French",

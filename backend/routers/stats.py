@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from backend.core.jobs import get_all_jobs
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])

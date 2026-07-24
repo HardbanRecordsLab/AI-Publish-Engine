@@ -1,6 +1,7 @@
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
+
 from backend.core.ai import research_content as _research_content
+from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class ResearchAgent(BaseAgent):

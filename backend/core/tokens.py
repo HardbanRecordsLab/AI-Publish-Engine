@@ -1,10 +1,9 @@
 """Design Token System — dynamiczny odczyt 20 theme'ów + daisyUI mapping."""
 from __future__ import annotations
-import os
+
 import re
-import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 _THEMES_DIR = Path(__file__).resolve().parent.parent.parent / "templates" / "themes"
 
@@ -33,7 +32,7 @@ DAISYUI_MAP = {
 }
 
 # Topic -> recommended theme mapping
-TOPIC_MAP: Dict[str, list[str]] = {
+TOPIC_MAP: dict[str, list[str]] = {
     "technology": ["ai", "future", "cyberpunk", "minimal"],
     "business": ["corporate", "business", "startup", "finance"],
     "finance": ["finance", "corporate", "book", "luxury"],
@@ -62,7 +61,7 @@ def _parse_var(css: str, name: str) -> str:
     return m.group(1).strip() if m else ""
 
 
-def _load_theme(name: str) -> Optional[Dict[str, Any]]:
+def _load_theme(name: str) -> dict[str, Any] | None:
     theme_dir = _THEMES_DIR / name
     css_file = theme_dir / "theme.css"
     if not css_file.exists():
@@ -137,7 +136,7 @@ def _load_theme(name: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def generate_design_system(style: str, tone: str = "") -> Dict[str, Any]:
+def generate_design_system(style: str, tone: str = "") -> dict[str, Any]:
     theme = _load_theme(style)
     if theme:
         return theme
@@ -150,7 +149,7 @@ def generate_design_system(style: str, tone: str = "") -> Dict[str, Any]:
     return _load_theme("minimal") or {"theme": "minimal"}
 
 
-def list_themes() -> List[Dict[str, str]]:
+def list_themes() -> list[dict[str, str]]:
     themes = []
     for d in sorted(_THEMES_DIR.iterdir()):
         if d.is_dir():
@@ -170,7 +169,7 @@ def list_themes() -> List[Dict[str, str]]:
     return themes
 
 
-def get_theme_topics(style: str) -> List[str]:
+def get_theme_topics(style: str) -> list[str]:
     return [t for t, s in TOPIC_MAP.items() if style in s]
 
 

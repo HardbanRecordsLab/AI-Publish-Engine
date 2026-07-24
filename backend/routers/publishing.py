@@ -1,22 +1,29 @@
 """Endpoints for AI Marketing Suite, Multi-language, Book Coach, Direct Publishing."""
 import json
 import os
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from backend.config import settings
-from backend.limiter import limiter
-from backend.core.jobs import get_job
-from backend.core.marketing import generate_all_marketing
-from backend.core.translator import translate_book, SUPPORTED_LANGUAGES
-from backend.core.coach import start_interview, process_answer
-from backend.core.publisher import get_platforms, generate_onix_metadata, generate_kdp_metadata, generate_google_play_metadata, generate_polish_metadata
-from backend.core.proofreader import full_proofread, grammar_check, originality_check
 from backend.core.beta_reader import beta_read
+from backend.core.coach import process_answer, start_interview
 from backend.core.format_checker import check_kdp_requirements
+from backend.core.jobs import get_job
 from backend.core.launch_page import generate_launch_page
-from backend.core.publish_validators import validate_kdp, validate_apple_books, validate_epub, validate_metadata
+from backend.core.marketing import generate_all_marketing
+from backend.core.proofreader import full_proofread, grammar_check, originality_check
 from backend.core.publish_prep import PREPARERS
+from backend.core.publish_validators import validate_apple_books, validate_epub, validate_kdp, validate_metadata
+from backend.core.publisher import (
+    generate_google_play_metadata,
+    generate_kdp_metadata,
+    generate_onix_metadata,
+    generate_polish_metadata,
+    get_platforms,
+)
+from backend.core.translator import SUPPORTED_LANGUAGES, translate_book
+from backend.limiter import limiter
 
 router = APIRouter()
 

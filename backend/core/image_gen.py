@@ -1,11 +1,12 @@
 """Free AI image generation — Pollinations.ai (no API key) + SVG fallback."""
-import io
-import time
 import base64
-import urllib.request
-import urllib.parse
+import time
 import urllib.error
+import urllib.parse
+import urllib.request
+
 from loguru import logger
+
 from backend.core.cover_art import generate_cover_svg, generate_illustration
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/{prompt}?width={w}&height={h}&seed={seed}&nofeed=true&model=flux"

@@ -1,8 +1,9 @@
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
+
 from backend.core.ai import editorial_rewrite_chapter as _rewrite_chapter
 from backend.core.jobs import update_job
 from backend.models.content_block import ContentBlock
+from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class EditorialAgent(BaseAgent):

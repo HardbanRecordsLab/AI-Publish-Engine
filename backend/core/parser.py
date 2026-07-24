@@ -1,5 +1,6 @@
-import docx
 from io import BytesIO
+
+import docx
 from pypdf import PdfReader
 
 

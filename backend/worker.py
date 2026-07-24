@@ -2,25 +2,32 @@
 import os
 import sys
 from pathlib import Path
-from datetime import datetime
+
 from loguru import logger
 
 # Ensure the project root is on sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from backend.core.jobs import create_job, update_job, get_job
-from backend.core.parser import extract_text
-from backend.core.builder import build_ebook_html
-from backend.core.pdf import html_to_pdf
-from backend.core.export import build_epub, build_docx
-from backend.core.website import build_website
-from backend.core.interactive import build_interactive_book
-from backend.orchestrator import Orchestrator, PipelineContext
-from backend.ws_manager import update_progress, is_cancelled, clear_cancel
 from backend.agents import (
-    AnalysisAgent, StructureAgent, ResearchAgent, EditorialAgent, FactCheckAgent,
-    DesignSystemAgent, InfographicArchitectAgent, CoverArtAgent, FinalizationAgent, QAAgent,
+    AnalysisAgent,
+    CoverArtAgent,
+    DesignSystemAgent,
+    EditorialAgent,
+    FactCheckAgent,
+    FinalizationAgent,
+    InfographicArchitectAgent,
+    QAAgent,
+    ResearchAgent,
+    StructureAgent,
 )
+from backend.core.builder import build_ebook_html
+from backend.core.export import build_docx, build_epub
+from backend.core.interactive import build_interactive_book
+from backend.core.jobs import update_job
+from backend.core.pdf import html_to_pdf
+from backend.core.website import build_website
+from backend.orchestrator import Orchestrator, PipelineContext
+from backend.ws_manager import clear_cancel, is_cancelled, update_progress
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", os.environ.get("OUTPUT_DIR", "outputs"))
 os.makedirs(OUTPUT_DIR, exist_ok=True)

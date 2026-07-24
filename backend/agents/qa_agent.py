@@ -1,6 +1,7 @@
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
+
 from backend.core.ai import qa_check as _qa_check
+from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class QAAgent(BaseAgent):

@@ -3,17 +3,17 @@ import re
 import shutil
 import subprocess
 from datetime import datetime
-from ebooklib import epub
+
 from docx import Document
-from docx.shared import Inches, Pt, Cm, RGBColor, Emu
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml.ns import qn
-from backend.themes import get_theme
+from docx.shared import Inches, Pt, RGBColor
+from ebooklib import epub
+
+from backend.core.builder import env
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.core.infographic_engine import render_infographic
-from backend.core.builder import env
+from backend.themes import get_theme
 
 
 def _html_to_text(html: str) -> str:
@@ -524,7 +524,8 @@ def generate_kdp_package(epub_path: str, html_content: str, output_dir: str, tit
     """Generate KDP-ready package: print PDF (rendered fresh at the given trim
     size) + EPUB (copied from the already-built epub_path) + metadata."""
     import json
-    from backend.core.pdf import html_to_print_pdf, TRIM_SIZES
+
+    from backend.core.pdf import TRIM_SIZES, html_to_print_pdf
     os.makedirs(output_dir, exist_ok=True)
     print_pdf = os.path.join(output_dir, f"{title}_print_{trim_size}.pdf")
     epub_file = os.path.join(output_dir, f"{title}.epub")

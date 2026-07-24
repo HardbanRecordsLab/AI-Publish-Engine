@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Response, Depends, Query
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi import APIRouter, Depends, Query, Response
+from fastapi.responses import JSONResponse
 
-from backend.core.jobs import get_all_jobs, get_job, delete_job, update_job, count_jobs
+from backend.core.jobs import count_jobs, delete_job, get_all_jobs, get_job, update_job
 from backend.routers.auth import require_admin
 
 router = APIRouter()

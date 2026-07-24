@@ -1,7 +1,8 @@
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
-from backend.core.image_gen import generate_cover_image, generate_chapter_image, generate_infographic_image
+
+from backend.core.image_gen import generate_chapter_image, generate_cover_image, generate_infographic_image
 from backend.core.jobs import update_job
+from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class CoverArtAgent(BaseAgent):

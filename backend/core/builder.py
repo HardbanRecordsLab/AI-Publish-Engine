@@ -1,11 +1,12 @@
 import os
 from datetime import datetime
+
 from jinja2 import Environment, FileSystemLoader
-from backend.themes import get_theme, list_themes
+
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.core.infographic_engine import render_infographic
-from backend.core.ai import generate_design_system
+from backend.themes import get_theme
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "templates")
 env = Environment(loader=FileSystemLoader([

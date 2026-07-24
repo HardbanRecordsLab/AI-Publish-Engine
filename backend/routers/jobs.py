@@ -1,18 +1,17 @@
+import asyncio
 import os
 import threading
-import asyncio
-from typing import List
-from fastapi import APIRouter, UploadFile, File, Form, Query, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+
+from fastapi import APIRouter, File, Form, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from loguru import logger
-from backend.ws_manager import manager, get_progress, cancel_job, is_cancelled
 
 from backend.config import settings
-from backend.limiter import limiter
-from backend.core.jobs import create_job, update_job, get_job
-from backend.core.parser import extract_text
 from backend.core.ai import PROVIDERS
-
+from backend.core.jobs import create_job, get_job
+from backend.core.parser import extract_text
+from backend.limiter import limiter
+from backend.ws_manager import cancel_job, get_progress, manager
 
 router = APIRouter()
 
@@ -60,7 +59,7 @@ def _queue_job(job_id: str, text: str, style: str, provider: str = None,
 @limiter.limit("10/minute")
 async def generate(
     request: Request,
-    files: List[UploadFile] = File(...),
+    files: list[UploadFile] = File(...),
     style: str = Form("minimal"),
     provider: str = Form(settings.ai_provider),
     content_type: str = Form("ebook"),
@@ -105,7 +104,7 @@ async def generate(
 @limiter.limit("5/minute")
 async def generate_batch(
     request: Request,
-    files: List[UploadFile] = File(...),
+    files: list[UploadFile] = File(...),
     style: str = Form("minimal"),
     provider: str = Form(settings.ai_provider),
     content_type: str = Form("ebook"),
@@ -198,7 +197,7 @@ def download_print(job_id: str, trim_size: str = Query("6x9"), isbn: str = Query
         return JSONResponse({"error": "Job not found"}, status_code=404)
     if job["status"] != "done":
         return JSONResponse({"error": "Job not ready yet"}, status_code=400)
-    from backend.core.pdf import html_to_print_pdf, TRIM_SIZES
+    from backend.core.pdf import TRIM_SIZES, html_to_print_pdf
     if trim_size not in TRIM_SIZES:
         return JSONResponse({"error": f"Invalid trim size. Valid: {', '.join(TRIM_SIZES.keys())}"}, status_code=400)
     html = job.get("html", "")

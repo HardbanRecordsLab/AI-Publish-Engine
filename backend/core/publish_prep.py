@@ -14,7 +14,7 @@ import os
 import re
 import shutil
 
-from backend.core.publish_validators import validate_kdp, validate_apple_books
+from backend.core.publish_validators import validate_apple_books, validate_kdp
 
 try:
     from PIL import Image

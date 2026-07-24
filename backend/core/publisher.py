@@ -1,9 +1,7 @@
 """Direct Publishing API — generate platform-ready files + metadata for self-publishing."""
-import os
-import json
 from datetime import datetime
-from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
+from xml.etree.ElementTree import Element, SubElement, tostring
 
 PLATFORMS = {
     "amazon_kdp": {

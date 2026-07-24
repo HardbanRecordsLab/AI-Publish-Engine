@@ -1,7 +1,9 @@
 """AI Beta Reader — simulates 5 reader personas giving chapter-by-chapter feedback."""
-from backend.core.ai import _try_providers
 import json
+
 from loguru import logger
+
+from backend.core.ai import _try_providers
 
 READER_PERSONAS = [
     {

@@ -1,6 +1,7 @@
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
+
 from backend.core.ai import fact_check as _fact_check
+from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class FactCheckAgent(BaseAgent):

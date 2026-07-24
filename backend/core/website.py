@@ -1,11 +1,13 @@
 """Website HTML builder — landing pages, blogs, documentation with SEO.
 Supports both classic CSS themes and Tailwind/daisyUI output."""
 from datetime import datetime
+
 from jinja2 import Environment, FileSystemLoader
-from backend.themes import get_theme
+
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
-from backend.core.tokens import DAISYUI_MAP, generate_design_system
+from backend.core.tokens import DAISYUI_MAP
+from backend.themes import get_theme
 
 TEMPLATE_DIR = "templates"
 env = Environment(loader=FileSystemLoader([TEMPLATE_DIR]))

@@ -1,8 +1,8 @@
 """AI Book Coach — interviews the user via chat, then generates a complete book."""
 import json
-from typing import Optional
-from backend.core.ai import _try_providers, PROVIDERS
+
 from backend.config import settings
+from backend.core.ai import _try_providers
 
 INTERVIEW_QUESTIONS = [
     "What is the main topic or subject of your book?",

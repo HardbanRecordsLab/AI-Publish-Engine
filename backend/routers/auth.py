@@ -1,15 +1,16 @@
+import hashlib
 import hmac
 import secrets
-import hashlib
 import time
 from pathlib import Path
+
 import bcrypt
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
 from loguru import logger
+from pydantic import BaseModel
 
-from backend.core.database import get_conn
 from backend.config import settings
+from backend.core.database import get_conn
 from backend.limiter import limiter
 
 router = APIRouter()
@@ -77,13 +78,12 @@ def create_admin(email: str, password: str) -> bool:
     """Create or update an admin account. Use this via shell, not HTTP."""
     password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO admins (email, password_hash) VALUES (%s, %s) "
-                    "ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash",
-                    (email, password_hash),
-                )
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO admins (email, password_hash) VALUES (%s, %s) "
+                "ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash",
+                (email, password_hash),
+            )
         logger.info(f"Admin account created/updated: {email}")
         return True
     except Exception as e:
@@ -105,10 +105,9 @@ class LoginResponse(BaseModel):
 @limiter.limit("5/minute")
 def admin_login(request: Request, body: LoginRequest):
     try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT password_hash FROM admins WHERE email = %s", (body.email,))
-                row = cur.fetchone()
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute("SELECT password_hash FROM admins WHERE email = %s", (body.email,))
+            row = cur.fetchone()
     except Exception as e:
         logger.warning(f"Admin login DB error: {e}")
         raise HTTPException(status_code=500, detail="Database unavailable")

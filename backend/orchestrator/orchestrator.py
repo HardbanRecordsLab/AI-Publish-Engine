@@ -1,14 +1,15 @@
-from typing import List
+
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
+
 from backend.core.jobs import update_job
-from backend.ws_manager import update_progress, is_cancelled
+from backend.orchestrator.agent import BaseAgent, PipelineContext
+from backend.ws_manager import is_cancelled, update_progress
 
 
 class Orchestrator:
     """Runs a sequence of agents, passing PipelineContext through."""
 
-    def __init__(self, agents: List[BaseAgent]):
+    def __init__(self, agents: list[BaseAgent]):
         self.agents = agents
 
     def run(self, ctx: PipelineContext) -> PipelineContext:

@@ -1,12 +1,14 @@
 import json
 import os
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, Form
+
+from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
-from backend.themes import list_themes, get_theme, generate_theme_css
-from backend.core.color_engine import list_topics
-from backend.core.ai import _try_providers
+
 from backend.config import settings
+from backend.core.ai import _try_providers
+from backend.core.color_engine import list_topics
+from backend.themes import generate_theme_css, get_theme, list_themes
 
 router = APIRouter()
 

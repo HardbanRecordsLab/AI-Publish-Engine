@@ -1,14 +1,14 @@
 import asyncio
 import time
 from threading import Lock
-from typing import Dict, Set, Optional
+
 from fastapi import WebSocket
 from loguru import logger
 
 
 class ConnectionManager:
     def __init__(self):
-        self.connections: Dict[str, Set[WebSocket]] = {}
+        self.connections: dict[str, set[WebSocket]] = {}
         self._lock = Lock()
 
     async def connect(self, job_id: str, ws: WebSocket):
@@ -43,7 +43,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # Thread-safe progress store for worker -> WebSocket bridge
-_progress_store: Dict[str, dict] = {}
+_progress_store: dict[str, dict] = {}
 _progress_lock = Lock()
 
 # The FastAPI/uvicorn event loop, captured at startup (see main.py) so worker
@@ -54,7 +54,7 @@ _progress_lock = Lock()
 # that already has a running loop — i.e. the broadcast would vanish with no
 # log line if this were ever called from async code instead of a worker
 # thread.
-_main_loop: Optional[asyncio.AbstractEventLoop] = None
+_main_loop: asyncio.AbstractEventLoop | None = None
 
 
 def set_event_loop(loop: asyncio.AbstractEventLoop) -> None:
@@ -76,13 +76,13 @@ def update_progress(job_id: str, status: str, progress: int, **extra):
         logger.warning(f"update_progress({job_id}): failed to schedule WS broadcast: {e}")
 
 
-def get_progress(job_id: str) -> Optional[dict]:
+def get_progress(job_id: str) -> dict | None:
     with _progress_lock:
         return _progress_store.get(job_id)
 
 
 # Cancellation store
-_cancel_flags: Dict[str, bool] = {}
+_cancel_flags: dict[str, bool] = {}
 _cancel_lock = Lock()
 
 

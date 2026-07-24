@@ -1,7 +1,8 @@
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
-from backend.models.content_block import ContentBlock
+
 from backend.core.ai import analyze_text as _analyze_text
+from backend.models.content_block import ContentBlock
+from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class AnalysisAgent(BaseAgent):

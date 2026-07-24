@@ -1,12 +1,12 @@
 """PostgreSQL connection manager for job storage."""
 import os
-import json
 from contextlib import contextmanager
+
+import psycopg2
+import psycopg2.extras
+import psycopg2.pool
 from dotenv import load_dotenv
 from loguru import logger
-import psycopg2
-import psycopg2.pool
-import psycopg2.extras
 
 load_dotenv()
 
@@ -51,6 +51,7 @@ def init_db():
         return False
     try:
         from alembic.config import Config
+
         from alembic import command
         alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "..", "..", "alembic.ini"))
         alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
@@ -87,42 +88,41 @@ def update_job(job_id, status, progress=None, output_path=None, epub_path=None, 
     if not job_id:
         return
     try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                sets = ["status = %s", "updated_at = NOW()"]
-                params = [status]
-                if progress is not None:
-                    sets.append("progress = %s")
-                    params.append(progress)
-                if output_path is not None:
-                    sets.append("output_path = %s")
-                    params.append(output_path)
-                if epub_path is not None:
-                    sets.append("epub_path = %s")
-                    params.append(epub_path)
-                if docx_path is not None:
-                    sets.append("docx_path = %s")
-                    params.append(docx_path)
-                if html is not None:
-                    sets.append("html = %s")
-                    params.append(html)
-                if website_path is not None:
-                    sets.append("website_path = %s")
-                    params.append(website_path)
-                if error is not None:
-                    sets.append("error = %s")
-                    params.append(error)
-                if topic is not None:
-                    sets.append("topic = %s")
-                    params.append(topic)
-                if book_data is not None:
-                    sets.append("book_data = %s")
-                    params.append(book_data)
-                if build_params is not None:
-                    sets.append("build_params = %s")
-                    params.append(build_params)
-                params.append(job_id)
-                cur.execute(f"UPDATE jobs SET {', '.join(sets)} WHERE id = %s", params)
+        with get_conn() as conn, conn.cursor() as cur:
+            sets = ["status = %s", "updated_at = NOW()"]
+            params = [status]
+            if progress is not None:
+                sets.append("progress = %s")
+                params.append(progress)
+            if output_path is not None:
+                sets.append("output_path = %s")
+                params.append(output_path)
+            if epub_path is not None:
+                sets.append("epub_path = %s")
+                params.append(epub_path)
+            if docx_path is not None:
+                sets.append("docx_path = %s")
+                params.append(docx_path)
+            if html is not None:
+                sets.append("html = %s")
+                params.append(html)
+            if website_path is not None:
+                sets.append("website_path = %s")
+                params.append(website_path)
+            if error is not None:
+                sets.append("error = %s")
+                params.append(error)
+            if topic is not None:
+                sets.append("topic = %s")
+                params.append(topic)
+            if book_data is not None:
+                sets.append("book_data = %s")
+                params.append(book_data)
+            if build_params is not None:
+                sets.append("build_params = %s")
+                params.append(build_params)
+            params.append(job_id)
+            cur.execute(f"UPDATE jobs SET {', '.join(sets)} WHERE id = %s", params)
     except Exception as e:
         logger.warning(f"update_job DB failed: {e}")
         from backend.core.jobs_fallback import update_job as fb
@@ -133,13 +133,12 @@ def get_job(job_id):
     if not job_id:
         return None
     try:
-        with get_conn() as conn:
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute("SELECT * FROM jobs WHERE id = %s", (job_id,))
-                row = cur.fetchone()
-                if row:
-                    return dict(row)
-                return None
+        with get_conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM jobs WHERE id = %s", (job_id,))
+            row = cur.fetchone()
+            if row:
+                return dict(row)
+            return None
     except Exception as e:
         logger.warning(f"get_job DB failed: {e}")
         from backend.core.jobs_fallback import get_job as fb
@@ -148,11 +147,10 @@ def get_job(job_id):
 
 def get_all_jobs(offset: int = 0, limit: int = 50):
     try:
-        with get_conn() as conn:
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute("SELECT * FROM jobs ORDER BY created_at DESC LIMIT %s OFFSET %s", (limit, offset))
-                rows = cur.fetchall()
-                return [dict(r) for r in rows]
+        with get_conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM jobs ORDER BY created_at DESC LIMIT %s OFFSET %s", (limit, offset))
+            rows = cur.fetchall()
+            return [dict(r) for r in rows]
     except Exception as e:
         logger.warning(f"get_all_jobs DB failed: {e}")
         from backend.core.jobs_fallback import get_all_jobs as fb
@@ -162,10 +160,9 @@ def get_all_jobs(offset: int = 0, limit: int = 50):
 def count_jobs():
     """Return total job count for pagination."""
     try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM jobs")
-                return cur.fetchone()[0]
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM jobs")
+            return cur.fetchone()[0]
     except Exception as e:
         logger.warning(f"count_jobs DB failed: {e}")
         return len(get_all_jobs())
@@ -175,9 +172,8 @@ def delete_job(job_id):
     if not job_id:
         return
     try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM jobs WHERE id = %s", (job_id,))
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute("DELETE FROM jobs WHERE id = %s", (job_id,))
     except Exception as e:
         logger.warning(f"delete_job DB failed: {e}")
         from backend.core.jobs_fallback import delete_job as fb

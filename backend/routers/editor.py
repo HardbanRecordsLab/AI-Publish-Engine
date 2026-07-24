@@ -1,9 +1,11 @@
 """WYSIWYG Chapter Editor — get/save edited chapters and rebuild HTML."""
 import json
+
 from fastapi import APIRouter, HTTPException
 from loguru import logger
-from backend.core.jobs import get_job, update_job
+
 from backend.core.builder import build_ebook_html
+from backend.core.jobs import get_job, update_job
 
 router = APIRouter()
 

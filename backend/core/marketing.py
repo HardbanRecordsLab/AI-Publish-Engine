@@ -1,7 +1,8 @@
 """AI Marketing Suite — generates Amazon listing, social media, press materials from book content."""
 import json
-from backend.core.ai import _try_providers
+
 from backend.config import settings
+from backend.core.ai import _try_providers
 
 
 def _book_summary(ebook_dict: dict) -> str:

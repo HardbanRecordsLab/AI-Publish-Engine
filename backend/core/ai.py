@@ -1,15 +1,15 @@
 import json
-import re
 import os
-import time
+import re
 import threading
+import time
+
 from loguru import logger
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from openai import APIError, RateLimitError, Timeout
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from backend.config import settings
 from backend.core.tokens import generate_design_system as _token_design_system
-from backend.core.tokens import list_themes, get_tokens_for_ai
 
 # ============================================================
 # PROVIDER REGISTRY

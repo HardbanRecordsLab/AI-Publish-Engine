@@ -7,7 +7,7 @@ so results can be rendered generically by the frontend.
 import os
 import re
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 MAX_COVER_BYTES = 50 * 1024 * 1024        # 50MB (KDP cover limit)
 MAX_EPUB_BYTES = 650 * 1024 * 1024        # 650MB (KDP EPUB limit)
@@ -16,7 +16,7 @@ MAX_APPLE_COVER_BYTES = 100 * 1024 * 1024  # 100MB (Apple Books cover limit)
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _score(errors: list, warnings: list, error_weight: int = 20, warning_weight: int = 5) -> int:

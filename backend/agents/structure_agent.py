@@ -1,7 +1,8 @@
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
+
 from backend.core.ai import structure_chapter as _structure_chapter
 from backend.core.jobs import update_job
+from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class StructureAgent(BaseAgent):

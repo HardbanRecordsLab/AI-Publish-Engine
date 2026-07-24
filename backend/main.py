@@ -1,18 +1,30 @@
 import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
+
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from loguru import logger
 
-from backend.limiter import limiter
-from backend.config import settings
 from backend import ws_manager
-from backend.routers import health_router, templates_router, jobs_router, admin_router, publishing_router, editor_router, series_router, auth_router, design_tokens_router, stats_router
+from backend.config import settings
+from backend.limiter import limiter
+from backend.routers import (
+    admin_router,
+    auth_router,
+    design_tokens_router,
+    editor_router,
+    health_router,
+    jobs_router,
+    publishing_router,
+    series_router,
+    stats_router,
+    templates_router,
+)
 
 
 async def _stale_job_watchdog():

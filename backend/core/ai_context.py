@@ -1,5 +1,5 @@
 """AI Context — design system metadata for agent prompts (from CMLP research)."""
-from backend.core.tokens import list_themes, TOPIC_MAP, DAISYUI_MAP
+from backend.core.tokens import DAISYUI_MAP
 
 
 def get_website_component_list() -> str:

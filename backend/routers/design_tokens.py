@@ -1,7 +1,7 @@
 from fastapi import APIRouter
-from backend.themes import list_themes, get_theme
-from backend.core.tokens import generate_design_system, list_themes as list_token_themes, get_tokens_for_ai, TOPIC_MAP
-from backend.core.tokens import DAISYUI_MAP
+
+from backend.core.tokens import DAISYUI_MAP, TOPIC_MAP, get_tokens_for_ai
+from backend.themes import get_theme, list_themes
 
 router = APIRouter(prefix="/api/design-tokens", tags=["design-tokens"])
 
@@ -16,7 +16,6 @@ def get_theme_detail(theme_id: str):
     t = get_theme(theme_id)
     if not t.get("id"):
         return {"error": "Theme not found"}
-    import json
     from pathlib import Path
     theme_dir = Path(__file__).resolve().parent.parent.parent / "templates" / "themes" / theme_id
     css_content = ""

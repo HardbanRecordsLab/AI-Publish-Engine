@@ -3,8 +3,6 @@ Supports 200,000+ open source icons. Zero cost.
 API: https://api.iconify.design"""
 
 import urllib.request
-import json
-import re
 
 ICONIFY_BASE = "https://api.iconify.design"
 CACHE = {}
@@ -29,7 +27,7 @@ def get_icon_svg(icon_name: str, color: str = "currentColor", width: int = 24, h
         icon_name = f"mdi:{icon_name}"
 
     url = f"{ICONIFY_BASE}/{icon_name.replace(':', '/')}.svg?width={width}&height={height}"
-    
+
     svg = _fetch_svg(url, color)
     CACHE[cache_key] = svg
     return svg

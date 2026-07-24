@@ -1,12 +1,18 @@
 """Book Series Manager REST endpoints."""
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
-from backend.core.series import (
-    list_series, get_series, create_series, update_series,
-    delete_series, add_book_to_series, remove_book_from_series,
-    generate_series_landing,
-)
+
 from backend.core.jobs import get_job
+from backend.core.series import (
+    add_book_to_series,
+    create_series,
+    delete_series,
+    generate_series_landing,
+    get_series,
+    list_series,
+    remove_book_from_series,
+    update_series,
+)
 
 router = APIRouter()
 

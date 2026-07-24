@@ -1,7 +1,8 @@
 from loguru import logger
-from backend.orchestrator.agent import BaseAgent, PipelineContext
+
 from backend.core.ai import generate_ebook_sections as _generate_sections
 from backend.core.jobs import update_job
+from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class FinalizationAgent(BaseAgent):

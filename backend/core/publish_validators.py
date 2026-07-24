@@ -130,25 +130,24 @@ def validate_kdp(metadata: dict = None, cover_path: str = None, epub_path: str =
     metadata = metadata or {}
     errors, warnings = [], []
 
-    if metadata:
-        title = metadata.get("title")
-        if not title:
-            errors.append({"code": "KDP001", "message": "Tytuł jest wymagany", "field": "title"})
-        elif len(title) > 200:
-            warnings.append({"code": "KDP002", "message": "Tytuł przekracza 200 znaków", "field": "title"})
+    title = metadata.get("title")
+    if not title:
+        errors.append({"code": "KDP001", "message": "Tytuł jest wymagany", "field": "title"})
+    elif len(title) > 200:
+        warnings.append({"code": "KDP002", "message": "Tytuł przekracza 200 znaków", "field": "title"})
 
-        if not metadata.get("author"):
-            errors.append({"code": "KDP003", "message": "Autor jest wymagany", "field": "author"})
+    if not metadata.get("author"):
+        errors.append({"code": "KDP003", "message": "Autor jest wymagany", "field": "author"})
 
-        description = metadata.get("description")
-        if not description:
-            warnings.append({"code": "KDP004", "message": "Opis jest zalecany", "field": "description"})
-        elif len(description) > 4000:
-            errors.append({"code": "KDP005", "message": "Opis przekracza 4000 znaków", "field": "description"})
+    description = metadata.get("description")
+    if not description:
+        warnings.append({"code": "KDP004", "message": "Opis jest zalecany", "field": "description"})
+    elif len(description) > 4000:
+        errors.append({"code": "KDP005", "message": "Opis przekracza 4000 znaków", "field": "description"})
 
-        keywords = metadata.get("keywords") or []
-        if len(keywords) > 7:
-            warnings.append({"code": "KDP006", "message": f"Amazon KDP akceptuje max 7 słów kluczowych. Masz: {len(keywords)}", "field": "keywords"})
+    keywords = metadata.get("keywords") or []
+    if len(keywords) > 7:
+        warnings.append({"code": "KDP006", "message": f"Amazon KDP akceptuje max 7 słów kluczowych. Masz: {len(keywords)}", "field": "keywords"})
 
     if cover_path:
         if not os.path.exists(cover_path):
@@ -201,19 +200,18 @@ def validate_apple_books(metadata: dict = None, cover_path: str = None, epub_pat
     metadata = metadata or {}
     errors, warnings = [], []
 
-    if metadata:
-        if not metadata.get("title"):
-            errors.append({"code": "AB001", "message": "Tytuł jest wymagany", "field": "title"})
-        if not metadata.get("author"):
-            errors.append({"code": "AB002", "message": "Autor jest wymagany", "field": "author"})
-        if not metadata.get("isbn"):
-            errors.append({"code": "AB003", "message": "ISBN jest wymagany dla Apple Books", "field": "isbn"})
-        if not metadata.get("language"):
-            errors.append({"code": "AB004", "message": "Język jest wymagany dla Apple Books", "field": "language"})
-        if not metadata.get("publicationDate"):
-            errors.append({"code": "AB005", "message": "Data publikacji jest wymagana", "field": "publicationDate"})
-        if not metadata.get("description"):
-            warnings.append({"code": "AB006", "message": "Opis jest zalecany", "field": "description"})
+    if not metadata.get("title"):
+        errors.append({"code": "AB001", "message": "Tytuł jest wymagany", "field": "title"})
+    if not metadata.get("author"):
+        errors.append({"code": "AB002", "message": "Autor jest wymagany", "field": "author"})
+    if not metadata.get("isbn"):
+        errors.append({"code": "AB003", "message": "ISBN jest wymagany dla Apple Books", "field": "isbn"})
+    if not metadata.get("language"):
+        errors.append({"code": "AB004", "message": "Język jest wymagany dla Apple Books", "field": "language"})
+    if not metadata.get("publicationDate"):
+        errors.append({"code": "AB005", "message": "Data publikacji jest wymagana", "field": "publicationDate"})
+    if not metadata.get("description"):
+        warnings.append({"code": "AB006", "message": "Opis jest zalecany", "field": "description"})
 
     if cover_path:
         if not os.path.exists(cover_path):

@@ -1,0 +1,2349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Publishing Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #070B14;
+  --surface: #0F1320;
+  --surface-hover: #151B2E;
+  --border: #1C2136;
+  --border-hover: #2A3250;
+  --text-primary: #E8EDF5;
+  --text-secondary: #8892A6;
+  --text-muted: #5B657A;
+  --accent-1: #6366F1;
+  --accent-2: #8B5CF6;
+  --accent-3: #A855F7;
+  --success: #22C55E;
+  --error: #EF4444;
+  --warning: #F59E0B;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  --shadow: 0 4px 24px rgba(0,0,0,.4);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --transition: .2s cubic-bezier(.4,0,.2,1);
+}
+::selection { background: rgba(99,102,241,.3); color: #fff; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  background-image: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,.08) 0%, transparent 70%);
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(7,11,20,.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header-logo {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 18px; font-weight: 700; letter-spacing: -.3px;
+}
+.header-logo svg { width: 28px; height: 28px; }
+.header-logo span { background: linear-gradient(135deg, var(--accent-1), var(--accent-3)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header-badge {
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 100px;
+  background: rgba(99,102,241,.15); color: var(--accent-1);
+  border: 1px solid rgba(99,102,241,.25);
+  margin-left: 8px;
+}
+
+/* Layout */
+.layout { display: flex; max-width: 1440px; margin: 0 auto; padding: 24px; gap: 24px; min-height: calc(100vh - 64px); }
+
+/* Sidebar */
+.sidebar {
+  width: 340px; flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.sidebar-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: border-color var(--transition);
+}
+.sidebar-card:hover { border-color: var(--border-hover); }
+.sidebar-card h3 {
+  font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--text-muted); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-card h3 svg { width: 16px; height: 16px; }
+
+.form-group { margin-bottom: 14px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 500;
+  color: var(--text-secondary); margin-bottom: 5px;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%; padding: 9px 12px; font-size: 13px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-xs); color: var(--text-primary);
+  font-family: var(--font); outline: none;
+  transition: border-color var(--transition);
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent-1); }
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-select { cursor: pointer; }
+.form-select option { background: var(--surface); color: var(--text-primary); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* Content Type Tabs */
+.content-tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: var(--radius-sm); margin-bottom: 16px; }
+.content-tab {
+  flex: 1; padding: 8px 6px; font-size: 11px; font-weight: 600;
+  text-align: center; border: none; background: transparent;
+  color: var(--text-muted); border-radius: 6px; cursor: pointer;
+  transition: all var(--transition); font-family: var(--font);
+  white-space: nowrap;
+}
+.content-tab:hover { color: var(--text-secondary); background: rgba(255,255,255,.03); }
+.content-tab.active { color: var(--text-primary); background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.content-tab svg { display: block; margin: 0 auto 3px; width: 18px; height: 18px; }
+
+/* Main Area */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+
+/* Drop Zone */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 32px; text-align: center;
+  cursor: pointer; transition: all var(--transition);
+  background: var(--surface);
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent-1); background: rgba(99,102,241,.05); }
+.drop-zone-icon { font-size: 32px; margin-bottom: 8px; opacity: .5; }
+.drop-zone-text { font-size: 14px; color: var(--text-secondary); }
+.drop-zone-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.drop-zone .file-name { font-size: 13px; font-weight: 600; color: var(--accent-1); margin-top: 8px; }
+
+/* Template Grid */
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.template-card {
+  position: relative;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  padding: 14px; cursor: pointer;
+  transition: all var(--transition);
+  overflow: hidden;
+  background: var(--surface);
+}
+.template-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+.template-card.active { border-color: var(--accent-1); box-shadow: 0 0 0 1px var(--accent-1); }
+.template-card-preview {
+  height: 60px; border-radius: 6px; margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; transition: all var(--transition);
+}
+.template-card-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.template-card-desc { font-size: 10px; color: var(--text-muted); margin-top: 2px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.template-card-check {
+  position: absolute; top: 6px; right: 6px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent-1); display: none;
+  align-items: center; justify-content: center;
+}
+.template-card.active .template-card-check { display: flex; }
+.template-card-check svg { width: 10px; height: 10px; stroke: white; stroke-width: 3; }
+
+/* Output Format Chips */
+.format-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.format-chip {
+  padding: 6px 14px; font-size: 12px; font-weight: 500;
+  border-radius: 100px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-secondary);
+  cursor: pointer; transition: all var(--transition);
+  font-family: var(--font);
+}
+.format-chip:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.format-chip.active { border-color: var(--accent-1); background: rgba(99,102,241,.1); color: var(--accent-1); }
+
+/* Action Bar */
+.action-bar {
+  display: flex; gap: 12px; align-items: center;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.action-bar .provider-select {
+  padding: 8px 12px; font-size: 13px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-xs); color: var(--text-primary);
+  font-family: var(--font); cursor: pointer; outline: none;
+  min-width: 140px;
+}
+.action-bar .provider-select:focus { border-color: var(--accent-1); }
+.action-bar .provider-select option { background: var(--surface); }
+.provider-indicator { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+.provider-indicator.online { background: var(--success); box-shadow: 0 0 6px rgba(34,197,94,.4); }
+.provider-indicator.offline { background: var(--text-muted); }
+
+.btn {
+  padding: 9px 20px; font-size: 13px; font-weight: 600;
+  border: none; border-radius: var(--radius-xs);
+  cursor: pointer; transition: all var(--transition);
+  font-family: var(--font); display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: white; box-shadow: 0 2px 12px rgba(99,102,241,.3);
+}
+.btn-primary:hover:not(:disabled) { box-shadow: 0 4px 20px rgba(99,102,241,.4); }
+.btn-accent { background: var(--color-accent, #6366F1); color: #fff; }
+.btn-accent:hover:not(:disabled) { opacity: .9; }
+.btn-secondary { background: var(--surface-hover); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border-hover); }
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { box-shadow: 0 4px 16px rgba(34,197,94,.3); }
+.btn-error { background: var(--error); color: white; }
+.btn-error:hover { box-shadow: 0 4px 16px rgba(239,68,68,.3); }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+
+/* Progress */
+.progress-section { display: none; animation: fadeSlideUp .3s ease; }
+.progress-section.visible { display: block; }
+.cancel-btn:hover { background: rgba(239,68,68,.1); }
+.cancel-btn:active { transform: scale(.97); }
+.spa-nav { display:flex; gap:4px; padding:8px 16px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.spa-link { padding:6px 16px; border-radius:100px; font-size:13px; font-weight:500; color:var(--text-muted); text-decoration:none; transition:all .15s; }
+.spa-link:hover { background:var(--surface-hover); color:var(--text-primary); }
+.spa-link.active { background:var(--accent-1); color:#fff; }
+.view { display:none; }
+.view:first-of-type { display:block; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; text-align:center; }
+.stat-value { font-size:24px; font-weight:700; }
+.stat-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+.status-badge { display:inline-block; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:600; text-transform:capitalize; }
+.status-done { background:rgba(34,197,94,.15); color:var(--success); }
+.status-failed { background:rgba(239,68,68,.15); color:var(--error); }
+.status-processing { background:rgba(99,102,241,.15); color:var(--accent-1); }
+.status-queued { background:rgba(245,158,11,.15); color:var(--warning); }
+.status-cancelled { background:rgba(100,116,139,.15); color:var(--text-muted); }
+@keyframes fadeSlideUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+.progress-steps {
+  display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px;
+  margin-bottom: 14px;
+}
+.progress-step {
+  text-align: center; padding: 6px 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--border);
+  transition: all var(--transition);
+  position: relative;
+}
+.progress-step.done { background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.3); }
+.progress-step.current { background: rgba(99,102,241,.1); border-color: var(--accent-1); }
+.progress-step.current::after { content:''; position:absolute; bottom:-2px; left:20%; width:60%; height:2px; background:var(--accent-1); border-radius:1px; animation: progressPulse 1.5s ease infinite; }
+@keyframes progressPulse { 0%,100% { opacity:1 } 50% { opacity:.3 } }
+.progress-step.failed { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); }
+.progress-step-icon { font-size: 13px; display: block; margin-bottom: 1px; }
+.progress-step-label { font-size: 8px; font-weight: 500; color: var(--text-muted); line-height: 1.1; }
+.progress-step.done .progress-step-label { color: var(--success); }
+.progress-step.current .progress-step-label { color: var(--accent-1); }
+.progress-bar-wrap {
+  width: 100%; height: 5px;
+  background: var(--border); border-radius: 3px; overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent-1), var(--accent-3));
+  transition: width .4s cubic-bezier(.4,0,.2,1); width: 0%;
+}
+.progress-stats { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+.progress-stats .stat { display: flex; align-items: center; gap: 4px; }
+.progress-stats .stat-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.progress-stats .stat-dot.green { background: var(--success); }
+.progress-stats .stat-dot.purple { background: var(--accent-1); }
+
+/* Result Card */
+.result-card {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.result-card.visible { display: block; }
+.result-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.result-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+.result-formats { display: flex; gap: 8px; flex-wrap: wrap; }
+.result-format-btn {
+  padding: 10px 20px; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-hover); color: var(--text-primary);
+  cursor: pointer; transition: all var(--transition);
+  text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font);
+}
+.result-format-btn:hover { border-color: var(--accent-1); background: rgba(99,102,241,.1); transform: translateY(-1px); }
+.result-format-btn .format-icon { font-size: 18px; }
+
+/* Error Card */
+.error-card {
+  display: none;
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.2);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.error-card.visible { display: block; }
+.error-title { font-size: 14px; font-weight: 600; color: var(--error); margin-bottom: 4px; }
+.error-msg { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+
+/* Spinner */
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.2);
+  border-top-color: white; border-radius: 50%;
+  animation: spin .6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Loading Skeleton */
+.skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface-hover) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* Empty State */
+.empty-state { text-align: center; padding: 48px 24px; }
+.empty-state-icon { font-size: 48px; margin-bottom: 12px; opacity: .3; }
+.empty-state-text { font-size: 14px; color: var(--text-muted); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .layout { flex-direction: column; padding: 16px; }
+  .sidebar { width: 100%; }
+  .content-tabs { overflow-x: auto; }
+  .content-tab { flex: none; padding: 8px 14px; }
+  .template-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .form-row { grid-template-columns: 1fr; }
+  .action-bar { flex-wrap: wrap; }
+  .progress-steps { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 500px) {
+  .header { padding: 0 16px; }
+  .progress-steps { grid-template-columns: repeat(3, 1fr); }
+  .template-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 28 28" fill="none"><rect x="2" y="2" width="24" height="24" rx="6" fill="url(#lg)"/><path d="M9 14l3 3 7-7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>AI Publishing</span><span class="header-badge">v2</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="/api/guide" target="_blank" style="font-size:12px;color:var(--text-muted);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:100px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-1)';this.style.color='var(--accent-1)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">📖 Guide</a>
+    <span class="provider-indicator" id="hdrProviderDot" style="margin-right:0"></span>
+    <span style="font-size:12px;color:var(--text-muted)" id="hdrProviderName">openrouter</span>
+  </div>
+</header>
+
+<nav class="spa-nav">
+  <a class="spa-link active" href="#home">Generate</a>
+  <a class="spa-link" href="#history">History</a>
+    <a class="spa-link" href="#admin" onclick="return loadAdminView()">Admin</a>
+    <a class="spa-link" href="#marketing">Marketing</a>
+    <a class="spa-link" href="#coach">Book Coach</a>
+    <a class="spa-link" href="#publish">Publish</a>
+    <a class="spa-link" href="#revenue">Revenue</a>
+    <a class="spa-link" href="#series">Series</a>
+  </nav>
+
+<div class="view" id="view-home">
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-card">
+      <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l2 2"/></svg>Content Specs</h3>
+      <div class="form-group">
+        <label class="form-label">Topic / Description</label>
+        <textarea class="form-textarea" id="topicInput" placeholder="E.g., A beginner's guide to artificial intelligence..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Target Audience</label>
+          <input class="form-input" id="audienceInput" placeholder="e.g., Beginners, developers">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Language</label>
+          <select class="form-select" id="languageInput">
+            <option value="English">English</option>
+            <option value="Polish">Polski</option>
+            <option value="Spanish">Español</option>
+            <option value="German">Deutsch</option>
+            <option value="French">Français</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tone</label>
+          <select class="form-select" id="toneInput">
+            <option value="">Auto</option>
+            <option value="professional">Professional</option>
+            <option value="conversational">Conversational</option>
+            <option value="academic">Academic</option>
+            <option value="creative">Creative</option>
+            <option value="persuasive">Persuasive</option>
+            <option value="humorous">Humorous</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sections</label>
+          <input class="form-input" id="chaptersInput" placeholder="e.g., 5" type="number" min="1" max="20">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Keywords</label>
+        <input class="form-input" id="keywordsInput" placeholder="AI, machine learning, neural networks">
+        <div class="form-hint">Comma-separated</div>
+      </div>
+    </div>
+
+    <!-- Customize -->
+    <div class="sidebar-card" id="customizeCard" style="display:none">
+      <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>Customize Theme</h3>
+      <div class="form-group">
+        <label class="form-label">Accent Color</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="form-input" id="accentColor" type="color" value="#6366F1" style="width:40px;height:36px;padding:2px;cursor:pointer;flex-shrink:0">
+          <input class="form-input" id="accentColorHex" value="#6366F1" placeholder="#6366F1" style="flex:1" maxlength="7">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Background Color</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="form-input" id="bgColor" type="color" value="#FFFFFF" style="width:40px;height:36px;padding:2px;cursor:pointer;flex-shrink:0">
+          <input class="form-input" id="bgColorHex" value="#FFFFFF" placeholder="#FFFFFF" style="flex:1" maxlength="7">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Heading Font</label>
+        <select class="form-select" id="headingFont">
+          <option value="">Theme Default</option>
+          <option value="'Georgia', serif">Georgia</option>
+          <option value="'Inter', sans-serif">Inter</option>
+          <option value="'Playfair Display', serif">Playfair Display</option>
+          <option value="'Poppins', sans-serif">Poppins</option>
+          <option value="'Merriweather', serif">Merriweather</option>
+          <option value="'Lora', serif">Lora</option>
+          <option value="'Palatino', serif">Palatino</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Body Font</label>
+        <select class="form-select" id="bodyFont">
+          <option value="">Theme Default</option>
+          <option value="'Inter', sans-serif">Inter</option>
+          <option value="'Georgia', serif">Georgia</option>
+          <option value="'Lato', sans-serif">Lato</option>
+          <option value="'Merriweather', serif">Merriweather</option>
+          <option value="'Palatino', serif">Palatino</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-sm btn-secondary" onclick="resetCustomize()" style="flex:1">Reset</button>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+      <div class="form-group">
+        <label class="form-label">AI Theme Generator</label>
+        <textarea class="form-input" id="aiThemeDesc" rows="2" placeholder="Describe your theme... e.g. dark mode, neon green accents, cyberpunk vibe" style="resize:vertical;font-size:12px"></textarea>
+        <button class="btn btn-sm btn-accent" onclick="generateATheme()" style="margin-top:6px;width:100%">Generate Theme</button>
+        <div id="aiThemePreview" style="margin-top:6px;font-size:11px;color:var(--text-muted);display:none"></div>
+      </div>
+    </div>
+
+    <!-- Custom Template Upload -->
+    <div class="sidebar-card">
+      <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 4h-4l-1-2H7L6 4H2v10h12"/><path d="M8 7v6M5 10h6"/></svg>Custom Template</h3>
+      <div class="form-group">
+        <label class="form-label">Upload your HTML template</label>
+        <input type="file" id="templateUpload" accept=".html" style="font-size:11px;width:100%">
+        <button class="btn btn-sm btn-secondary" onclick="uploadCustomTemplate()" style="margin-top:4px;width:100%;font-size:10px">Upload</button>
+        <div id="customTemplateList" style="margin-top:6px;font-size:11px;color:var(--text-muted)"></div>
+      </div>
+    </div>
+
+    <!-- File Upload -->
+    <div class="sidebar-card">
+      <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 13V3M4 7l4-4 4 4"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg>Source Files</h3>
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-icon">📂</div>
+        <div class="drop-zone-text">Drop files here</div>
+        <div class="drop-zone-hint">Supports .txt .md .docx .pdf (multiple)</div>
+        <div id="fileList" style="margin-top:8px;text-align:left"></div>
+        <input type="file" id="fileInput" accept=".txt,.md,.docx,.pdf" multiple style="display:none">
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Content Type -->
+    <div class="sidebar-card">
+      <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="14" height="12" rx="2"/><path d="M5 8h6M5 11h4"/></svg>Output Type</h3>
+      <div class="content-tabs" id="contentTabs">
+        <button class="content-tab active" data-type="ebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Ebook</button>
+        <button class="content-tab" data-type="website"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Website</button>
+        <button class="content-tab" data-type="landing-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>Landing</button>
+        <button class="content-tab" data-type="blog-post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Blog</button>
+        <button class="content-tab" data-type="interactive-book"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h12"/><circle cx="20" cy="18" r="2"/></svg>Interactive</button>
+      </div>
+
+      <!-- Templates -->
+      <div id="templateSection">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px">Template</span>
+          <button class="btn btn-sm btn-secondary" onclick="toggleCustomize()" id="customizeToggleBtn" style="font-size:10px">Customize</button>
+        </div>
+        <div class="template-grid" id="templateGrid"></div>
+      </div>
+    </div>
+
+    <!-- Output Formats -->
+    <div class="sidebar-card">
+      <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 12V4h8v8"/><path d="M8 8l-3 3h6L8 8z"/></svg>Output Formats</h3>
+      <div class="format-chips" id="formatChips"></div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <select class="provider-select" id="providerSelect"><option value="">Loading...</option></select>
+      <button class="btn btn-primary" id="generateBtn"><span class="btn-icon">⚡</span> Generate</button>
+      <button class="btn btn-secondary" id="batchBtn" style="display:none"><span class="btn-icon">📦</span> Generate All</button>
+      <div style="flex:1"></div>
+      <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="batchMode" onchange="toggleBatchMode()"> Batch
+      </label>
+      <span style="font-size:12px;color:var(--text-muted)" id="statusText"></span>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-section" id="progressSection">
+      <div class="sidebar-card">
+        <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l2 2"/></svg>Generation Progress</h3>
+        <div class="progress-steps" id="progressSteps"></div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+        <div class="progress-stats">
+          <span class="stat" id="progressPct">0%</span>
+          <span class="stat" id="progressAgent">Starting...</span>
+          <span class="stat" id="progressElapsed">0s</span>
+        </div>
+        <button class="cancel-btn" id="cancelBtn" style="display:none;margin-top:8px;width:100%;padding:8px;border:1px solid var(--error);border-radius:var(--radius-sm);background:transparent;color:var(--error);cursor:pointer;font-size:13px">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Live Preview -->
+    <div class="sidebar-card" id="previewCard" style="display:none">
+      <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h8"/></svg>Live Preview</h3>
+      <div style="position:relative;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);background:#fff;max-height:300px">
+        <iframe id="previewFrame" style="width:100%;height:300px;border:none;background:#fff" srcdoc="<p style='padding:20px;color:#999;font-family:sans-serif'>Preview will appear when generation completes...</p>"></iframe>
+      </div>
+      <div style="margin-top:8px;text-align:right">
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('previewFrame').srcdoc = document.getElementById('previewFrame').srcdoc">Refresh</button>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="resultCard">
+      <div class="result-title" id="resultTitle">✨ Your content is ready!</div>
+      <div class="result-meta" id="resultMeta"></div>
+      <div class="result-formats" id="resultFormats"></div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-card" id="errorCard">
+      <div class="error-title">⚠️ Generation Failed</div>
+      <div class="error-msg" id="errorMsg"></div>
+      <button class="btn btn-error btn-sm" onclick="resetUI()">Try Again</button>
+    </div>
+
+    <!-- History -->
+    <div class="sidebar-card" id="historyCard" style="display:none">
+      <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l2 2"/></svg>History</h3>
+      <div id="historyList"></div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-state-icon">🚀</div>
+      <div class="empty-state-text">Configure your content specs, choose a template, and generate your publication.</div>
+    </div>
+  </main>
+</div> <!-- /view-home -->
+</div> <!-- /layout -->
+
+<!-- View: History -->
+<div class="view" id="view-history" style="display:none">
+  <div class="layout">
+    <aside class="sidebar" style="max-width:100%;flex:1">
+      <div class="sidebar-card">
+        <h3><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l2 2"/></svg>History</h3>
+        <div id="historyListFull"></div>
+      </div>
+      <button class="btn btn-sm btn-secondary" onclick="clearHistory()" style="width:100%">Clear History</button>
+    </aside>
+  </div>
+</div>
+
+<!-- View: Admin -->
+<div class="view" id="view-marketing" style="display:none">
+  <div class="layout">
+    <aside class="sidebar" style="max-width:100%;flex:1">
+      <div class="sidebar-card">
+        <h3>AI Marketing Suite</h3>
+        <div class="form-group">
+          <label class="form-label">Job ID (from a completed generation)</label>
+          <input class="form-input" id="marketingJobId" placeholder="Paste job ID here">
+        </div>
+        <button class="btn btn-primary" onclick="generateMarketing()" style="width:100%">Generate Marketing Materials</button>
+      </div>
+      <div id="marketingResults"></div>
+    </aside>
+  </div>
+</div>
+
+<div class="view" id="view-coach" style="display:none">
+  <div class="layout">
+    <aside class="sidebar" style="max-width:100%;flex:1">
+      <div class="sidebar-card">
+        <h3>🤖 AI Book Coach</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Answer a few questions and the AI will write your book for you.</p>
+        <div id="coachChat" style="margin-bottom:12px;max-height:400px;overflow-y:auto"></div>
+        <div class="form-group" id="coachInputArea">
+          <input class="form-input" id="coachAnswer" placeholder="Type your answer..." style="flex:1">
+          <button class="btn btn-primary" onclick="sendCoachAnswer()" style="margin-top:6px;width:100%">Send</button>
+        </div>
+        <button class="btn btn-accent" onclick="startCoach()" id="coachStartBtn" style="width:100%">Start Interview</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="view" id="view-publish" style="display:none">
+  <div class="layout">
+    <aside class="sidebar" style="max-width:100%;flex:1">
+      <div class="sidebar-card">
+        <h3>📤 Direct Publishing</h3>
+        <div class="form-group">
+          <label class="form-label">Job ID</label>
+          <input class="form-input" id="publishJobId" placeholder="Job ID">
+        </div>
+        <button class="btn btn-primary" onclick="loadPublishInfo()" style="width:100%;margin-bottom:12px">Load Publishing Info</button>
+        <div id="publishResults"></div>
+        <div class="sidebar-card" id="publishPlatforms" style="display:none">
+          <h4>Supported Platforms</h4>
+          <div id="platformList"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="view" id="view-revenue" style="display:none">
+  <div class="layout">
+    <aside class="sidebar" style="max-width:100%;flex:1">
+      <div class="sidebar-card">
+        <h3>💰 Revenue Dashboard</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px" id="revenueStats">
+          <div class="stat-card"><div class="stat-value" id="revTotal">$0</div><div class="stat-label">Total Revenue</div></div>
+          <div class="stat-card"><div class="stat-value" id="revBooks">0</div><div class="stat-label">Books Sold</div></div>
+          <div class="stat-card"><div class="stat-value" id="revAvg">$0</div><div class="stat-label">Avg Price</div></div>
+          <div class="stat-card"><div class="stat-value" id="revPlatforms">0</div><div class="stat-label">Platforms</div></div>
+          <div class="stat-card"><div class="stat-value" id="revGoal">$0 / $0</div><div class="stat-label">Monthly Goal</div></div>
+        </div>
+      </div>
+      <div class="sidebar-card">
+        <h3>➕ Add Sale</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 80px;gap:8px">
+          <select id="revPlatform" class="form-select" style="font-size:12px">
+            <option value="Amazon KDP">Amazon KDP</option>
+            <option value="Google Play">Google Play</option>
+            <option value="Apple Books">Apple Books</option>
+            <option value="Kobo">Kobo</option>
+            <option value="B&N Press">B&N Press</option>
+            <option value="Draft2Digital">Draft2Digital</option>
+            <option value="StreetLib">StreetLib</option>
+            <option value="Smashwords">Smashwords</option>
+            <option value="Lulu">Lulu</option>
+            <option value="Publio">Publio</option>
+            <option value="Virtualo">Virtualo</option>
+            <option value="Legimi">Legimi</option>
+            <option value="Woblink">Woblink</option>
+            <option value="Ebookpoint">Ebookpoint</option>
+            <option value="Direct">Direct</option>
+          </select>
+          <input id="revBookTitle" class="form-input" placeholder="Book title" style="font-size:12px">
+          <input id="revAmount" class="form-input" type="number" step="0.01" placeholder="0.00" style="font-size:12px">
+          <button class="btn btn-sm btn-primary" onclick="addRevenueEntry()" style="font-size:11px">Add</button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <label style="font-size:11px;color:var(--text-muted)">Monthly Goal:</label>
+          <input id="revGoalInput" class="form-input" type="number" step="100" value="1000" style="width:100px;font-size:12px">
+          <button class="btn btn-sm btn-secondary" onclick="setRevenueGoal()" style="font-size:10px">Set Goal</button>
+          <button class="btn btn-sm btn-secondary" onclick="exportRevenueCSV()" style="font-size:10px;margin-left:auto">📥 Export CSV</button>
+          <button class="btn btn-sm btn-error" onclick="clearRevenue()" style="font-size:10px">Clear All</button>
+        </div>
+      </div>
+      <div class="sidebar-card" id="revenueChartCard" style="display:none">
+        <h3>📊 Monthly Revenue</h3>
+        <div style="height:200px;position:relative;display:flex;align-items:flex-end;gap:4px;padding:20px 0 30px" id="revChart"></div>
+      </div>
+      <div class="sidebar-card" id="revenueTableCard">
+        <h3>📋 Sales History <span id="revCount" style="font-size:11px;color:var(--text-muted);font-weight:400"></span></h3>
+        <div style="max-height:400px;overflow-y:auto" id="revTable"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="view" id="view-series" style="display:none">
+  <div class="layout">
+    <aside class="sidebar" style="max-width:100%;flex:1">
+      <div class="sidebar-card">
+        <h3>📚 Book Series Manager</h3>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
+          <input id="seriesNameInput" class="form-input" placeholder="Series name (e.g., The Dragon Saga)">
+          <button class="btn btn-primary btn-sm" onclick="createSeries()">Create Series</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <input id="seriesDescInput" class="form-input" placeholder="Description (optional)">
+          <input id="seriesAuthorInput" class="form-input" placeholder="Author (optional)">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;margin-top:8px">
+          <input id="seriesGenreInput" class="form-input" placeholder="Genre (e.g., Fantasy)">
+          <input id="seriesColorInput" class="form-input" type="color" value="#6366F1" style="padding:2px;height:36px;cursor:pointer">
+        </div>
+      </div>
+      <div id="seriesList"></div>
+    </aside>
+  </div>
+</div>
+
+<div class="view" id="view-admin" style="display:none">
+  <div class="layout" id="adminLayout">
+    <aside class="sidebar" style="max-width:100%;flex:1">
+      <div class="stats-grid" id="adminStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px"></div>
+      <div id="adminContent"><p>Loading admin...</p></div>
+    </aside>
+  </div>
+</div>
+
+<!-- View: Editor -->
+<div class="view" id="view-editor" style="display:none">
+  <style>
+    .editor-layout { display:flex; height:calc(100vh - 64px - 48px); }
+    .editor-sidebar { width:260px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+    .editor-sidebar-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .editor-sidebar-header h3 { font-size:13px; font-weight:600; color:var(--text-primary); }
+    .editor-chapter-list { flex:1; overflow-y:auto; padding:8px; }
+    .editor-chapter-item { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; font-size:13px; color:var(--text-secondary); margin-bottom:2px; }
+    .editor-chapter-item:hover { background:var(--surface-hover); color:var(--text-primary); }
+    .editor-chapter-item.active { background:rgba(99,102,241,.1); color:var(--accent-1); font-weight:600; }
+    .editor-chapter-num { width:22px; height:22px; border-radius:50%; background:var(--border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+    .editor-chapter-item.active .editor-chapter-num { background:var(--accent-1); color:#fff; }
+    .editor-chapter-title { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .editor-main { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg); }
+    .editor-toolbar { padding:8px 16px; border-bottom:1px solid var(--border); background:var(--surface); display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+    .editor-toolbar-btn { padding:6px 10px; border:none; background:transparent; color:var(--text-secondary); border-radius:4px; cursor:pointer; font-size:13px; font-family:var(--font); transition:all .15s; }
+    .editor-toolbar-btn:hover { background:var(--surface-hover); color:var(--text-primary); }
+    .editor-toolbar-btn.active { background:rgba(99,102,241,.15); color:var(--accent-1); }
+    .editor-toolbar-sep { width:1px; height:20px; background:var(--border); margin:0 4px; }
+    .editor-content { flex:1; overflow-y:auto; padding:24px 48px; max-width:860px; margin:0 auto; width:100%; }
+    .editor-content:focus { outline:none; }
+    .editor-content h1 { font-size:24px; font-weight:700; margin-bottom:12px; color:var(--text-primary); }
+    .editor-content h2 { font-size:20px; font-weight:600; margin-bottom:10px; margin-top:20px; color:var(--text-primary); }
+    .editor-content p { font-size:15px; line-height:1.7; margin-bottom:12px; color:var(--text-secondary); }
+    .editor-header { display:flex; align-items:center; gap:12px; padding:10px 24px; background:var(--surface); border-bottom:1px solid var(--border); }
+    .editor-header-title { font-size:14px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .editor-chapter-title-input { width:100%; padding:10px 16px; font-size:15px; font-weight:600; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text-primary); font-family:var(--font); outline:none; transition:border-color .2s; }
+    .editor-chapter-title-input:focus { border-bottom-color:var(--accent-1); }
+    .editor-section { margin-bottom:16px; border:1px solid transparent; border-radius:var(--radius-sm); padding:8px; transition:border-color .2s; }
+    .editor-section:hover { border-color:var(--border); }
+    .editor-section-heading { width:100%; padding:6px 8px; font-size:16px; font-weight:600; background:transparent; border:none; color:var(--text-primary); font-family:var(--font); outline:none; }
+    .editor-section-content { width:100%; min-height:60px; padding:8px; font-size:14px; line-height:1.7; background:transparent; border:none; color:var(--text-secondary); font-family:var(--font); outline:none; resize:vertical; }
+    @media(max-width:768px){ .editor-layout { flex-direction:column; } .editor-sidebar { width:100%; max-height:140px; } .editor-content { padding:16px; } }
+  </style>
+  <div class="editor-header">
+    <button class="btn btn-sm btn-secondary" onclick="navigate('#home');resetUI()">← Back</button>
+    <span class="editor-header-title" id="editorBookTitle">Loading...</span>
+    <button class="btn btn-sm btn-secondary" onclick="editorPreview()" id="editorPreviewBtn">Preview</button>
+    <button class="btn btn-primary btn-sm" onclick="editorSave()" id="editorSaveBtn">💾 Save</button>
+    <span id="editorSaveStatus" style="font-size:12px;color:var(--text-muted)"></span>
+  </div>
+  <div class="editor-layout">
+    <aside class="editor-sidebar">
+      <div class="editor-sidebar-header">
+        <h3>Chapters</h3>
+        <span id="editorChapterCount" style="font-size:11px;color:var(--text-muted)">0</span>
+      </div>
+      <div class="editor-chapter-list" id="editorChapterList"></div>
+    </aside>
+    <div class="editor-main">
+      <div class="editor-toolbar">
+        <button class="editor-toolbar-btn" onclick="execCmd('bold')" title="Bold"><strong>B</strong></button>
+        <button class="editor-toolbar-btn" onclick="execCmd('italic')" title="Italic"><em>I</em></button>
+        <button class="editor-toolbar-btn" onclick="execCmd('underline')" title="Underline"><u>U</u></button>
+        <span class="editor-toolbar-sep"></span>
+        <button class="editor-toolbar-btn" onclick="execCmd('formatBlock','h1')" title="Heading 1">H1</button>
+        <button class="editor-toolbar-btn" onclick="execCmd('formatBlock','h2')" title="Heading 2">H2</button>
+        <button class="editor-toolbar-btn" onclick="execCmd('formatBlock','p')" title="Paragraph">¶</button>
+        <span class="editor-toolbar-sep"></span>
+        <button class="editor-toolbar-btn" onclick="execCmd('insertUnorderedList')" title="Bullet list">•</button>
+        <button class="editor-toolbar-btn" onclick="execCmd('insertOrderedList')" title="Numbered list">1.</button>
+        <span class="editor-toolbar-sep"></span>
+        <button class="editor-toolbar-btn" onclick="execCmd('undo')" title="Undo">↩</button>
+        <button class="editor-toolbar-btn" onclick="execCmd('redo')" title="Redo">↪</button>
+      </div>
+      <div class="editor-content" id="editorContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+const STEPS = [
+  {id:'analysis', label:'Analysis', icon:'🔍'},
+  {id:'structure', label:'Structure', icon:'📐'},
+  {id:'research', label:'Research', icon:'📊'},
+  {id:'editorial', label:'Editorial', icon:'✍️'},
+  {id:'factcheck', label:'Fact Check', icon:'✓'},
+  {id:'design', label:'Design', icon:'🎨'},
+  {id:'infographics', label:'Infographics', icon:'📈'},
+  {id:'cover', label:'Cover Art', icon:'🖼️'},
+  {id:'finalize', label:'Finalize', icon:'🏁'},
+];
+
+let templates = {};
+let currentType = 'ebook';
+let currentTemplate = 'minimal';
+let currentJobId = null;
+let pollTimer = null; // legacy, kept for batch fallback
+
+// Init
+async function init() {
+  await loadProviders();
+  await loadTemplates();
+  renderTemplates('ebook');
+  renderFormatChips('ebook');
+  renderProgressSteps();
+  setupEventListeners();
+  loadCustomTemplates();
+}
+
+async function loadProviders() {
+  try {
+    const res = await fetch(API + '/api/providers');
+    const providers = await res.json();
+    const sel = document.getElementById('providerSelect');
+    sel.innerHTML = providers.map(p =>
+      `<option value="${p.id}">${p.id}</option>`
+    ).join('');
+    // Check each provider
+    providers.forEach(p => checkProvider(p.id));
+  } catch(e) { console.error('Providers load failed', e); }
+}
+
+async function checkProvider(id) {
+  try {
+    const res = await fetch(API + `/api/health`);
+    const sel = document.getElementById('providerSelect');
+    const opt = sel.querySelector(`option[value="${id}"]`);
+    // Simple heuristic: if provider has a key configured, it's available
+    // We check by trying to fetch providers list (which lists all configured providers)
+    if (opt) {
+      opt.dataset.online = '1';
+      updateProviderIndicator();
+    }
+  } catch(e) {}
+}
+
+function updateProviderIndicator() {
+  const sel = document.getElementById('providerSelect');
+  const opt = sel.options[sel.selectedIndex];
+  const dot = document.getElementById('hdrProviderDot');
+  const name = document.getElementById('hdrProviderName');
+  name.textContent = sel.value;
+  dot.className = 'provider-indicator' + (opt && opt.dataset.online ? ' online' : ' offline');
+}
+
+async function loadTemplates() {
+  try {
+    const res = await fetch(API + '/api/templates');
+    templates = await res.json();
+  } catch(e) {
+    // fallback
+    templates = {
+      ebook: [{id:'minimal',name:'Minimal',desc:'Clean layout',color:'#1a1a2e',icon:'📄'},{id:'professional',name:'Professional',desc:'Corporate design',color:'#0f3460',icon:'💼'},{id:'creative',name:'Creative',desc:'Bold layout',color:'#533483',icon:'🎨'},{id:'academic',name:'Academic',desc:'Formal structure',color:'#2d4059',icon:'🎓'}],
+      website: [{id:'landing',name:'Landing Page',desc:'High-conversion',color:'#1a1a2e',icon:'🚀'},{id:'blog',name:'Blog',desc:'Content-focused',color:'#0f3460',icon:'✍️'}],
+      'landing-page': [{id:'startup',name:'Startup',desc:'Modern launch',color:'#0f3460',icon:'⚡'},{id:'saas',name:'SaaS',desc:'Software product',color:'#1a1a2e',icon:'☁️'}],
+      'blog-post': [{id:'story',name:'Story',desc:'Narrative layout',color:'#1a1a2e',icon:'📖'},{id:'tutorial',name:'Tutorial',desc:'Step-by-step',color:'#0f3460',icon:'🔧'}],
+      'interactive-book': [{id:'minimal',name:'Minimal Reader',desc:'Clean reading experience',color:'#1a1a2e',icon:'📖'},{id:'modern',name:'Modern Reader',desc:'Contemporary layout',color:'#16213e',icon:'✨'},{id:'dark',name:'Dark Reader',desc:'Dark-themed immersive',color:'#0B0F1A',icon:'🌙'}]
+    };
+  }
+}
+
+function renderTemplates(type) {
+  const grid = document.getElementById('templateGrid');
+  const list = templates[type] || templates.ebook || [];
+  grid.innerHTML = list.map(t => `
+    <div class="template-card${t.id === currentTemplate ? ' active' : ''}" data-id="${t.id}" onclick="selectTemplate('${t.id}')">
+      <div class="template-card-preview" style="background:${t.color};overflow:hidden;position:relative">
+        <iframe src="${API}/api/template-preview/${t.id}" loading="lazy" style="position:absolute;top:-10px;left:-10px;width:calc(100% + 20px);height:calc(100% + 20px);border:none;transform:scale(0.28);transform-origin:0 0;pointer-events:none" title="${t.name} preview"></iframe>
+      </div>
+      <div class="template-card-name">${t.name}</div>
+      <div class="template-card-desc">${t.desc || ''}</div>
+      <div class="template-card-check"><svg viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="white" stroke-width="2"/></svg></div>
+    </div>
+  `).join('');
+  // Set first as default if current not found
+  if (!list.find(t => t.id === currentTemplate) && list.length) {
+    currentTemplate = list[0].id;
+    renderTemplates(type);
+  }
+}
+
+function selectTemplate(id) {
+  currentTemplate = id;
+  document.querySelectorAll('.template-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === id);
+  });
+}
+
+function renderFormatChips(type) {
+  const chips = document.getElementById('formatChips');
+  const formats = {
+    ebook: [{id:'pdf', label:'PDF'}, {id:'epub', label:'EPUB'}, {id:'docx', label:'DOCX'}],
+    website: [{id:'website', label:'HTML'}],
+    'landing-page': [{id:'website', label:'HTML'}],
+    'blog-post': [{id:'website', label:'HTML'}],
+    'interactive-book': [{id:'website', label:'Interactive HTML'}],
+  };
+  const list = formats[type] || formats.ebook;
+  chips.innerHTML = list.map(f =>
+    `<span class="format-chip active">${f.label}</span>`
+  ).join('');
+}
+
+function renderProgressSteps() {
+  const container = document.getElementById('progressSteps');
+  container.innerHTML = STEPS.map(s =>
+    `<div class="progress-step" data-step="${s.id}">
+      <span class="progress-step-icon">${s.icon}</span>
+      <div class="progress-step-label">${s.label}</div>
+    </div>`
+  ).join('');
+}
+
+function setupEventListeners() {
+  // Content type tabs
+  document.querySelectorAll('.content-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentType = tab.dataset.type;
+      currentTemplate = null;
+      renderTemplates(currentType);
+      renderFormatChips(currentType);
+    });
+  });
+
+  // File upload
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+  // Provider select
+  document.getElementById('providerSelect').addEventListener('change', updateProviderIndicator);
+
+  // Customize sync color ↔ hex
+  document.getElementById('accentColor').addEventListener('input', e => {
+    document.getElementById('accentColorHex').value = e.target.value;
+  });
+  document.getElementById('accentColorHex').addEventListener('input', e => {
+    if (/^#[0-9a-f]{6}$/i.test(e.target.value)) {
+      document.getElementById('accentColor').value = e.target.value;
+    }
+  });
+  document.getElementById('bgColor').addEventListener('input', e => {
+    document.getElementById('bgColorHex').value = e.target.value;
+  });
+  document.getElementById('bgColorHex').addEventListener('input', e => {
+    if (/^#[0-9a-f]{6}$/i.test(e.target.value)) {
+      document.getElementById('bgColor').value = e.target.value;
+    }
+  });
+
+  // Generate
+  document.getElementById('generateBtn').addEventListener('click', generate);
+  document.getElementById('batchBtn').addEventListener('click', generateBatch);
+}
+
+function toggleBatchMode() {
+  const batch = document.getElementById('batchMode').checked;
+  document.getElementById('batchBtn').style.display = batch ? '' : 'none';
+  document.getElementById('generateBtn').style.display = batch ? 'none' : '';
+  if (batch) {
+    document.querySelector('.drop-zone-hint').textContent = 'Batch: each file becomes a separate ebook';
+  } else {
+    document.querySelector('.drop-zone-hint').textContent = 'Supports .txt .md .docx .pdf (multiple)';
+  }
+}
+
+async function generateBatch() {
+  const btn = document.getElementById('batchBtn');
+  if (uploadedFiles.length === 0) { alert('Upload files for batch generation'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating...';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('errorCard').classList.remove('visible');
+  document.getElementById('resultCard').classList.remove('visible');
+
+  try {
+    const form = new FormData();
+    uploadedFiles.forEach(f => form.append('files', f));
+    let batchStyle = currentTemplate;
+    if (batchStyle.startsWith('custom_')) batchStyle = batchStyle.replace('custom_', '');
+    form.append('style', batchStyle);
+    form.append('provider', document.getElementById('providerSelect').value);
+    form.append('content_type', currentType);
+    form.append('audience', document.getElementById('audienceInput').value);
+    form.append('tone', document.getElementById('toneInput').value);
+    form.append('chapters', document.getElementById('chaptersInput').value);
+    form.append('keywords', document.getElementById('keywordsInput').value);
+    form.append('language', document.getElementById('languageInput').value);
+
+    const res = await fetch(API + '/api/generate-batch', {method: 'POST', body: form});
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById('statusText').textContent = `${data.count} jobs queued`;
+    // Show batch results
+    btn.disabled = false;
+    btn.innerHTML = '<span class="btn-icon">📦</span> Generate All';
+    document.getElementById('resultCard').classList.add('visible');
+    document.getElementById('resultTitle').textContent = `📦 ${data.count} Batch Jobs Queued`;
+    document.getElementById('resultMeta').textContent = `${data.count} files submitted for batch generation`;
+    document.getElementById('resultFormats').innerHTML = data.jobs.map(j =>
+      `<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span>${j.filename}</span>
+        <span style="font-family:monospace;color:var(--accent-1);font-size:11px">${j.job_id.slice(0,8)}...</span>
+      </div>`
+    ).join('');
+
+    // Poll all jobs
+    data.jobs.forEach(j => startPolling(j.job_id));
+  } catch(e) {
+    showError(e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<span class="btn-icon">📦</span> Generate All';
+  }
+}
+
+function toggleCustomize() {
+  const card = document.getElementById('customizeCard');
+  const btn = document.getElementById('customizeToggleBtn');
+  const shown = card.style.display !== 'none';
+  card.style.display = shown ? 'none' : '';
+  btn.textContent = shown ? 'Customize' : 'Hide';
+}
+
+function resetCustomize() {
+  document.getElementById('accentColor').value = '#6366F1';
+  document.getElementById('accentColorHex').value = '#6366F1';
+  document.getElementById('bgColor').value = '#FFFFFF';
+  document.getElementById('bgColorHex').value = '#FFFFFF';
+  document.getElementById('headingFont').value = '';
+  document.getElementById('bodyFont').value = '';
+}
+
+let uploadedFiles = [];
+function handleFile(file) {
+  const valid = ['.txt', '.md', '.docx', '.pdf'];
+  const ext = '.' + file.name.split('.').pop().toLowerCase();
+  if (!valid.includes(ext)) {
+    alert('File not supported: ' + file.name + '. Valid: .txt .md .docx .pdf');
+    return;
+  }
+  // Avoid duplicates
+  if (!uploadedFiles.find(f => f.name === file.name && f.size === file.size)) {
+    uploadedFiles.push(file);
+  }
+  renderFileList();
+}
+
+function renderFileList() {
+  const container = document.getElementById('fileList');
+  if (uploadedFiles.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = uploadedFiles.map((f, i) => {
+    const icon = f.name.endsWith('.pdf') ? '📕' : f.name.endsWith('.docx') ? '📘' : f.name.endsWith('.md') ? '📝' : '📄';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px;color:var(--text-secondary)">
+      <span>${icon}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span>
+      <span style="cursor:pointer;color:var(--error);font-size:14px;padding:0 4px" onclick="removeFile(${i})">×</span>
+    </div>`;
+  }).join('');
+}
+
+function removeFile(i) {
+  uploadedFiles.splice(i, 1);
+  renderFileList();
+}
+
+async function generate() {
+  const btn = document.getElementById('generateBtn');
+  const topic = document.getElementById('topicInput').value.trim();
+  if (!topic && uploadedFiles.length === 0) {
+    alert('Enter a topic or upload files');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating...';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('errorCard').classList.remove('visible');
+  document.getElementById('resultCard').classList.remove('visible');
+  document.getElementById('progressSection').classList.add('visible');
+  resetProgress();
+
+  try {
+    const form = new FormData();
+
+    // Attach files
+    if (uploadedFiles.length > 0) {
+      uploadedFiles.forEach(f => form.append('files', f));
+    } else {
+      // Create a text file from topic input
+      const file = new File([topic], 'content.txt', {type: 'text/plain'});
+      form.append('files', file);
+    }
+
+    let genStyle = currentTemplate;
+    if (genStyle.startsWith('custom_')) {
+      genStyle = genStyle.replace('custom_', '');
+      form.append('custom_template', genStyle);
+    }
+    form.append('style', genStyle);
+    form.append('provider', document.getElementById('providerSelect').value);
+    form.append('content_type', currentType);
+    form.append('audience', document.getElementById('audienceInput').value);
+    form.append('tone', document.getElementById('toneInput').value);
+    form.append('chapters', document.getElementById('chaptersInput').value);
+    form.append('keywords', document.getElementById('keywordsInput').value);
+    form.append('language', document.getElementById('languageInput').value);
+
+    // Customization overrides
+    const accentColor = document.getElementById('accentColorHex').value;
+    const bgColor = document.getElementById('bgColorHex').value;
+    const headingFont = document.getElementById('headingFont').value;
+    const bodyFont = document.getElementById('bodyFont').value;
+    if (accentColor !== '#6366F1') form.append('accent_color', accentColor);
+    if (bgColor !== '#FFFFFF') form.append('bg_color', bgColor);
+    if (headingFont) form.append('heading_font', headingFont);
+    if (bodyFont) form.append('body_font', bodyFont);
+
+    const res = await fetch(API + '/api/generate', {method: 'POST', body: form});
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    currentJobId = data.job_id;
+    document.getElementById('statusText').textContent = 'Job: ' + currentJobId.slice(0,8) + '...';
+    startPolling(currentJobId);
+
+  } catch(e) {
+    showError(e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<span class="btn-icon">⚡</span> Generate';
+  }
+}
+
+async function uploadCustomTemplate() {
+  const input = document.getElementById('templateUpload');
+  if (!input.files.length) return alert('Select an .html file');
+  const form = new FormData();
+  form.append('file', input.files[0]);
+  form.append('name', input.files[0].name.replace('.html', ''));
+  try {
+    const res = await fetch(API + '/api/templates/upload', {method:'POST', body: form});
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    loadCustomTemplates();
+  } catch(e) { alert('Upload failed: ' + e.message); }
+}
+
+async function generateMarketing() {
+  const jobId = document.getElementById('marketingJobId').value.trim();
+  if (!jobId) return alert('Enter a job ID');
+  const container = document.getElementById('marketingResults');
+  container.innerHTML = '<p>Generating marketing materials... (this may take a minute)</p>';
+  try {
+    const res = await fetch(API + '/api/marketing/generate/' + jobId);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    container.innerHTML = '';
+    // Amazon Listing
+    if (data.amazon_listing) {
+      const al = data.amazon_listing;
+      let html = '<div class="sidebar-card"><h4>Amazon KDP Listing</h4>';
+      html += `<div class="form-group"><label class="form-label">Title</label><div style="font-size:14px">${al.title}</div></div>`;
+      if (al.subtitle) html += `<div class="form-group"><label class="form-label">Subtitle</label><div>${al.subtitle}</div></div>`;
+      html += `<div class="form-group"><label class="form-label">Description</label><textarea rows="6" style="width:100%;font-size:12px" readonly>${al.description}</textarea><button class="btn btn-sm btn-secondary" onclick="copyText(this.previousElementSibling)" style="margin-top:4px">Copy</button></div>`;
+      if (al.keywords) html += `<div class="form-group"><label class="form-label">Keywords</label><div>${al.keywords}</div></div>`;
+      if (al.categories) html += `<div class="form-group"><label class="form-label">Categories</label><div>${al.categories.join(', ')}</div></div>`;
+      if (al.price_suggestion) html += `<div class="form-group"><label class="form-label">Suggested Price</label><div>$${al.price_suggestion}</div></div>`;
+      html += '</div>';
+      container.innerHTML += html;
+    }
+    // Social Media
+    if (data.social_media) {
+      const sm = data.social_media;
+      let html = '<div class="sidebar-card"><h4>Social Media</h4>';
+      const renderPosts = (label, posts) => {
+        html += `<div class="form-group"><label class="form-label">${label}</label>`;
+        (posts || []).forEach(p => {
+          html += `<textarea rows="2" style="width:100%;font-size:12px;margin-bottom:4px" readonly>${p}</textarea>`;
+        });
+        html += '</div>';
+      };
+      renderPosts('Twitter', sm.twitter);
+      renderPosts('LinkedIn', sm.linkedin);
+      renderPosts('Instagram', sm.instagram);
+      renderPosts('Facebook', sm.facebook);
+      html += '</div>';
+      container.innerHTML += html;
+    }
+    // Press Release
+    if (data.press_release) {
+      const pr = data.press_release;
+      let html = '<div class="sidebar-card"><h4>Press Release</h4>';
+      html += `<div class="form-group"><label class="form-label">Headline</label><div style="font-size:16px;font-weight:700">${pr.headline}</div></div>`;
+      html += `<div class="form-group"><label class="form-label">Body</label><textarea rows="8" style="width:100%;font-size:12px" readonly>${pr.body}</textarea><button class="btn btn-sm btn-secondary" onclick="copyText(this.previousElementSibling)" style="margin-top:4px">Copy</button></div>`;
+      if (pr.talking_points) html += `<div class="form-group"><label class="form-label">Talking Points</label><ul>${pr.talking_points.map(t => `<li style="font-size:12px">${t}</li>`).join('')}</ul></div>`;
+      html += '</div>';
+      container.innerHTML += html;
+    }
+    // Email Sequence
+    if (data.email_sequence && data.email_sequence.emails) {
+      let html = '<div class="sidebar-card"><h4>Email Launch Sequence</h4>';
+      data.email_sequence.emails.forEach((e, i) => {
+        html += `<div class="form-group"><label class="form-label">Email ${i+1}: ${e.subject}</label>`;
+        if (e.preview) html += `<div style="font-size:11px;color:var(--text-muted)">Preview: ${e.preview}</div>`;
+        html += `<textarea rows="4" style="width:100%;font-size:12px" readonly>${e.body}</textarea></div>`;
+      });
+      html += '</div>';
+      container.innerHTML += html;
+    }
+  } catch(e) {
+    container.innerHTML = `<p style="color:var(--error)">Failed: ${e.message}</p>`;
+  }
+}
+
+copyText = (el) => { navigator.clipboard.writeText(el.value || el.textContent); };
+
+// ─── Book Coach ─────────────────────────────────────
+let coachSessionId = null;
+async function startCoach() {
+  document.getElementById('coachStartBtn').style.display = 'none';
+  document.getElementById('coachInputArea').style.display = '';
+  try {
+    const res = await fetch(API + '/api/coach/start', {method:'POST'});
+    const data = await res.json();
+    coachSessionId = data.session_id;
+    addCoachMsg('assistant', data.question);
+  } catch(e) { addCoachMsg('assistant', 'Error: ' + e.message); }
+}
+
+async function sendCoachAnswer() {
+  const input = document.getElementById('coachAnswer');
+  const answer = input.value.trim();
+  if (!answer || !coachSessionId) return;
+  addCoachMsg('user', answer);
+  input.value = '';
+  try {
+    const res = await fetch(API + '/api/coach/answer?session_id=' + coachSessionId + '&answer=' + encodeURIComponent(answer), {method:'POST'});
+    const data = await res.json();
+    if (data.done) {
+      addCoachMsg('assistant', '🎉 Book generated! Session complete.');
+      document.getElementById('coachInputArea').style.display = 'none';
+      if (data.book && data.book.title) {
+        addCoachMsg('assistant', '📖 Title: ' + data.book.title + (data.book.subtitle ? ' — ' + data.book.subtitle : ''));
+        addCoachMsg('assistant', '✍️ Author: ' + (data.book.author || 'AI Design Engine'));
+        addCoachMsg('assistant', '📚 Chapters: ' + (data.book.chapters || []).length);
+        // Queue a generation job
+        addCoachMsg('assistant', '⏳ Queuing book generation...');
+        queueCoachBook(data.book);
+      }
+    } else {
+      addCoachMsg('assistant', data.question);
+    }
+  } catch(e) { addCoachMsg('assistant', 'Error: ' + e.message); }
+}
+
+async function queueCoachBook(book) {
+  const form = new FormData();
+  const file = new File([JSON.stringify(book)], 'coach-book.json', {type:'application/json'});
+  form.append('files', file);
+  form.append('style', 'modern');
+  form.append('content_type', 'ebook');
+  try {
+    const res = await fetch(API + '/api/generate', {method:'POST', body: form});
+    const data = await res.json();
+    addCoachMsg('assistant', '✅ Job queued: ' + data.job_id.slice(0,8) + '...');
+    if (data.job_id) { currentJobId = data.job_id; startPolling(data.job_id); }
+  } catch(e) { addCoachMsg('assistant', 'Queue failed: ' + e.message); }
+}
+
+function addCoachMsg(role, text) {
+  const chat = document.getElementById('coachChat');
+  chat.innerHTML += `<div style="margin-bottom:8px;padding:8px 12px;border-radius:8px;font-size:13px;${role === 'user' ? 'background:var(--accent-1);color:#fff;margin-left:40px' : 'background:var(--surface);border:1px solid var(--border);margin-right:40px'}">${text}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// ─── Direct Publishing ──────────────────────────────
+async function loadPublishInfo() {
+  const jobId = document.getElementById('publishJobId').value.trim();
+  if (!jobId) return alert('Enter a job ID');
+  const results = document.getElementById('publishResults');
+  const platforms = document.getElementById('publishPlatforms');
+  results.innerHTML = '<p>Loading...</p>';
+  try {
+    const [metaRes, platRes] = await Promise.all([
+      fetch(API + '/api/publish/metadata/' + jobId, {method:'POST'}),
+      fetch(API + '/api/publish/platforms')
+    ]);
+    const meta = await metaRes.json();
+    const plats = await platRes.json();
+    if (meta.error) throw new Error(meta.error);
+    results.innerHTML = '';
+    // ONIX
+    if (meta.onix) {
+      results.innerHTML += `<div class="sidebar-card"><h4>📄 ONIX 3.0 Metadata</h4>
+        <textarea rows="6" style="width:100%;font-size:11px;font-family:monospace" readonly>${meta.onix}</textarea>
+        <button class="btn btn-sm btn-secondary" onclick="copyText(this.previousElementSibling)" style="margin-top:4px">Copy</button></div>`;
+    }
+    // KDP
+    if (meta.kdp) {
+      let html = '<div class="sidebar-card"><h4>📕 Amazon KDP</h4>';
+      html += `<div class="form-group"><label class="form-label">Title</label><div>${meta.kdp.title}</div></div>`;
+      html += `<div class="form-group"><label class="form-label">Author</label><div>${meta.kdp.author}</div></div>`;
+      html += `<div class="form-group"><label class="form-label">Description</label><textarea rows="3" style="width:100%;font-size:12px" readonly>${meta.kdp.description}</textarea></div>`;
+      if (meta.kdp.format_recommendations) {
+        html += '<div class="form-group"><label class="form-label">Format Guide</label><ul style="font-size:12px">' +
+          Object.entries(meta.kdp.format_recommendations).map(([k,v]) => `<li><strong>${k}:</strong> ${v}</li>`).join('') + '</ul></div>';
+      }
+      html += '</div>';
+      results.innerHTML += html;
+    }
+    // Google Play
+    if (meta.google_play) {
+      results.innerHTML += `<div class="sidebar-card"><h4>📗 Google Play Books</h4>
+        <div style="font-size:12px"><pre>${JSON.stringify(meta.google_play, null, 2)}</pre></div></div>`;
+    }
+    // Polish
+    if (meta.polish) {
+      let html = '<div class="sidebar-card"><h4>🇵🇱 Polish Platforms</h4><ul style="font-size:13px">';
+      meta.polish.platformy.forEach(p => { html += `<li>${p}</li>`; });
+      html += '</ul>';
+      if (meta.polish.wymagania_techniczne) {
+        html += '<div class="form-group"><label class="form-label">Technical Requirements</label><ul style="font-size:12px">' +
+          Object.entries(meta.polish.wymagania_techniczne).map(([k,v]) => `<li><strong>${k}:</strong> ${v}</li>`).join('') + '</ul></div>';
+      }
+      html += '</div>';
+      results.innerHTML += html;
+    }
+    // Platforms
+    platforms.style.display = '';
+    document.getElementById('platformList').innerHTML = plats.map(p =>
+      `      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span>${p.icon}</span>
+        <div style="flex:1"><strong>${p.name}</strong>
+          <div style="font-size:11px;color:var(--text-muted)">${p.cost || ''}</div>
+          <div style="font-size:11px;color:var(--text-muted)">🌍 ${p.reach || 'Global'} · Formats: ${(p.formats||[]).join(', ')}</div>
+        </div>
+        <a href="${p.guide_url}" target="_blank" class="btn btn-sm btn-secondary" style="font-size:10px">Guide</a>
+      </div>`
+    ).join('');
+  } catch(e) { results.innerHTML = `<p style="color:var(--error)">Failed: ${e.message}</p>`; }
+}
+
+async function loadAdminView() {
+  setTimeout(() => navigate('#admin'), 50);
+  const statsEl = document.getElementById('adminStats');
+  const contentEl = document.getElementById('adminContent');
+  try {
+    const res = await fetch(API + '/api/admin/jobs');
+    const jobs = await res.json();
+    const total = jobs.length;
+    const done = jobs.filter(j => j.status === 'done').length;
+    const failed = jobs.filter(j => j.status === 'failed').length;
+    const processing = jobs.filter(j => j.status === 'processing' || j.status === 'queued').length;
+    const today = jobs.filter(j => {
+      const d = new Date(j.created_at);
+      return d.toDateString() === new Date().toDateString();
+    }).length;
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--success)">${done}</div><div class="stat-label">Done</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--error)">${failed}</div><div class="stat-label">Failed</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent-1)">${processing}</div><div class="stat-label">Active</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--warning)">${today}</div><div class="stat-label">Today</div></div>`;
+    contentEl.innerHTML = `<input type="text" id="adminSearch" placeholder="Search..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:12px" oninput="filterAdminTable()">
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:var(--surface);text-align:left">
+        <th style="padding:8px">ID</th><th style="padding:8px">Status</th><th style="padding:8px">Topic</th><th style="padding:8px">Style</th><th style="padding:8px">Type</th><th style="padding:8px">Actions</th>
+      </tr></thead><tbody id="adminTableBody"></tbody></table></div>`;
+    renderAdminTable(jobs);
+  } catch(e) {
+    contentEl.innerHTML = '<p style="color:var(--error)">Failed to load admin: ' + e.message + '</p>';
+  }
+  return false; // prevent link navigation
+}
+
+function renderAdminTable(jobs) {
+  const tbody = document.getElementById('adminTableBody');
+  const search = document.getElementById('adminSearch');
+  const q = search ? search.value.toLowerCase() : '';
+  const filtered = q ? jobs.filter(j => (j.id + j.topic + j.style + j.content_type).toLowerCase().includes(q)) : jobs;
+  tbody.innerHTML = filtered.map(j => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px;font-family:monospace;font-size:11px">${j.id.slice(0,8)}...</td>
+      <td style="padding:8px"><span class="status-badge status-${j.status}">${j.status}</span></td>
+      <td style="padding:8px">${j.topic || '-'}</td>
+      <td style="padding:8px">${j.style}</td>
+      <td style="padding:8px">${j.content_type}</td>
+      <td style="padding:8px">
+        ${j.status === 'done' ? `<a href="${API}/api/download/${j.id}?format=pdf" class="btn btn-sm btn-primary" style="font-size:10px">PDF</a> ` : ''}
+        ${j.status === 'done' ? `<a href="${API}/api/preview/${j.id}" class="btn btn-sm btn-secondary" style="font-size:10px" target="_blank">Preview</a> ` : ''}
+        <button class="btn btn-sm btn-secondary" style="font-size:10px" onclick="fetch('${API}/api/admin/jobs/${j.id}',{method:'DELETE'}).then(()=>loadAdminView())">Del</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterAdminTable() {
+  fetch(API + '/api/admin/jobs').then(r => r.json()).then(jobs => renderAdminTable(jobs));
+}
+
+async function loadCustomTemplates() {
+  try {
+    const res = await fetch(API + '/api/templates/custom');
+    const list = await res.json();
+    const el = document.getElementById('customTemplateList');
+    if (!list.length) { el.innerHTML = '<em>No custom templates yet</em>'; return; }
+    el.innerHTML = list.map(t =>
+      `<label style="display:block;padding:4px 0;cursor:pointer">
+        <input type="radio" name="customTemplate" value="${t.id}" onchange="selectCustomTemplate('${t.id}')">
+        ${t.name}
+      </label>`
+    ).join('');
+    if (list.length > 0) el.innerHTML += '<div style="font-size:10px;color:var(--text-muted);margin-top:4px">Select to use as template</div>';
+  } catch(e) {}
+}
+
+function selectCustomTemplate(id) {
+  currentTemplate = 'custom_' + id;
+  const grid = document.getElementById('templateGrid');
+  grid.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+}
+
+async function generateATheme() {
+  const desc = document.getElementById('aiThemeDesc').value.trim();
+  if (!desc) return alert('Describe your theme first');
+  const btn = document.querySelector('[onclick="generateATheme()"]');
+  btn.disabled = true; btn.textContent = 'Generating...';
+  try {
+    const res = await fetch(API + '/api/themes/generate?description=' + encodeURIComponent(desc));
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const preview = document.getElementById('aiThemePreview');
+    preview.style.display = 'block';
+    preview.innerHTML = `<strong>${data.theme.name}</strong> (${data.theme.vibe})<br>
+      <span style="color:${data.theme.colors.accent}">Accent</span> ·
+      <span style="background:${data.theme.colors.background};color:${data.theme.colors.text};padding:0 4px">Bg</span> ·
+      <code style="font-size:10px">${data.theme.id}</code>
+      <button class="btn btn-sm btn-accent" style="margin-top:4px;width:100%;font-size:10px">Apply Theme</button>`;
+    document.getElementById('accentColor').value = data.theme.colors.accent;
+    document.getElementById('accentColorHex').value = data.theme.colors.accent;
+  } catch(e) {
+    alert('Theme generation failed: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = 'Generate Theme';
+}
+
+let pollStartTime = null;
+let activeJobs = {};
+let wsConn = null;
+let wsFallbackTimer = null;
+
+function startPolling(jobId, isBatch = false) {
+  pollStartTime = Date.now();
+  document.getElementById('cancelBtn').style.display = 'block';
+  document.getElementById('cancelBtn').onclick = () => cancelJob(jobId);
+
+  // Try WebSocket first
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${location.host}/ws/progress/${jobId}`;
+  try {
+    wsConn = new WebSocket(wsUrl);
+    wsConn.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      updateProgressUI(data, jobId);
+    };
+    wsConn.onclose = () => { wsConn = null; startFallbackPoll(jobId); };
+    wsConn.onerror = () => { wsConn = null; startFallbackPoll(jobId); };
+  } catch(e) {
+    startFallbackPoll(jobId);
+  }
+}
+
+function startFallbackPoll(jobId) {
+  if (wsFallbackTimer) return;
+  wsFallbackTimer = setInterval(() => {
+    fetch(API + '/api/status/' + jobId)
+      .then(r => r.json())
+      .then(data => updateProgressUI(data, jobId))
+      .catch(() => {});
+  }, 2000);
+}
+
+async function cancelJob(jobId) {
+  document.getElementById('cancelBtn').style.display = 'none';
+  try {
+    await fetch(API + '/api/cancel/' + jobId, { method: 'POST' });
+  } catch(e) {}
+}
+
+function updateProgressUI(data, jobId) {
+  const progress = data.progress || 0;
+  document.getElementById('progressFill').style.width = progress + '%';
+  document.getElementById('progressPct').textContent = progress + '%';
+
+  // Elapsed time
+  if (pollStartTime) {
+    const elapsed = Math.floor((Date.now() - pollStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    document.getElementById('progressElapsed').textContent = (mins > 0 ? mins + 'm ' : '') + secs + 's';
+  }
+
+  // Agent name from WebSocket (fallback to range-based)
+  let agentLabel = data.agent || null;
+  if (!agentLabel) {
+    const agentNames = [
+      [0, 5, 'Queued'], [5, 25, 'Analyzing content'], [25, 30, 'Building structure'],
+      [30, 45, 'Researching'], [45, 55, 'Writing chapters'], [55, 60, 'Fact checking'],
+      [60, 62, 'Designing layout'], [62, 68, 'Creating infographics'], [68, 72, 'Generating cover art'],
+      [72, 80, 'Building ebook'], [80, 95, 'Quality check'], [95, 100, 'Exporting'],
+    ];
+    for (const [min, max, label] of agentNames) {
+      if (progress >= min && progress < max) { agentLabel = label; break; }
+    }
+  }
+  if (progress >= 100) agentLabel = 'Complete!';
+  if (data.status === 'failed') agentLabel = 'Failed';
+  if (data.status === 'cancelled') agentLabel = 'Cancelled';
+  document.getElementById('progressAgent').textContent = agentLabel;
+
+  // Update step indicators
+  const stepCount = STEPS.length;
+  const stepIndex = Math.min(Math.floor(progress / (100 / stepCount)), stepCount - 1);
+  document.querySelectorAll('.progress-step').forEach((el, i) => {
+    el.classList.toggle('done', i < stepIndex);
+    el.classList.toggle('current', i === stepIndex && data.status !== 'done' && data.status !== 'failed' && data.status !== 'cancelled');
+    el.classList.toggle('failed', (data.status === 'failed' || data.status === 'cancelled') && i === stepIndex);
+  });
+
+  if (data.status === 'done') {
+    cleanupProgress();
+    onComplete(jobId);
+  } else if (data.status === 'failed') {
+    cleanupProgress();
+    showError(data.error || 'Generation failed');
+  } else if (data.status === 'cancelled') {
+    cleanupProgress();
+    showError('Job cancelled');
+  }
+}
+
+function cleanupProgress() {
+  if (wsConn) { wsConn.close(); wsConn = null; }
+  if (wsFallbackTimer) { clearInterval(wsFallbackTimer); wsFallbackTimer = null; }
+  document.getElementById('cancelBtn').style.display = 'none';
+}
+
+async function onComplete(jobId) {
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<span class="btn-icon">⚡</span> Generate';
+  document.getElementById('statusText').textContent = '';
+
+  document.getElementById('resultCard').classList.add('visible');
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('progressPct').textContent = '100%';
+  document.getElementById('progressAgent').textContent = 'Complete!';
+
+  // Show live preview
+  try {
+    const previewRes = await fetch(API + '/api/preview/' + jobId);
+    if (previewRes.ok) {
+      const html = await previewRes.text();
+      document.getElementById('previewFrame').srcdoc = html;
+      document.getElementById('previewCard').style.display = '';
+    }
+  } catch(e) {}
+
+  // Build download links
+  const formats = {
+    ebook: [
+      {id:'pdf', label:'PDF', icon:'📕', ext:'pdf'},
+      {id:'epub', label:'EPUB', icon:'📘', ext:'epub'},
+      {id:'docx', label:'DOCX', icon:'📗', ext:'docx'},
+    ],
+    website: [{id:'website', label:'HTML', icon:'🌐', ext:'html'}],
+    'landing-page': [{id:'website', label:'HTML', icon:'🌐', ext:'html'}],
+    'blog-post': [{id:'website', label:'HTML', icon:'🌐', ext:'html'}],
+    'interactive-book': [{id:'website', label:'Interactive HTML', icon:'📖', ext:'html'}],
+  };
+
+  const list = formats[currentType] || formats.ebook;
+  const container = document.getElementById('resultFormats');
+  container.innerHTML = list.map(f =>
+    `    <a href="${API}/api/download/${jobId}?format=${f.id}" class="result-format-btn" download>
+      <span class="format-icon">${f.icon}</span>
+      Download ${f.label}
+    </a>`
+  ).join('');
+  container.innerHTML += `
+    <button class="result-format-btn" onclick="openEditor('${jobId}')" style="border-color:var(--accent-1);color:var(--accent-1)">
+      <span class="format-icon">✏️</span> Edit
+    </button>
+    <button class="result-format-btn" onclick="proofreadBook('${jobId}')" style="border-color:var(--warning);color:var(--warning)">
+      <span class="format-icon">🔍</span> Proofread
+    </button>
+    <button class="result-format-btn" onclick="betaRead('${jobId}')" style="border-color:#8B5CF6;color:#8B5CF6">
+      <span class="format-icon">🧠</span> Beta Read
+    </button>
+    <button class="result-format-btn" onclick="formatCheck('${jobId}')" style="border-color:#22C55E;color:#22C55E">
+      <span class="format-icon">✓</span> Format Check
+    </button>
+    <button class="result-format-btn" onclick="openLaunchPage('${jobId}')" style="border-color:#F59E0B;color:#F59E0B">
+      <span class="format-icon">🚀</span> Launch Page
+    </button>
+    <div style="display:flex;align-items:center;gap:8px;width:100%;margin-top:8px;flex-wrap:wrap">
+      <button class="result-format-btn" onclick="downloadPrint('${jobId}')" style="border-color:var(--success);color:var(--success);font-size:12px">
+        <span class="format-icon">🖨️</span> Print PDF
+      </button>
+      <select id="printTrimSize" style="padding:6px 10px;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:var(--font);outline:none">
+        <option value="6x9">6" x 9"</option>
+        <option value="5.5x8.5">5.5" x 8.5"</option>
+        <option value="5.25x8">5.25" x 8"</option>
+        <option value="8x10">8" x 10"</option>
+        <option value="8.5x11">8.5" x 11"</option>
+      </select>
+      <input id="printIsbn" placeholder="ISBN (optional)" style="padding:6px 10px;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:var(--font);outline:none;width:160px;flex:1;min-width:120px">
+    </div>`;
+
+  document.getElementById('resultMeta').textContent = `Template: ${currentTemplate} · ${currentType} · ${document.getElementById('languageInput').value}`;
+
+  addHistory(jobId, document.getElementById('topicInput').value || 'Generated', currentTemplate, currentType);
+}
+
+function showError(msg) {
+  document.getElementById('progressSection').classList.remove('visible');
+  document.getElementById('previewCard').style.display = 'none';
+  document.getElementById('errorCard').classList.add('visible');
+  document.getElementById('errorMsg').textContent = msg;
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<span class="btn-icon">⚡</span> Generate';
+  document.getElementById('statusText').textContent = '';
+}
+
+function resetProgress() {
+  document.querySelectorAll('.progress-step').forEach(el => {
+    el.classList.remove('done', 'current', 'failed');
+  });
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressText').textContent = 'Starting...';
+}
+
+function resetUI() {
+  document.getElementById('errorCard').classList.remove('visible');
+  document.getElementById('resultCard').classList.remove('visible');
+  document.getElementById('progressSection').classList.remove('visible');
+  document.getElementById('previewCard').style.display = 'none';
+  document.getElementById('emptyState').style.display = '';
+  currentJobId = null;
+  document.getElementById('statusText').textContent = '';
+}
+
+// History management (localStorage)
+function addHistory(jobId, topic, style, type) {
+  const history = JSON.parse(localStorage.getItem('publishHistory') || '[]');
+  history.unshift({ jobId, topic, style, type, time: Date.now() });
+  if (history.length > 20) history.length = 20;
+  localStorage.setItem('publishHistory', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = JSON.parse(localStorage.getItem('publishHistory') || '[]');
+  const container = document.getElementById('historyList');
+  const card = document.getElementById('historyCard');
+  if (history.length === 0) { card.style.display = 'none'; } else { card.style.display = ''; }
+  if (container) {
+    container.innerHTML = history.map(h => `
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <div style="flex:1;overflow:hidden">
+          <div style="font-weight:500;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.topic || 'Untitled'}</div>
+          <div style="color:var(--text-muted);font-size:10px">${h.style} · ${h.type} · ${new Date(h.time).toLocaleDateString()}</div>
+        </div>
+        <a href="${API}/api/download/${h.jobId}?format=pdf" style="color:var(--accent-1);text-decoration:none;padding:4px 8px;border:1px solid var(--border);border-radius:100px;font-size:10px">PDF</a>
+        <a href="${API}/api/preview/${h.jobId}" target="_blank" style="color:var(--text-muted);text-decoration:none;padding:4px 8px;border:1px solid var(--border);border-radius:100px;font-size:10px">Preview</a>
+      </div>
+    `).join('');
+  }
+  // Also render in full history view
+  const full = document.getElementById('historyListFull');
+  if (full) {
+    if (history.length === 0) { full.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No history yet.</p>'; return; }
+    full.innerHTML = history.map(h => `
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div style="flex:1;overflow:hidden">
+          <div style="font-weight:600;color:var(--text-primary)">${h.topic || 'Untitled'}</div>
+          <div style="color:var(--text-muted);font-size:11px">${h.style} · ${h.type} · ${new Date(h.time).toLocaleString()}</div>
+        </div>
+        <a href="${API}/api/download/${h.jobId}?format=pdf" class="btn btn-sm btn-primary" style="font-size:10px">PDF</a>
+        <a href="${API}/api/download/${h.jobId}?format=epub" class="btn btn-sm btn-secondary" style="font-size:10px">EPUB</a>
+        <a href="${API}/api/preview/${h.jobId}" target="_blank" class="btn btn-sm btn-secondary" style="font-size:10px">Preview</a>
+      </div>
+    `).join('');
+  }
+}
+
+function clearHistory() {
+  if (!confirm('Clear all history?')) return;
+  localStorage.removeItem('publishHistory');
+  renderHistory();
+}
+
+// ─── Revenue Dashboard ──────────────────────────────
+function loadRevenue() {
+  const entries = JSON.parse(localStorage.getItem('revEntries') || '[]');
+  const goal = parseFloat(localStorage.getItem('revGoal') || '1000');
+
+  // Stats
+  const total = entries.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const books = entries.length;
+  const platforms = [...new Set(entries.map(e => e.platform))].length;
+  const avg = books > 0 ? total / books : 0;
+
+  document.getElementById('revTotal').textContent = '$' + total.toFixed(0);
+  document.getElementById('revBooks').textContent = books;
+  document.getElementById('revAvg').textContent = '$' + avg.toFixed(2);
+
+  // Get current month entries for goal tracking
+  const now = new Date();
+  const thisMonth = entries.filter(e => {
+    const d = new Date(e.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthTotal = thisMonth.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const goalPct = goal > 0 ? Math.min(100, (monthTotal / goal) * 100) : 0;
+  document.getElementById('revGoal').textContent = '$' + monthTotal.toFixed(0) + ' / $' + goal.toFixed(0);
+  document.getElementById('revPlatforms').textContent = platforms;
+  document.getElementById('revGoalInput').value = goal;
+
+  // Chart
+  drawRevenueChart(entries);
+
+  // Table
+  renderRevenueTable(entries);
+}
+
+function drawRevenueChart(entries) {
+  const chart = document.getElementById('revChart');
+  const card = document.getElementById('revenueChartCard');
+  if (entries.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  // Group by month
+  const byMonth = {};
+  entries.forEach(e => {
+    const d = new Date(e.date);
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    byMonth[key] = (byMonth[key] || 0) + (parseFloat(e.amount) || 0);
+  });
+
+  const months = Object.keys(byMonth).sort();
+  const maxVal = Math.max(...Object.values(byMonth), 1);
+
+  chart.innerHTML = months.map(m => {
+    const val = byMonth[m];
+    const pct = (val / maxVal) * 100;
+    const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const [y, mo] = m.split('-');
+    const label = names[parseInt(mo) - 1] + ' ' + y.slice(2);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end">
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">$${val.toFixed(0)}</div>
+      <div style="width:100%;max-width:40px;height:${pct}%;background:linear-gradient(to top,var(--accent-1),var(--accent-3));border-radius:4px 4px 0 0;min-height:4px;transition:height .3s"></div>
+      <div style="font-size:9px;color:var(--text-muted);margin-top:4px;white-space:nowrap">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRevenueTable(entries) {
+  const table = document.getElementById('revTable');
+  const count = document.getElementById('revCount');
+  count.textContent = '(' + entries.length + ')';
+
+  if (entries.length === 0) {
+    table.innerHTML = '<p style="font-size:13px;color:var(--text-muted);padding:12px;text-align:center">No sales yet. Add your first sale above.</p>';
+    return;
+  }
+
+  // Show newest first
+  const sorted = [...entries].reverse();
+  table.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:var(--surface-hover);text-align:left">
+      <th style="padding:6px 8px">Date</th><th style="padding:6px 8px">Platform</th><th style="padding:6px 8px">Book</th><th style="padding:6px 8px;text-align:right">Amount</th><th style="padding:6px 8px"></th>
+    </tr></thead><tbody>${sorted.map((e, i) => {
+      const idx = entries.length - 1 - i;
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px;white-space:nowrap">${e.date}</td>
+        <td style="padding:6px 8px">${e.platform}</td>
+        <td style="padding:6px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.book}</td>
+        <td style="padding:6px 8px;text-align:right;font-weight:600">$${(parseFloat(e.amount) || 0).toFixed(2)}</td>
+        <td style="padding:6px 8px"><button class="btn btn-sm btn-error" style="font-size:9px;padding:2px 8px" onclick="deleteRevenueEntry(${idx})">✕</button></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function addRevenueEntry() {
+  const platform = document.getElementById('revPlatform').value;
+  const book = document.getElementById('revBookTitle').value.trim();
+  const amount = document.getElementById('revAmount').value;
+  if (!book || !amount) { alert('Enter book title and amount'); return; }
+  const entries = JSON.parse(localStorage.getItem('revEntries') || '[]');
+  entries.push({
+    date: new Date().toISOString().split('T')[0],
+    platform, book,
+    amount: parseFloat(amount),
+  });
+  localStorage.setItem('revEntries', JSON.stringify(entries));
+  document.getElementById('revBookTitle').value = '';
+  document.getElementById('revAmount').value = '';
+  loadRevenue();
+}
+
+function deleteRevenueEntry(index) {
+  const entries = JSON.parse(localStorage.getItem('revEntries') || '[]');
+  entries.splice(index, 1);
+  localStorage.setItem('revEntries', JSON.stringify(entries));
+  loadRevenue();
+}
+
+function setRevenueGoal() {
+  const goal = parseFloat(document.getElementById('revGoalInput').value) || 0;
+  localStorage.setItem('revGoal', goal.toString());
+  loadRevenue();
+}
+
+function clearRevenue() {
+  if (!confirm('Clear all revenue data?')) return;
+  localStorage.removeItem('revEntries');
+  loadRevenue();
+}
+
+function exportRevenueCSV() {
+  const entries = JSON.parse(localStorage.getItem('revEntries') || '[]');
+  if (entries.length === 0) { alert('No entries to export'); return; }
+  const header = 'Date,Platform,Book,Amount\n';
+  const rows = entries.map(e => `${e.date},${e.platform},"${e.book}",${e.amount}`).join('\n');
+  const csv = header + rows;
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'revenue_export.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Proofreader ────────────────────────────────────
+async function proofreadBook(jobId) {
+  const container = document.getElementById('resultFormats');
+  const proofreadSection = document.getElementById('proofreadResults');
+  if (proofreadSection) proofreadSection.remove();
+
+  const section = document.createElement('div');
+  section.id = 'proofreadResults';
+  section.style.cssText = 'width:100%;margin-top:8px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)';
+  section.innerHTML = '<div style="text-align:center;padding:12px"><span class="spinner"></span> Proofreading... (this may take a minute)</div>';
+  container.appendChild(section);
+
+  try {
+    const res = await fetch(API + '/api/proofread/' + jobId, {method:'POST'});
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const grade = data.overall || {};
+    let html = `<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div class="stat-card" style="flex:1;min-width:80px"><div class="stat-value" style="color:${grade.avg_grammar_score > 80 ? 'var(--success)' : 'var(--warning)'}">${grade.avg_grammar_score || '?'}</div><div class="stat-label">Grammar</div></div>
+      <div class="stat-card" style="flex:1;min-width:80px"><div class="stat-value" style="color:${(grade.avg_ai_score || 0) < 40 ? 'var(--success)' : 'var(--warning)'}">${grade.avg_ai_score || '?'}%</div><div class="stat-label">AI Score</div></div>
+      <div class="stat-card" style="flex:1;min-width:80px"><div class="stat-value">${grade.total_issues || 0}</div><div class="stat-label">Issues</div></div>
+      <div class="stat-card" style="flex:1;min-width:80px"><div class="stat-value">${grade.total_patterns || 0}</div><div class="stat-label">Patterns</div></div>
+      <div class="stat-card" style="flex:1;min-width:120px"><div class="stat-value" style="font-size:16px">${grade.grade || 'N/A'}</div><div class="stat-label">Grade</div></div>
+    </div>`;
+
+    (data.chapters || []).forEach((ch, i) => {
+      html += `<details style="margin-bottom:6px">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;padding:6px 8px;background:var(--surface-hover);border-radius:4px">
+          ${ch.chapter_title || 'Chapter ' + (i+1)}
+          <span style="float:right;font-weight:400;color:var(--text-muted)">G:${ch.grammar.score || '?'} · AI:${ch.originality.ai_score || '?'}%</span>
+        </summary>
+        <div style="padding:8px;font-size:12px">`;
+
+      if (ch.grammar.issues && ch.grammar.issues.length) {
+        html += '<div style="font-weight:600;color:var(--warning);margin:4px 0">Grammar Issues</div>';
+        ch.grammar.issues.slice(0, 5).forEach(issue => {
+          html += `<div style="padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">
+            <span class="status-badge status-${issue.type === 'error' ? 'failed' : 'processing'}">${issue.type}</span>
+            <span style="color:var(--text-muted)">${issue.explanation || ''}</span>
+          </div>`;
+        });
+      }
+
+      if (ch.originality.patterns && ch.originality.patterns.length) {
+        html += '<div style="font-weight:600;color:var(--accent-1);margin:8px 0 4px">AI Patterns</div>';
+        ch.originality.patterns.slice(0, 3).forEach(p => {
+          html += `<div style="padding:3px 0;font-size:11px;color:var(--text-secondary)">• ${p.pattern}: ${p.suggestion}</div>`;
+        });
+      }
+
+      html += '</div></details>';
+    });
+
+    if (data.overall) {
+      html += `<div style="margin-top:8px;padding:8px;background:var(--bg);border-radius:4px;font-size:11px;color:var(--text-muted)">
+        <strong>Recommendations:</strong>
+        ${(data.chapters || []).flatMap(c => c.originality.recommendations || []).filter((v,i,a) => a.indexOf(v)===i).slice(0,3).map(r => `<div>• ${r}</div>`).join('')}
+      </div>`;
+    }
+
+    section.innerHTML = html;
+  } catch(e) {
+    section.innerHTML = `<p style="color:var(--error);font-size:12px">Proofread failed: ${e.message}</p>`;
+  }
+}
+
+// ─── Beta Reader ────────────────────────────────────
+async function betaRead(jobId) {
+  const section = document.createElement('div');
+  section.id = 'betaResults';
+  section.style.cssText = 'width:100%;margin-top:8px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)';
+  section.innerHTML = '<div style="text-align:center;padding:12px"><span class="spinner"></span> AI Beta Readers analyzing... (2-3 min)</div>';
+  const container = document.getElementById('resultFormats');
+  const old = document.getElementById('betaResults');
+  if (old) old.remove();
+  container.appendChild(section);
+  try {
+    const res = await fetch(API + '/api/beta-read/' + jobId, {method:'POST'});
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const s = data.summary || {};
+    let html = `<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div class="stat-card" style="flex:1;min-width:80px"><div class="stat-value">${s.avg_rating || '?'}</div><div class="stat-label">Avg Rating</div></div>
+      <div class="stat-card" style="flex:1;min-width:80px"><div class="stat-value">${s.would_finish || '?'}</div><div class="stat-label">Would Finish</div></div>
+      <div class="stat-card" style="flex:1;min-width:80px"><div class="stat-value">${s.would_recommend || '?'}</div><div class="stat-label">Recommend</div></div>
+    </div>`;
+    (data.readers || []).forEach(r => {
+      const color = r.overall_rating >= 4 ? 'var(--success)' : r.overall_rating >= 3 ? 'var(--warning)' : 'var(--error)';
+      html += `<details style="margin-bottom:6px">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;padding:6px 8px;background:var(--surface-hover);border-radius:4px">
+          ${r.persona_name || r.persona}
+          <span style="float:right">⭐ ${r.overall_rating || '?'}/5</span>
+        </summary>
+        <div style="padding:8px;font-size:12px">
+          <div style="margin:4px 0">${r.specific_notes || ''}</div>
+          ${(r.strengths || []).length ? `<div style="color:var(--success);margin-top:4px">✅ ${r.strengths.slice(0,3).join(', ')}</div>` : ''}
+          ${(r.weaknesses || []).length ? `<div style="color:var(--error);margin-top:4px">❌ ${r.weaknesses.slice(0,3).join(', ')}</div>` : ''}
+          ${(r.improvement_suggestions || []).length ? `<div style="color:var(--accent-1);margin-top:4px">💡 ${r.improvement_suggestions.slice(0,2).join('; ')}</div>` : ''}
+          <div style="margin-top:4px;display:flex;gap:12px;font-size:11px;color:var(--text-muted)">
+            <span>Clarity: ${r.clarity_rating || '?'}/5</span>
+            <span>Engagement: ${r.engagement_rating || '?'}/5</span>
+            <span>Pacing: ${r.pacing_rating || '?'}</span>
+          </div>
+        </div>
+      </details>`;
+    });
+    section.innerHTML = html;
+  } catch(e) {
+    section.innerHTML = `<p style="color:var(--error);font-size:12px">Beta read failed: ${e.message}</p>`;
+  }
+}
+
+// ─── Format Check ────────────────────────────────────
+async function formatCheck(jobId) {
+  const section = document.createElement('div');
+  section.id = 'formatResults';
+  section.style.cssText = 'width:100%;margin-top:8px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)';
+  section.innerHTML = '<div style="text-align:center;padding:12px"><span class="spinner"></span> Checking format...</div>';
+  const container = document.getElementById('resultFormats');
+  const old = document.getElementById('formatResults');
+  if (old) old.remove();
+  container.appendChild(section);
+  try {
+    const res = await fetch(API + '/api/format-check/' + jobId + '?platform=kdp');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const pct = data.passed ? data.passed.length : 0;
+    const total = (data.passed ? data.passed.length : 0) + (data.issues ? data.issues.length : 0);
+    const ok = data.is_ready;
+    let html = `<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+      <div class="stat-card" style="flex:1;min-width:80px"><div class="stat-value" style="color:${ok ? 'var(--success)' : 'var(--warning)'}">${pct}/${total}</div><div class="stat-label">Passed</div></div>
+      <div class="stat-card" style="flex:1;min-width:100px"><div class="stat-value" style="font-size:16px;color:${ok ? 'var(--success)' : 'var(--error)'}">${ok ? '✅ Ready' : '❌ Issues'}</div><div class="stat-label">${data.platform}</div></div>
+    </div>`;
+    if (data.issues && data.issues.length) {
+      html += '<div style="font-weight:600;color:var(--warning);margin:4px 0;font-size:12px">Issues to fix:</div>';
+      data.issues.forEach(issue => {
+        html += `<div style="padding:4px 8px;margin-bottom:4px;background:rgba(245,158,11,.08);border-radius:4px;font-size:11px">
+          <strong>${issue.check}:</strong> ${issue.detail}</div>`;
+      });
+    }
+    if (data.passed && data.passed.length) {
+      html += `<div style="margin-top:6px;font-size:11px;color:var(--text-muted)">✅ Passed: ${data.passed.join(', ')}</div>`;
+    }
+    section.innerHTML = html;
+  } catch(e) {
+    section.innerHTML = `<p style="color:var(--error);font-size:12px">Format check failed: ${e.message}</p>`;
+  }
+}
+
+// ─── Launch Page ────────────────────────────────────
+function openLaunchPage(jobId) {
+  const url = API + '/api/launch-page/' + jobId + '?accent_color=%236366F1';
+  window.open(url, '_blank');
+}
+
+// ─── Print PDF ──────────────────────────────────────
+async function downloadPrint(jobId) {
+  const trimSize = document.getElementById('printTrimSize').value;
+  const isbn = document.getElementById('printIsbn').value.trim();
+  const params = new URLSearchParams({trim_size: trimSize});
+  if (isbn) params.set('isbn', isbn);
+  const url = API + '/api/download/' + jobId + '/print?' + params.toString();
+  window.open(url, '_blank');
+}
+
+// ─── WYSIWYG Editor ────────────────────────────────
+let editorData = null;
+let editorCurrentChapter = 0;
+
+function openEditor(jobId) {
+  navigate('#editor/' + jobId);
+  loadEditor(jobId);
+}
+
+async function loadEditor(jobId) {
+  const contentEl = document.getElementById('editorContent');
+  const listEl = document.getElementById('editorChapterList');
+  contentEl.innerHTML = '<p style="padding:20px;color:var(--text-muted)">Loading...</p>';
+  listEl.innerHTML = '';
+  try {
+    const res = await fetch(API + '/api/editor/' + jobId + '/chapters');
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed to load'); }
+    editorData = await res.json();
+    document.getElementById('editorBookTitle').textContent = editorData.title;
+    document.getElementById('editorChapterCount').textContent = editorData.chapters.length;
+    renderChapterList();
+    selectChapter(0);
+  } catch(e) {
+    contentEl.innerHTML = `<p style="padding:20px;color:var(--error)">Error: ${e.message}</p>`;
+  }
+}
+
+function renderChapterList() {
+  const listEl = document.getElementById('editorChapterList');
+  listEl.innerHTML = editorData.chapters.map((ch, i) =>
+    `<div class="editor-chapter-item${i === editorCurrentChapter ? ' active' : ''}" onclick="selectChapter(${i})">
+      <span class="editor-chapter-num">${i + 1}</span>
+      <span class="editor-chapter-title">${ch.title}</span>
+    </div>`
+  ).join('');
+}
+
+function selectChapter(index) {
+  editorCurrentChapter = index;
+  renderChapterList();
+  const ch = editorData.chapters[index];
+  const contentEl = document.getElementById('editorContent');
+  let html = `<input class="editor-chapter-title-input" id="editorChTitle" value="${escapeHtml(ch.title)}" oninput="editorData.chapters[${index}].title = this.value">`;
+  if (ch.introduction) {
+    html += `<div class="editor-section"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Introduction</div>
+      <textarea class="editor-section-content" rows="3" oninput="editorData.chapters[${index}].introduction = this.value">${escapeHtml(ch.introduction)}</textarea></div>`;
+  }
+  ch.sections.forEach((sec, si) => {
+    html += `<div class="editor-section">
+      <input class="editor-section-heading" value="${escapeHtml(sec.heading)}" placeholder="Section heading..." oninput="editorData.chapters[${index}].sections[${si}].heading = this.value">
+      <div contenteditable="true" class="editor-section-content"
+        oninput="editorData.chapters[${index}].sections[${si}].content = this.innerHTML"
+        onkeydown="editorHandleKeydown(event)">${sec.content}</div>
+    </div>`;
+  });
+  contentEl.innerHTML = html;
+}
+
+function execCmd(cmd, arg) {
+  // Focus the active contenteditable
+  const active = document.querySelector('.editor-section-content:focus');
+  if (!active) {
+    const first = document.querySelector('.editor-section-content');
+    if (first) first.focus();
+  }
+  document.execCommand(cmd, false, arg);
+}
+
+function editorHandleKeydown(e) {
+  // Tab inserts spaces
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    document.execCommand('insertText', false, '  ');
+  }
+}
+
+async function editorSave() {
+  const btn = document.getElementById('editorSaveBtn');
+  const status = document.getElementById('editorSaveStatus');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving...';
+  status.textContent = '';
+
+  // Collect all chapters from current DOM
+  const ch = editorData.chapters[editorCurrentChapter];
+  ch.title = document.getElementById('editorChTitle')?.value || ch.title;
+  const sections = document.querySelectorAll('.editor-section');
+  sections.forEach((secEl, si) => {
+    if (si < ch.sections.length) {
+      const headingInput = secEl.querySelector('.editor-section-heading');
+      const contentDiv = secEl.querySelector('.editor-section-content');
+      if (headingInput) ch.sections[si].heading = headingInput.value;
+      if (contentDiv) ch.sections[si].content = contentDiv.innerHTML;
+    }
+  });
+
+  try {
+    const res = await fetch(API + '/api/editor/' + editorData.job_id + '/chapters', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({chapters: editorData.chapters.map((c, i) => ({
+        index: i,
+        title: c.title,
+        introduction: c.introduction || '',
+        sections: c.sections.map((s, si) => ({index: si, heading: s.heading, content: s.content})),
+      }))}),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Save failed'); }
+    status.textContent = '✅ Saved!';
+    status.style.color = 'var(--success)';
+    setTimeout(() => { status.textContent = ''; }, 2000);
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+    status.style.color = 'var(--error)';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '💾 Save';
+}
+
+function editorPreview() {
+  const btn = document.getElementById('editorPreviewBtn');
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  // Save first, then open preview
+  editorSave().then(() => {
+    window.open(API + '/api/preview/' + editorData.job_id, '_blank');
+    btn.textContent = 'Preview';
+    btn.disabled = false;
+  }).catch(() => {
+    btn.textContent = 'Preview';
+    btn.disabled = false;
+  });
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Series Manager ─────────────────────────────────
+async function loadSeriesList() {
+  const container = document.getElementById('seriesList');
+  try {
+    const res = await fetch(API + '/api/series');
+    const list = await res.json();
+    if (list.length === 0) {
+      container.innerHTML = '<div class="sidebar-card"><p style="font-size:13px;color:var(--text-muted);text-align:center">No series yet. Create one above.</p></div>';
+      return;
+    }
+    container.innerHTML = list.map(s => {
+      const bookCount = (s.books || []).length;
+      return `<div class="sidebar-card" style="margin-top:8px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:40px;height:40px;border-radius:8px;background:${s.cover_color||'#6366F1'};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0">${s.name[0]}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:14px">${s.name}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${s.author || 'No author'} · ${s.genre || 'No genre'} · ${bookCount} book(s)</div>
+          </div>
+          <a href="${API}/api/series/${s.id}/landing" target="_blank" class="btn btn-sm btn-secondary" style="font-size:10px">🌐 Page</a>
+          <button class="btn btn-sm btn-error" style="font-size:10px" onclick="deleteSeries('${s.id}')">✕</button>
+        </div>
+        <div id="seriesBooks_${s.id}" style="margin-top:8px;padding-left:4px">
+          ${(s.books || []).map((b, i) => `
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
+              <span style="color:var(--text-muted)">#${b.volume || i+1}</span>
+              <span style="flex:1">${b.title}</span>
+              <a href="${API}/api/preview/${b.job_id}" target="_blank" class="btn btn-sm btn-secondary" style="font-size:9px">Read</a>
+              <button class="btn btn-sm btn-error" style="font-size:9px" onclick="removeBookFromSeries('${s.id}','${b.job_id}')">✕</button>
+            </div>
+          `).join('')}
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input id="addJob_${s.id}" class="form-input" placeholder="Job ID to add..." style="font-size:11px;flex:1">
+            <input id="addVol_${s.id}" class="form-input" type="number" placeholder="Vol #" style="font-size:11px;width:60px">
+            <button class="btn btn-sm btn-primary" style="font-size:10px" onclick="addBookToSeries('${s.id}')">+</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = `<p style="color:var(--error);font-size:13px">Failed: ${e.message}</p>`;
+  }
+}
+
+async function createSeries() {
+  const name = document.getElementById('seriesNameInput').value.trim();
+  if (!name) return alert('Enter a series name');
+  const body = {
+    name,
+    description: document.getElementById('seriesDescInput').value.trim(),
+    author: document.getElementById('seriesAuthorInput').value.trim(),
+    genre: document.getElementById('seriesGenreInput').value.trim(),
+  };
+  try {
+    const res = await fetch(API + '/api/series', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+    document.getElementById('seriesNameInput').value = '';
+    document.getElementById('seriesDescInput').value = '';
+    document.getElementById('seriesAuthorInput').value = '';
+    document.getElementById('seriesGenreInput').value = '';
+    loadSeriesList();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+async function deleteSeries(id) {
+  if (!confirm('Delete this series?')) return;
+  try {
+    await fetch(API + '/api/series/' + id, {method: 'DELETE'});
+    loadSeriesList();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+async function addBookToSeries(seriesId) {
+  const jobId = document.getElementById('addJob_' + seriesId).value.trim();
+  const vol = document.getElementById('addVol_' + seriesId).value.trim();
+  if (!jobId) return alert('Enter a job ID');
+  const body = {job_id: jobId};
+  if (vol) body.volume = parseInt(vol);
+  try {
+    const res = await fetch(API + '/api/series/' + seriesId + '/books', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+    document.getElementById('addJob_' + seriesId).value = '';
+    document.getElementById('addVol_' + seriesId).value = '';
+    loadSeriesList();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+async function removeBookFromSeries(seriesId, jobId) {
+  try {
+    await fetch(API + '/api/series/' + seriesId + '/books/' + jobId, {method: 'DELETE'});
+    loadSeriesList();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// SPA Router
+function navigate(hash) {
+  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  document.querySelectorAll('.spa-link').forEach(l => l.classList.remove('active'));
+  const viewName = hash.replace('#', '').split('/')[0];
+  const target = document.getElementById('view-' + viewName);
+  if (target) target.style.display = '';
+  const link = document.querySelector(`.spa-link[href="#${viewName}"]`);
+  if (link) link.classList.add('active');
+  if (hash === '#history') renderHistory();
+  if (hash === '#revenue') loadRevenue();
+  if (hash === '#series') loadSeriesList();
+}
+
+window.addEventListener('hashchange', () => navigate(location.hash || '#home'));
+window.addEventListener('load', () => {
+  if (!location.hash) location.hash = '#home';
+  navigate(location.hash);
+});
+
+init();
+
+</body>
+</html>

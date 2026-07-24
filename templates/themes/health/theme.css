@@ -1,0 +1,40 @@
+/* Health & Wellness — fresh natural */
+:root {
+  --color-bg: #F8FAF5;
+  --color-surface: #F0FDF4;
+  --color-text: #1A2E1A;
+  --color-heading: #0F1F0F;
+  --color-accent: #22C55E;
+  --color-secondary: #F0FDF4;
+  --color-muted: #6B8E6B;
+  --color-border: #BBE8BB;
+  --color-highlight: #F0FFF4;
+  --color-success: #16A34A;
+  --color-warning: #F97316;
+  --color-error: #DC2626;
+  --color-info: #06B6D4;
+  --font-heading: 'Georgia', 'Times New Roman', serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-size-h1: 38pt;
+  --font-size-h2: 22pt;
+  --font-size-h3: 15pt;
+  --font-size-body: 10.5pt;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  --line-height: 1.75;
+  --cover-gradient: linear-gradient(135deg, #0F1F0F 0%, #1A3A1A 50%, #22C55E 100%);
+  --accent-gradient: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+  --content-width: 14cm;
+}

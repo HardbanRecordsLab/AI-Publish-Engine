@@ -1,0 +1,32 @@
+# Secrets
+.env
+.env.*
+!.env.example
+backend/.secret_key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Runtime data / generated output
+outputs/
+jobs/jobs.json
+
+# Logs
+logs/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Test cache
+.pytest_cache/
+
+# Old unpacked zip (superseded by root backend/)
+ai-publish-engine-fixed/
+
+# OS
+.DS_Store

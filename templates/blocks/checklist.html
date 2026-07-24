@@ -1,0 +1,11 @@
+<div class="checklist" style="margin: 0.5cm 0; page-break-inside: avoid;">
+  {% if title %}<h4 style="font-family: var(--font-heading); font-size: 11pt; color: var(--color-heading); margin-bottom: 0.3cm;">{{ title }}</h4>{% endif %}
+  <ul style="list-style: none;">
+    {% for item in items %}
+    <li style="padding: 0.15cm 0; display: flex; align-items: center; gap: 0.3cm;">
+      <span style="width: 14px; height: 14px; border: 2px solid var(--color-accent); border-radius: 3px; display: inline-block; {% if item.checked %}background: var(--color-accent);{% endif %}"></span>
+      <span style="{% if item.checked %}text-decoration: line-through; color: var(--color-muted);{% endif %}">{{ item.text }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>

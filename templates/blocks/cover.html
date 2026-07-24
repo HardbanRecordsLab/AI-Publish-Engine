@@ -1,0 +1,22 @@
+<section class="cover page" style="
+  page: cover;
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center;
+  align-items: center; height: 100vh; text-align: center;
+  {% if cover_svg %}background: var(--cover-gradient);{% endif %}
+">
+  {% if cover_image %}
+  <div style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;">
+    <img src="{{ cover_image }}" alt="Cover" style="width:100%;height:100%;object-fit:cover;">
+  </div>
+  <div style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;background:linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%);"></div>
+  {% endif %}
+  {% if icon and not cover_image %}<div class="cover-icon" style="position:relative;z-index:2;margin-bottom:0.6cm;opacity:0.9;">{{ icon }}</div>{% endif %}
+  <div class="cover-inner" style="position:relative;z-index:2;max-width:14cm;padding:2cm;">
+    <h1 style="font-family: var(--font-heading); font-size: var(--font-size-h1); font-weight: 800; color: var(--color-heading); letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 0.4cm;">{{ title }}</h1>
+    {% if subtitle %}<p class="subtitle" style="font-size: 14pt; color: var(--color-muted); margin-bottom: 0.8cm; line-height: 1.4;">{{ subtitle }}</p>{% endif %}
+    <div style="width: 60px; height: 2px; background: var(--color-accent); margin: 0 auto 0.8cm;"></div>
+    {% if summary %}<p style="font-size: 10pt; color: var(--color-muted); max-width: 10cm; margin: 0 auto 1cm; line-height: 1.6;">{{ summary }}</p>{% endif %}
+    <p class="meta" style="font-size: 9pt; color: var(--color-muted); letter-spacing: 1px;">{{ author }} · {{ date }}</p>
+  </div>
+</section>

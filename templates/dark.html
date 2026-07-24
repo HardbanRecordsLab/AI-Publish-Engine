@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4; margin: 2.2cm 2cm 2.5cm;
+    @bottom-left { content: "{{ title }}"; font-family: {{ fonts.body }}; font-size: 7pt; color: {{ colors.muted }}; }
+    @bottom-right { content: counter(page); font-family: {{ fonts.body }}; font-size: 7pt; color: {{ colors.muted }}; }
+  }
+  @page cover { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+  @page toc { @bottom-left { content: none; } }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: {{ fonts.body }}; color: {{ colors.text }}; line-height: 1.75; font-size: 10pt; background: {{ colors.background }}; }
+
+  .cover { page: cover; page-break-after: always; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; position: relative; overflow: hidden; background: {{ colors.background }}; }
+  .cover::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at 30% 20%, {{ colors.accent }}12 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, {{ colors.accent }}08 0%, transparent 50%); }
+  .cover::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: {{ style_pack.accent_gradient }}; }
+  .cover-inner { position: relative; z-index: 1; max-width: 14cm; padding: 2cm; }
+  .cover-icon { margin-bottom: 0.6cm; opacity: 0.85; }
+  .cover h1 { font-family: {{ fonts.heading }}; font-size: 42pt; font-weight: 700; color: {{ colors.heading }}; letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 0.4cm; text-shadow: 0 0 60px {{ colors.accent }}15; }
+  .cover .subtitle { font-size: 15pt; color: {{ colors.muted }}; font-weight: 400; margin-bottom: 1.2cm; line-height: 1.4; letter-spacing: 0.5px; }
+  .cover-divider { width: 100px; height: 2px; background: linear-gradient(90deg, transparent, {{ colors.accent }}, transparent); margin: 0 auto 1cm; }
+  .cover .meta { font-size: 9pt; color: {{ colors.muted }}; letter-spacing: 2px; }
+
+  .toc { page: toc; page-break-after: always; }
+  .toc h2 { font-family: {{ fonts.heading }}; font-size: 22pt; color: {{ colors.heading }}; margin-bottom: 0.5cm; padding-bottom: 0.3cm; border-bottom: 1px solid {{ colors.border }}; }
+  .toc-list { list-style: none; }
+  .toc-list li { padding: 0.2cm 0.2cm; border-bottom: 1px solid {{ colors.border }}; display: flex; align-items: center; }
+  .toc-list li .num { font-weight: 600; color: {{ colors.accent }}; width: 1cm; font-size: 10pt; }
+  .toc-list li .title { font-size: 10.5pt; color: {{ colors.text }}; }
+
+  .chapter { page-break-before: always; }
+  .chapter-header { margin-bottom: 0.6cm; padding-bottom: 0.3cm; border-bottom: 1px solid {{ colors.accent }}30; }
+  .chapter-number { font-size: 8pt; color: {{ colors.accent }}; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.1cm; font-weight: 600; }
+  .chapter h2 { font-family: {{ fonts.heading }}; font-size: 24pt; color: {{ colors.heading }}; letter-spacing: -0.5px; line-height: 1.2; }
+  .chapter-intro { margin: 0.3cm 0 0.5cm; padding: 0.3cm 0.4cm; background: {{ colors.secondary }}; border-left: 3px solid {{ colors.accent }}60; border-radius: 0 6px 6px 0; font-size: 10.5pt; color: {{ colors.text }}; line-height: 1.6; }
+
+  .section { margin-bottom: 0.5cm; padding: 0.35cm 0.4cm; background: {{ colors.secondary }}; border: 1px solid {{ colors.border }}; border-radius: 10px; }
+  .section h3 { font-family: {{ fonts.heading }}; font-size: 15pt; color: {{ colors.accent }}; margin-bottom: 0.15cm; }
+  .section p { text-align: justify; font-size: 10pt; line-height: 1.75; color: {{ colors.text }}; }
+
+  .takeaway { margin: 0.4cm 0; padding: 0.3cm 0.4cm; background: {{ colors.secondary }}; border: 1px solid {{ colors.accent }}30; border-radius: 8px; }
+  .takeaway strong { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: {{ colors.accent }}; }
+  .takeaway p { margin-top: 0.1cm; font-size: 9.5pt; color: {{ colors.text }}; }
+
+  .infographic-block { margin: 0.5cm 0; padding: 0.4cm; background: {{ colors.secondary }}; border: 1px solid {{ colors.border }}; border-radius: 12px; text-align: center; page-break-inside: avoid; }
+  .infographic-block .ig-title { font-size: 9pt; font-weight: 600; color: {{ colors.accent }}; margin-bottom: 0.25cm; text-transform: uppercase; letter-spacing: 2px; }
+  .infographic-block .ig-desc { font-size: 8.5pt; color: {{ colors.muted }}; margin-bottom: 0.3cm; }
+  .infographic-block svg { max-width: 100%; height: auto; }
+
+  .conclusion { page-break-before: always; }
+  .conclusion h2 { font-family: {{ fonts.heading }}; font-size: 22pt; color: {{ colors.heading }}; margin-bottom: 0.4cm; }
+  .conclusion p { font-size: 11pt; line-height: 1.8; text-align: justify; }
+
+  .copyright { text-align: center; padding-top: 0.4cm; margin-top: 0.8cm; border-top: 1px solid {{ colors.border }}; font-size: 8pt; color: {{ colors.muted }}; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="cover-inner">
+    {% if cover_icon %}<div class="cover-icon">{{ cover_icon }}</div>{% endif %}
+    <h1>{{ title }}</h1>
+    {% if subtitle %}<div class="subtitle">{{ subtitle }}</div>{% endif %}
+    <div class="cover-divider"></div>
+    <div class="meta">{{ author }} &middot; {{ generated_date }}</div>
+  </div>
+</section>
+
+<section class="toc">
+  <h2>Contents</h2>
+  <ol class="toc-list">
+    {% for item in toc_items %}
+    <li>
+      <span class="num">{{ item.index }}.</span>
+      <span class="title">{{ item.title }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+{% for chapter in chapters %}
+<section class="chapter">
+  <div class="chapter-header">
+    <div class="chapter-number">Chapter {{ loop.index }}</div>
+    <h2>{{ chapter.title }}</h2>
+  </div>
+  {% if chapter.get("introduction") %}
+  <div class="chapter-intro">{{ chapter.introduction }}</div>
+  {% endif %}
+  {% for section in chapter.sections %}
+  <div class="section">
+    <h3>{{ section.heading }}</h3>
+    <p>{{ section.content }}</p>
+  </div>
+  {% set ig_key = "{}_{}".format(loop.index0, loop.index0) %}
+  {% if ig_key in infographics %}
+    {% for ig in infographics[ig_key] %}
+    <div class="infographic-block">
+      <div class="ig-title">{{ ig.title }}</div>
+      {% if ig.description %}<div class="ig-desc">{{ ig.description }}</div>{% endif %}
+      {{ ig.svg }}
+    </div>
+    {% endfor %}
+  {% endif %}
+  {% endfor %}
+  {% if chapter.get("key_takeaway") %}
+  <div class="takeaway">
+    <strong>Key Takeaway</strong>
+    <p>{{ chapter.key_takeaway }}</p>
+  </div>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% if conclusion %}
+<section class="conclusion">
+  <h2>{{ conclusion.get("title", "Conclusion") }}</h2>
+  <p>{{ conclusion.get("content", "") }}</p>
+</section>
+{% endif %}
+
+<div class="copyright">
+  Generated by AI Ebook Builder &mdash; {{ generated_date }}
+</div>
+
+</body>
+</html>

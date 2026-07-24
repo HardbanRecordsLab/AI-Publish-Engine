@@ -1,0 +1,15 @@
+<section class="conclusion page">
+  <h2 style="font-family: var(--font-heading); font-size: var(--font-size-h2); color: var(--color-heading); margin-bottom: 0.5cm;">{{ title | default('Conclusion') }}</h2>
+  <p style="font-size: 11pt; line-height: 1.8; text-align: justify; margin-bottom: 0.5cm;">{{ content }}</p>
+  {% if cta %}
+  <div style="text-align: center; margin: 1cm 0;">
+    <div style="display: inline-block; padding: 0.4cm 1cm; background: var(--accent-gradient); color: #fff; border-radius: var(--radius-md); font-weight: 600; font-size: 11pt;">{{ cta }}</div>
+  </div>
+  {% endif %}
+  {% if resources %}
+  <div style="margin-top: 0.5cm; padding: 0.3cm; background: var(--color-surface); border-radius: var(--radius-md);">
+    <strong style="font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent);">Resources</strong>
+    <ul style="margin-top: 0.2cm; list-style: none;">{% for r in resources %}<li style="padding: 0.1cm 0;">{{ r }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</section>

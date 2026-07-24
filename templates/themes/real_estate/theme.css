@@ -1,0 +1,40 @@
+/* Real Estate — sophisticated premium */
+:root {
+  --color-bg: #FCFCFA;
+  --color-surface: #F5F5F0;
+  --color-text: #1C1C1C;
+  --color-heading: #0A0A0A;
+  --color-accent: #1E3A5F;
+  --color-secondary: #F0F4F8;
+  --color-muted: #6B7280;
+  --color-border: #D1D5DB;
+  --color-highlight: #F9FAFB;
+  --color-success: #059669;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  --color-info: #2563EB;
+  --font-heading: 'Georgia', 'Times New Roman', serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-size-h1: 40pt;
+  --font-size-h2: 24pt;
+  --font-size-h3: 16pt;
+  --font-size-body: 10.5pt;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  --line-height: 1.75;
+  --cover-gradient: linear-gradient(135deg, #0A0A0A 0%, #1E3A5F 50%, #2E5A8F 100%);
+  --accent-gradient: linear-gradient(135deg, #1E3A5F 0%, #2E5A8F 100%);
+  --content-width: 14cm;
+}

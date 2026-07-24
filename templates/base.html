@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: {{ theme.page.format | default('A4') }};
+    margin: {{ theme.page.margin_top }} {{ theme.page.margin_right }} {{ theme.page.margin_bottom }} {{ theme.page.margin_left }};
+    @top-left { content: "{{ meta.title }}"; font-family: var(--font-body); font-size: 8pt; color: var(--color-muted); }
+    @top-right { content: "{{ meta.author }}"; font-family: var(--font-body); font-size: 8pt; color: var(--color-muted); }
+    @bottom-left { content: "{{ meta.title }}"; font-family: var(--font-body); font-size: {{ theme.page.footer_font_size }}; color: var(--color-muted); }
+    @bottom-right { content: counter(page); font-family: var(--font-body); font-size: {{ theme.page.footer_font_size }}; color: var(--color-muted); }
+  }
+  @page cover { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-right { content: none; } }
+  @page copyright { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-right { content: none; } }
+  @page author { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-right { content: none; } }
+  @page back-cover { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-right { content: none; } }
+  @page toc { @bottom-left { content: none; } }
+
+  /* Design Tokens */
+  :root {
+    --color-bg: {{ theme.colors.background }};
+    --color-surface: {{ theme.colors.surface }};
+    --color-text: {{ theme.colors.text }};
+    --color-heading: {{ theme.colors.heading }};
+    --color-accent: {{ theme.colors.accent }};
+    --color-secondary: {{ theme.colors.secondary }};
+    --color-muted: {{ theme.colors.muted }};
+    --color-border: {{ theme.colors.border }};
+    --color-highlight: {{ theme.colors.highlight }};
+    --color-success: {{ theme.colors.success }};
+    --color-warning: {{ theme.colors.warning }};
+    --color-error: {{ theme.colors.error }};
+    --color-info: {{ theme.colors.info }};
+    --font-heading: {{ theme.fonts.heading }};
+    --font-body: {{ theme.fonts.body }};
+    --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    --spacing-xs: {{ theme.spacing.xs }};
+    --spacing-sm: {{ theme.spacing.sm }};
+    --spacing-md: {{ theme.spacing.md }};
+    --spacing-lg: {{ theme.spacing.lg }};
+    --spacing-xl: {{ theme.spacing.xl }};
+    --spacing-2xl: {{ theme.spacing['2xl'] }};
+    --spacing-3xl: {{ theme.spacing['3xl'] }};
+    --radius-sm: {{ theme.radii.sm }};
+    --radius-md: {{ theme.radii.md }};
+    --radius-lg: {{ theme.radii.lg }};
+    --radius-xl: {{ theme.radii.xl }};
+    --shadow-sm: {{ theme.shadows.sm }};
+    --shadow-md: {{ theme.shadows.md }};
+    --shadow-lg: {{ theme.shadows.lg }};
+    --line-height: {{ theme.page.line_height }};
+    --font-size-body: {{ theme.font_sizes.body }};
+    --font-size-h1: {{ theme.font_sizes.h1 }};
+    --font-size-h2: {{ theme.font_sizes.h2 }};
+    --font-size-h3: {{ theme.font_sizes.h3 }};
+    --content-width: {{ theme.page.content_width }};
+    --cover-gradient: {{ theme.cover_gradient }};
+    --accent-gradient: {{ theme.accent_gradient }};
+  }
+
+  {{ theme.custom_css | default('') }}
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: {{ theme.font_sizes.body }}; }
+  body {
+    font-family: var(--font-body); color: var(--color-text);
+    line-height: var(--line-height); font-size: var(--font-size-body);
+    background: var(--color-bg);
+    widows: 3;
+    orphans: 3;
+  }
+  a { color: var(--color-accent); text-decoration: none; }
+  img { max-width: 100%; height: auto; }
+
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .page-break { page-break-before: always; }
+
+  h1, h2, h3, h4 { page-break-after: avoid; }
+  .chapter { page-break-before: always; }
+  .chapter:first-of-type { page-break-before: auto; }
+
+  p { text-align: justify; hyphens: auto; }
+  p, li { widows: 3; orphans: 3; }
+  table { page-break-inside: avoid; }
+  pre, blockquote { page-break-inside: avoid; }
+
+  /* Print-specific */
+  @media print {
+    body { background: white; }
+    a { color: inherit; text-decoration: none; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+{{ content }}
+</body>
+</html>

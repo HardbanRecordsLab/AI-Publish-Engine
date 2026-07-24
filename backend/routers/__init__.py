@@ -1,0 +1,10 @@
+from backend.routers.health import router as health_router
+from backend.routers.templates import router as templates_router
+from backend.routers.jobs import router as jobs_router
+from backend.routers.admin import router as admin_router
+from backend.routers.publishing import router as publishing_router
+from backend.routers.editor import router as editor_router
+from backend.routers.series import router as series_router
+from backend.routers.auth import router as auth_router
+from backend.routers.design_tokens import router as design_tokens_router
+from backend.routers.stats import router as stats_router

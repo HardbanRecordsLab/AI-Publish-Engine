@@ -1,0 +1,11 @@
+<div class="summary" style="margin: 0.5cm 0; padding: 0.3cm 0.4cm; background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border); page-break-inside: avoid;">
+  <strong style="font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent); display: block; margin-bottom: 0.2cm;">{{ title | default('Summary') }}</strong>
+  <ul style="list-style: none;">
+    {% for point in points %}
+    <li style="padding: 0.1cm 0; font-size: 10pt; display: flex; gap: 0.3cm;">
+      <span style="color: var(--color-accent);">▸</span>
+      <span>{{ point }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>

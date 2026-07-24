@@ -1,0 +1,12 @@
+<div class="callout callout-{{ type | default('note') }}" style="
+  margin: 0.5rem 0; padding: 0.75rem 1rem; border-radius: var(--radius-md);
+  border-left: 4px solid {{ accent }};
+  background: {{ accent }}08;
+  page-break-inside: avoid;
+">
+  <strong style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: {{ accent }}; display: block; margin-bottom: 0.25rem;">
+    {% if type == 'tip' %}💡 {% elif type == 'warning' %}⚠️ {% elif type == 'danger' %}🚫 {% elif type == 'info' %}ℹ️ {% endif %}
+    {{ title | default(type | capitalize) }}
+  </strong>
+  <p style="font-size: 10pt; line-height: 1.6;">{{ text }}</p>
+</div>

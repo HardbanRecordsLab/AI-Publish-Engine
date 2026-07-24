@@ -1,0 +1,28 @@
+<section class="chapter page">
+  {% if illustration and not illustration.startswith('<') %}
+  <div style="margin-bottom:0.5cm;border-radius:8px;overflow:hidden;">
+    <img src="{{ illustration }}" alt="{{ title }}" style="width:100%;height:auto;display:block;">
+  </div>
+  {% elif illustration %}
+  <div style="margin-bottom:0.5cm;">{{ illustration }}</div>
+  {% endif %}
+  <div class="chapter-header" style="margin-bottom: 0.7cm; padding-bottom: 0.3cm; border-bottom: 1px solid var(--color-border);">
+    <div class="chapter-number" style="font-size: 8pt; color: var(--color-accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.15cm; font-weight: 600;">Chapter {{ number }}</div>
+    <h2 style="font-family: var(--font-heading); font-size: var(--font-size-h2); color: var(--color-heading); font-weight: 700; letter-spacing: -0.5px; line-height: 1.2;">{{ title }}</h2>
+  </div>
+  {% if introduction %}
+  <div class="chapter-intro" style="font-size: 11pt; color: var(--color-muted); font-style: italic; margin: 0.4cm 0 0.6cm; line-height: 1.6; padding-left: 0.3cm; border-left: 2px solid var(--color-accent);">{{ introduction }}</div>
+  {% endif %}
+  {% for section in sections %}
+  <div class="section" style="margin-bottom: 0.6cm;">
+    {% if section.heading %}<h3 style="font-family: var(--font-heading); font-size: var(--font-size-h3); color: var(--color-heading); margin-bottom: 0.2cm; font-weight: 600;">{{ section.heading }}</h3>{% endif %}
+    {% if section.content %}<p style="margin-bottom: 0.3cm; text-align: justify;">{{ section.content }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  {% if key_takeaway %}
+  <div class="takeaway" style="margin: 0.5cm 0; padding: 0.3cm 0.4cm; background: var(--color-highlight); border-left: 3px solid var(--color-accent); border-radius: 0 6px 6px 0;">
+    <strong style="font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent);">Key Takeaway</strong>
+    <p style="margin-top: 0.1cm; font-size: 10pt;">{{ key_takeaway }}</p>
+  </div>
+  {% endif %}
+</section>

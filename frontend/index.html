@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Publishing Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/style.css">
+
+</head>
+<body>
+
+<!-- Login Overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="url(#lg)"/><path d="M8 12l3 3 5-7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>AI Publish</span>
+    </div>
+    <div class="login-sub">Sign in to continue</div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="loginEmail" type="email" placeholder="admin@example.com" autocomplete="email" autofocus>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="loginPassword" type="password" placeholder="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="url(#lg)"/><path d="M8 12l3 3 5-7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>AI Publish</span>
+    <span class="badge">v2</span>
+  </div>
+  <div class="sidebar-section">Content</div>
+  <div class="sidebar-nav">
+    <a class="sidebar-link active" data-panel="dashboard"><span class="icon">🏠</span>Dashboard</a>
+    <a class="sidebar-link" data-panel="generator"><span class="icon">📖</span>Generator</a>
+    <a class="sidebar-link" data-panel="editor"><span class="icon">✏️</span>Editor</a>
+    <a class="sidebar-link" data-panel="history"><span class="icon">📋</span>History</a>
+    <a class="sidebar-link" data-panel="batch"><span class="icon">📦</span>Batch Generator</a>
+  </div>
+  <div class="sidebar-section">AI Tools</div>
+  <div class="sidebar-nav">
+    <a class="sidebar-link" data-panel="proofreader"><span class="icon">✅</span>Proofreader</a>
+    <a class="sidebar-link" data-panel="beta-reader"><span class="icon">👁️</span>Beta Reader</a>
+    <a class="sidebar-link" data-panel="coach"><span class="icon">🎯</span>Writing Coach</a>
+    <a class="sidebar-link" data-panel="format-checker"><span class="icon">📐</span>KDP Format Check</a>
+    <a class="sidebar-link" data-panel="translate"><span class="icon">🌍</span>Translation</a>
+  </div>
+  <div class="sidebar-section">Business</div>
+  <div class="sidebar-nav">
+    <a class="sidebar-link" data-panel="series"><span class="icon">📚</span>Series</a>
+    <a class="sidebar-link" data-panel="launch"><span class="icon">🚀</span>Launch Page</a>
+    <a class="sidebar-link" data-panel="marketing"><span class="icon">📈</span>Marketing</a>
+    <a class="sidebar-link" data-panel="publish"><span class="icon">📤</span>Publishing</a>
+    <a class="sidebar-link" data-panel="revenue"><span class="icon">💰</span>Revenue</a>
+  </div>
+  <div class="sidebar-section">System</div>
+  <div class="sidebar-nav">
+    <a class="sidebar-link" data-panel="admin"><span class="icon">⚙️</span>Admin</a>
+    <a class="sidebar-link" href="/api/guide" target="_blank" style="color:var(--text-muted)"><span class="icon">📖</span>Guide</a>
+  </div>
+  <div class="sidebar-footer">AI Publishing Engine v2</div>
+</nav>
+
+<!-- Main -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title" id="panelTitle">Dashboard</div>
+    <div class="topbar-actions">
+      <span class="provider-dot on" id="providerDot"></span>
+      <span class="topbar-provider" id="providerName">openrouter</span>
+      <button class="btn btn-sm btn-secondary" onclick="doLogout()" style="font-size:11px;padding:4px 10px;margin-left:4px" title="Sign out">🚪</button>
+    </div>
+  </header>
+
+  <!-- ==================== DASHBOARD ==================== -->
+  <section class="panel active" id="panel-dashboard">
+    <div style="margin-bottom:20px">
+      <h1 style="font-size:22px;font-weight:800">Dashboard</h1>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:4px">AI Publishing Engine — wszystkie narzędzia w jednym miejscu</p>
+    </div>
+    <div class="grid-4" id="dashStats">
+      <div class="stat-card"><div class="val" id="dashJobs">-</div><div class="lbl">Total Jobs</div></div>
+      <div class="stat-card"><div class="val" id="dashDone">-</div><div class="lbl">Completed</div></div>
+      <div class="stat-card"><div class="val" id="dashSuccess">-</div><div class="lbl">Success Rate</div><div class="sub" id="dashSuccessSub"></div></div>
+      <div class="stat-card"><div class="val" id="dashToday">-</div><div class="lbl">Today</div></div>
+    </div>
+    <div style="margin-bottom:12px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px">Quick Actions</div>
+    <div class="tool-grid" id="toolGrid">
+      <div class="tool-card" onclick="switchPanel('generator')"><div class="icon">📖</div><div class="name">Ebook Generator</div><div class="desc">Generate complete ebooks, websites, landing pages from any topic</div><span class="tag">AI</span></div>
+      <div class="tool-card" onclick="switchPanel('editor')"><div class="icon">✏️</div><div class="name">Chapter Editor</div><div class="desc">WYSIWYG editing of generated chapters and content blocks</div><span class="tag">Editor</span></div>
+      <div class="tool-card" onclick="switchPanel('proofreader')"><div class="icon">✅</div><div class="name">AI Proofreader</div><div class="desc">Grammar check, style suggestions, and originality analysis</div><span class="tag">AI</span></div>
+      <div class="tool-card" onclick="switchPanel('beta-reader')"><div class="icon">👁️</div><div class="name">Beta Reader</div><div class="desc">5 AI personas review your book from different perspectives</div><span class="tag">AI</span></div>
+      <div class="tool-card" onclick="switchPanel('coach')"><div class="icon">🎯</div><div class="name">Writing Coach</div><div class="desc">Interactive AI coaching for structure, pacing, and style</div><span class="tag">AI</span></div>
+      <div class="tool-card" onclick="switchPanel('format-checker')"><div class="icon">📐</div><div class="name">KDP Format Check</div><div class="desc">12-point checklist for Amazon KDP print-ready compliance</div><span class="tag">Utility</span></div>
+      <div class="tool-card" onclick="switchPanel('series')"><div class="icon">📚</div><div class="name">Book Series</div><div class="desc">Manage series, organize books, generate series landing pages</div><span class="tag">Management</span></div>
+      <div class="tool-card" onclick="switchPanel('launch')"><div class="icon">🚀</div><div class="name">Launch Page</div><div class="desc">Generate book launch countdown pages with email capture</div><span class="tag">Marketing</span></div>
+      <div class="tool-card" onclick="switchPanel('marketing')"><div class="icon">📈</div><div class="name">Marketing Content</div><div class="desc">Generate blurbs, descriptions, social posts, ad copy</div><span class="tag">Marketing</span></div>
+      <div class="tool-card" onclick="switchPanel('revenue')"><div class="icon">💰</div><div class="name">Revenue Dashboard</div><div class="desc">Track earnings, expenses, and profitability per book</div><span class="tag">Finance</span></div>
+      <div class="tool-card" onclick="switchPanel('history')"><div class="icon">📋</div><div class="name">Job History</div><div class="desc">View and manage all past generation jobs</div><span class="tag">System</span></div>
+      <div class="tool-card" onclick="switchPanel('admin')"><div class="icon">⚙️</div><div class="name">Admin Panel</div><div class="desc">System administration, job management, export</div><span class="tag">System</span></div>
+    </div>
+  </section>
+
+  <!-- ==================== GENERATOR ==================== -->
+  <section class="panel" id="panel-generator">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-title">Content Specs</div>
+          <div class="form-group">
+            <label class="form-label">Topic / Description</label>
+            <textarea class="form-textarea" id="topicInput" placeholder="E.g., A beginner's guide to artificial intelligence..." rows="3"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Audience</label>
+              <input class="form-input" id="audienceInput" placeholder="e.g., Beginners, developers">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Language</label>
+              <select class="form-select" id="languageInput">
+                <option value="English">English</option>
+                <option value="Polish">Polski</option>
+                <option value="Spanish">Español</option>
+                <option value="German">Deutsch</option>
+                <option value="French">Français</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Tone</label>
+              <select class="form-select" id="toneInput">
+                <option value="">Auto</option>
+                <option value="professional">Professional</option>
+                <option value="conversational">Conversational</option>
+                <option value="academic">Academic</option>
+                <option value="creative">Creative</option>
+                <option value="persuasive">Persuasive</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sections</label>
+              <input class="form-input" id="chaptersInput" placeholder="e.g., 5" type="number" min="1" max="20">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Keywords</label>
+            <input class="form-input" id="keywordsInput" placeholder="AI, machine learning, neural networks">
+            <div class="form-hint">Comma-separated</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">Output Type</div>
+          <div class="content-tabs" id="contentTabs">
+            <button class="content-tab active" data-type="ebook"><span class="tab-icon">📖</span>Ebook</button>
+            <button class="content-tab" data-type="website"><span class="tab-icon">🌐</span>Website</button>
+            <button class="content-tab" data-type="landing-page"><span class="tab-icon">🏠</span>Landing</button>
+            <button class="content-tab" data-type="blog-post"><span class="tab-icon">📝</span>Blog</button>
+            <button class="content-tab" data-type="interactive-book"><span class="tab-icon">🎮</span>Interactive</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Template</span>
+            <button class="btn btn-sm btn-secondary" onclick="showThemeGenerator()" style="font-size:10px;padding:3px 8px">✨ AI Theme</button>
+            <button class="btn btn-sm btn-secondary" onclick="showCustomTemplates()" style="font-size:10px;padding:3px 8px">📂 Custom</button>
+          </div>
+          <div class="template-grid" id="templateGrid"></div>
+          <div id="themeGenArea" class="hidden" style="margin-top:10px;padding:12px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">✨ AI Theme Generator</div>
+            <div class="form-group"><input class="form-input" id="themePrompt" placeholder="Describe a theme... e.g., dark ocean with gold accents"></div>
+            <button class="btn btn-sm btn-primary" onclick="genTheme()">Generate Theme</button>
+            <div id="themeResult" style="font-size:11px;color:var(--text-secondary);margin-top:4px"></div>
+          </div>
+          <div id="customTmplArea" class="hidden" style="margin-top:10px;padding:12px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">📂 Custom Templates</div>
+            <input type="file" id="customTmplInput" accept=".html" style="font-size:11px;margin-bottom:6px">
+            <button class="btn btn-sm btn-primary" onclick="uploadTemplate()">Upload</button>
+            <div id="customTmplList" style="font-size:11px;color:var(--text-secondary);margin-top:6px"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Output Formats</div>
+          <div class="format-chips" id="formatChips"></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">Source Files</div>
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📂</div>
+            <div class="drop-zone-text">Drop files here</div>
+            <div class="drop-zone-hint">Supports .txt .md .docx .pdf</div>
+            <div id="fileList" style="margin-top:6px;text-align:left"></div>
+            <input type="file" id="fileInput" accept=".txt,.md,.docx,.pdf" multiple style="display:none">
+          </div>
+        </div>
+        <div class="action-bar" style="margin-top:12px">
+          <select class="provider-select" id="providerSelect"><option value="">Loading...</option></select>
+          <button class="btn btn-primary" id="generateBtn"><span>⚡</span> Generate</button>
+        </div>
+        <div class="progress-section" id="progressSection">
+          <div class="card">
+            <div class="progress-steps" id="progressSteps"></div>
+            <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+            <div class="progress-stats"><span id="progressStatus">Starting...</span><span id="progressPct">0%</span></div>
+          </div>
+        </div>
+        <div class="result-card" id="resultCard">
+          <div class="result-title" id="resultTitle">Ready</div>
+          <div class="result-meta" id="resultMeta"></div>
+          <div class="result-formats" id="resultFormats"></div>
+        </div>
+        <div class="error-card" id="errorCard">
+          <div class="error-title" id="errorTitle">Error</div>
+          <div class="error-msg" id="errorMsg"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== EDITOR ==================== -->
+  <section class="panel" id="panel-editor">
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Chapter Editor</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Job ID</label>
+          <input class="form-input" id="editorJobId" placeholder="Paste a completed job ID">
+        </div>
+        <div class="form-group" style="display:flex;align-items:flex-end">
+          <button class="btn btn-primary btn-block" onclick="loadEditor()">Load Chapters</button>
+        </div>
+      </div>
+    </div>
+    <div id="editorContent"></div>
+  </section>
+
+  <!-- ==================== HISTORY ==================== -->
+  <section class="panel" id="panel-history">
+    <div class="card">
+      <div class="card-title">Generation History</div>
+      <div class="table-wrap"><table><thead><tr><th>Job ID</th><th>Topic</th><th>Status</th><th>Type</th><th>Style</th><th>Created</th><th>Actions</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+      <div class="empty-state" id="historyEmpty"><div class="empty-state-icon">📋</div>No jobs found</div>
+    </div>
+  </section>
+
+  <!-- ==================== PROOFREADER ==================== -->
+  <section class="panel" id="panel-proofreader">
+    <div class="card">
+      <div class="card-title">AI Proofreader</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Grammar check, style suggestions, and originality analysis for any chapter.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Job ID</label>
+          <input class="form-input" id="proofJobId" placeholder="Job ID">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Chapter (optional)</label>
+          <input class="form-input" id="proofChapter" placeholder="0" type="number" min="0">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="runProofread()">Run Proofread</button>
+      <div id="proofResult" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ==================== BETA READER ==================== -->
+  <section class="panel" id="panel-beta-reader">
+    <div class="card">
+      <div class="card-title">Beta Reader</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">5 AI personas read your book and provide feedback from different perspectives.</p>
+      <div class="form-group">
+        <label class="form-label">Job ID</label>
+        <input class="form-input" id="betaJobId" placeholder="Job ID">
+      </div>
+      <button class="btn btn-primary" onclick="runBetaRead()">Run Beta Read</button>
+      <div id="betaResult" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ==================== COACH ==================== -->
+  <section class="panel" id="panel-coach">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-title">🎯 AI Writing Coach</div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Interactive coaching session. Ask a question, get advice, continue the conversation.</p>
+          <div class="form-group">
+            <label class="form-label">Your message</label>
+            <textarea class="form-textarea" id="coachInput" placeholder="I need help with structuring my book chapters..." rows="3"></textarea>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" id="coachBtn" onclick="startCoaching()">Send</button>
+            <button class="btn btn-secondary" id="coachNewBtn" onclick="coachNewSession()">New Session</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="max-height:500px;overflow-y:auto" id="coachCard">
+          <div class="card-title">Conversation</div>
+          <div id="coachContent" style="font-size:13px;color:var(--text-muted)">Start a coaching session to begin.</div>
+          <div id="coachReplyArea" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div class="form-group">
+              <textarea class="form-textarea" id="coachReply" placeholder="Follow up..." rows="2"></textarea>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="coachReply()">Reply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FORMAT CHECKER ==================== -->
+  <section class="panel" id="panel-format-checker">
+    <div class="card">
+      <div class="card-title">KDP Format Checker</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">12-point checklist to ensure your ebook is print-ready for Amazon KDP.</p>
+      <div class="form-group">
+        <label class="form-label">Job ID</label>
+        <input class="form-input" id="formatJobId" placeholder="Job ID">
+      </div>
+      <button class="btn btn-primary" onclick="runFormatCheck()">Check Format</button>
+      <div id="formatResult" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ==================== SERIES ==================== -->
+  <section class="panel" id="panel-series">
+    <div class="card">
+      <div class="card-title">Book Series Manager</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Create and manage book series, organize your titles.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Series Name</label>
+          <input class="form-input" id="seriesName" placeholder="e.g., AI Mastery Series">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input class="form-input" id="seriesDesc" placeholder="Series description">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="createSeries()">Create Series</button>
+      <div id="seriesList" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <!-- ==================== LAUNCH ==================== -->
+  <section class="panel" id="panel-launch">
+    <div class="card">
+      <div class="card-title">Launch Page Generator</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate a countdown landing page for your book launch with email capture.</p>
+      <div class="form-group">
+        <label class="form-label">Job ID</label>
+        <input class="form-input" id="launchJobId" placeholder="Job ID">
+      </div>
+      <button class="btn btn-primary" onclick="generateLaunchPage()">Generate Launch Page</button>
+      <div id="launchResult" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ==================== MARKETING ==================== -->
+  <section class="panel" id="panel-marketing">
+    <div class="card">
+      <div class="card-title">Marketing Content Generator</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate blurbs, descriptions, social media posts, and ad copy for your book.</p>
+      <div class="form-group">
+        <label class="form-label">Job ID</label>
+        <input class="form-input" id="mktJobId" placeholder="Job ID">
+      </div>
+      <button class="btn btn-primary" onclick="generateMarketing()">Generate Marketing</button>
+      <div id="mktResult" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ==================== REVENUE ==================== -->
+  <section class="panel" id="panel-revenue">
+    <div class="card">
+      <div class="card-title">Revenue Dashboard</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Track your book earnings, expenses, and profitability.</p>
+      <div id="revenueContent"></div>
+    </div>
+  </section>
+
+  <!-- ==================== TRANSLATION ==================== -->
+  <section class="panel" id="panel-translate">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-title">🌍 Translate Book</div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Translate a completed book into up to 5 languages at once.</p>
+          <div class="form-group">
+            <label class="form-label">Job ID</label>
+            <input class="form-input" id="transJobId" placeholder="Completed job ID">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Languages</label>
+            <div id="langCheckboxes" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;max-height:200px;overflow-y:auto"></div>
+          </div>
+          <button class="btn btn-primary" id="transBtn" onclick="runTranslation()">Translate</button>
+          <div id="transError" style="color:var(--error);font-size:12px;margin-top:6px"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Translation Results</div>
+          <div id="transResult" style="font-size:13px;color:var(--text-secondary)">Enter a Job ID and select languages, then translate.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PUBLISHING ==================== -->
+  <section class="panel" id="panel-publish">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-title">📤 Publish & Metadata</div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate ONIX, KDP, and Google Play metadata. View supported platforms.</p>
+          <div class="form-group">
+            <label class="form-label">Job ID</label>
+            <input class="form-input" id="pubJobId" placeholder="Completed job ID">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="genMetadata()">Generate Metadata</button>
+            <button class="btn btn-secondary" onclick="loadPlatforms()">Show Platforms</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">Supported Platforms</div>
+          <div id="pubPlatforms" style="font-size:13px;color:var(--text-muted)">Click "Show Platforms" to load.</div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Metadata Output</div>
+          <div id="pubResult" style="font-size:13px;color:var(--text-secondary)">Enter a Job ID and generate metadata.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== BATCH ==================== -->
+  <section class="panel" id="panel-batch">
+    <div class="card">
+      <div class="card-title">📦 Batch Generator</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate multiple files at once — each file becomes a separate job.</p>
+      <div class="drop-zone" id="batchDropZone">
+        <div class="drop-zone-icon">📂</div>
+        <div class="drop-zone-text">Drop files here or click to select</div>
+        <div class="drop-zone-hint">Supports .txt .md .docx .pdf</div>
+        <div id="batchFileList" style="margin-top:6px;text-align:left"></div>
+        <input type="file" id="batchFileInput" accept=".txt,.md,.docx,.pdf" multiple style="display:none">
+      </div>
+      <div class="action-bar" style="margin-top:12px">
+        <select class="provider-select" id="batchProvider"><option value="">Loading...</option></select>
+        <button class="btn btn-primary" id="batchBtn" onclick="runBatch()">Generate All</button>
+      </div>
+      <div id="batchResult" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ==================== ADMIN ==================== -->
+  <section class="panel" id="panel-admin">
+    <div class="card">
+      <div class="card-title">Admin Panel</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">System administration — job management, retries, cancel, and export.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn btn-sm btn-secondary" onclick="adminRefresh()">Refresh</button>
+        <button class="btn btn-sm btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Topic</th><th>Status</th><th>Progress</th><th>Style</th><th>Created</th><th>Actions</th></tr></thead><tbody id="adminBody"></tbody></table></div>
+    </div>
+  </section>
+
+</div>
+
+<svg style="position:absolute;width:0;height:0">
+  <defs>
+    <linearGradient id="lg" x1="0" y1="0" x2="24" y2="24">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script type="module" src="/src/app.js"></script>
+
+</body>
+</html>

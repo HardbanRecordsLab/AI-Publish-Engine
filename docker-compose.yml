@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: aipublish-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aipublish
+      POSTGRES_USER: aipublish
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aipublish -d aipublish"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    container_name: aipublish-app
+    restart: unless-stopped
+    ports:
+      - "9109:9109"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./outputs:/app/outputs
+      - ./jobs:/app/jobs
+      - ./logs:/app/logs
+
+volumes:
+  pgdata:

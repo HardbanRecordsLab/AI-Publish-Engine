@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — AI Publishing Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#070B14;--surface:#0F1320;--surface-hover:#151B2E;--border:#1C2136;--border-hover:#2A3250;--text-primary:#E8EDF5;--text-secondary:#8892A6;--text-muted:#5B657A;--accent-1:#6366F1;--accent-2:#8B5CF6;--success:#22C55E;--error:#EF4444;--warning:#F59E0B;--radius:12px;--radius-sm:8px;--radius-xs:6px;--font:'Inter',sans-serif;--transition:.2s ease}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text-primary);min-height:100vh;line-height:1.5}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-hover);border-radius:3px}
+.header{position:sticky;top:0;z-index:100;background:rgba(7,11,20,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:16px;font-weight:700;background:linear-gradient(135deg,var(--accent-1),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .nav{display:flex;gap:12px;align-items:center}
+.header .nav a{font-size:12px;color:var(--text-muted);text-decoration:none;padding:4px 12px;border:1px solid var(--border);border-radius:100px;transition:all var(--transition)}
+.header .nav a:hover{border-color:var(--accent-1);color:var(--accent-1)}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center}
+.stat-card .value{font-size:32px;font-weight:800;background:linear-gradient(135deg,var(--accent-1),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-card .label{font-size:12px;color:var(--text-muted);margin-top:4px}
+.stat-card .sub{font-size:10px;color:var(--text-muted);margin-top:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.card h2{font-size:14px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h2 svg{width:18px;height:18px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px}
+.chart-box h3{font-size:11px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.chart-canvas{width:100%;height:120px;display:flex;align-items:flex-end;gap:4px}
+.chart-bar{flex:1;border-radius:3px 3px 0 0;position:relative;transition:height .6s cubic-bezier(.4,0,.2,1);min-height:4px}
+.chart-bar:hover{opacity:.8}
+.chart-bar .lbl{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--text-muted);white-space:nowrap}
+.chart-bar .val{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:600;color:var(--text-primary);white-space:nowrap}
+.donut-wrap{display:flex;align-items:center;gap:20px;justify-content:center}
+.donut-svg{width:100px;height:100px;transform:rotate(-90deg)}
+.donut-legend{display:flex;flex-direction:column;gap:6px}
+.donut-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)}
+.donut-legend-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:10px 12px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary)}
+tr:hover td{background:var(--surface-hover)}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600}
+.status-badge.done{background:rgba(34,197,94,.15);color:var(--success)}
+.status-badge.failed{background:rgba(239,68,68,.15);color:var(--error)}
+.status-badge.processing{background:rgba(99,102,241,.15);color:var(--accent-1)}
+.status-badge.queued{background:rgba(245,158,11,.15);color:var(--warning)}
+.progress-bar{width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-bar .fill{height:100%;background:linear-gradient(90deg,var(--accent-1),var(--accent-3));border-radius:2px;transition:width .5s}
+.btn-sm{padding:4px 10px;font-size:11px;border:none;border-radius:var(--radius-xs);cursor:pointer;font-family:var(--font);transition:all var(--transition)}
+.btn{padding:10px 24px;font-size:14px;font-weight:600;border:none;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);transition:all var(--transition)}
+.btn-primary{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));color:#fff}
+.btn-primary:hover{opacity:.9}
+.login-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:40px;width:100%;max-width:400px;text-align:center}
+.login-box h2{font-size:20px;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,var(--accent-1),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-box p{font-size:13px;color:var(--text-muted);margin-bottom:24px}
+.login-box .field{text-align:left;margin-bottom:16px}
+.login-box .field label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.login-box .field input{width:100%;padding:10px 14px;font-size:14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text-primary);font-family:var(--font);outline:none;transition:border var(--transition)}
+.login-box .field input:focus{border-color:var(--accent-1)}
+.login-box .error{color:var(--error);font-size:12px;margin-top:8px;min-height:20px}
+.login-box .btn{width:100%}
+.login-overlay.hidden{display:none}
+.btn-sm:hover{opacity:.8}
+.btn-danger{background:var(--error);color:#fff}
+.btn-primary{background:var(--accent-1);color:#fff}
+.empty-state{text-align:center;padding:48px;color:var(--text-muted);font-size:14px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.search-input{padding:8px 12px;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text-primary);font-family:var(--font);min-width:200px;outline:none}
+.search-input:focus{border-color:var(--accent-1)}
+.filter-select{padding:8px 12px;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text-primary);font-family:var(--font);outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--accent-1)}
+.refresh-btn{padding:8px 16px;font-size:12px;font-weight:600;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text-primary);cursor:pointer;font-family:var(--font);transition:all var(--transition)}
+.refresh-btn:hover{background:var(--surface-hover)}
+a{color:var(--accent-1);text-decoration:none}
+a:hover{text-decoration:underline}
+@media(max-width:768px){.layout{padding:16px}.stats-grid{grid-template-columns:1fr 1fr}.charts-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>Admin Panel</h2>
+    <p>Sign in to manage jobs</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@example.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="error" id="loginError"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+<header class="header">
+  <h1>AI Publishing Engine — Admin</h1>
+  <div class="nav">
+    <a href="/frontend/index.html">← Generator</a>
+    <a href="#" id="csvLink" onclick="exportCSV()">📥 CSV</a>
+    <a href="#" onclick="refreshJobs()">🔄 Refresh</a>
+    <a href="#" onclick="doLogout()" style="color:var(--error)">🚪</a>
+  </div>
+</header>
+<div class="layout">
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card"><div class="value" id="statTotal">0</div><div class="label">Total Jobs</div></div>
+    <div class="stat-card"><div class="value" id="statDone">0</div><div class="label">Completed</div><div class="sub" id="statDonePct"></div></div>
+    <div class="stat-card"><div class="value" id="statFailed">0</div><div class="label">Failed</div><div class="sub" id="statFailedPct"></div></div>
+    <div class="stat-card"><div class="value" id="statProcessing">0</div><div class="label">In Progress</div></div>
+    <div class="stat-card"><div class="value" id="statToday">0</div><div class="label">Today</div></div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-box">
+      <h3>Jobs by Status</h3>
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 36 36" id="donutChart">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" stroke-width="2.5"/>
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-dasharray="0 100" stroke-linecap="round" id="donutDone"/>
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--accent-1)" stroke-width="2.5" stroke-dasharray="0 100" stroke-linecap="round" id="donutProcessing"/>
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--error)" stroke-width="2.5" stroke-dasharray="0 100" stroke-linecap="round" id="donutFailed"/>
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--warning)" stroke-width="2.5" stroke-dasharray="0 100" stroke-linecap="round" id="donutQueued"/>
+        </svg>
+        <div class="donut-legend" id="donutLegend"></div>
+      </div>
+    </div>
+    <div class="chart-box">
+      <h3>Jobs by Style (Top 8)</h3>
+      <div class="chart-canvas" id="styleChart"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>All Jobs</h2>
+    <div class="toolbar" style="margin-bottom:12px">
+      <input class="search-input" id="searchInput" placeholder="Search by job ID or topic..." oninput="renderJobs()">
+      <select class="filter-select" id="filterSelect" onchange="renderJobs()">
+        <option value="all">All Status</option>
+        <option value="done">Done</option>
+        <option value="processing">Processing</option>
+        <option value="queued">Queued</option>
+        <option value="failed">Failed</option>
+      </select>
+      <button class="refresh-btn" onclick="refreshJobs()">Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Job ID</th><th>Topic</th><th>Status</th><th>Progress</th><th>Style</th><th>Type</th><th>Created</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="jobsBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="emptyState">No jobs found.</div>
+  </div>
+</div>
+<script>
+const API = '';
+let allJobs = [];
+let authToken = localStorage.getItem('admin_token') || '';
+
+function getHeaders() {
+  return { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' };
+}
+
+async function checkAuth() {
+  if (!authToken) { showLogin(); return false; }
+  try {
+    const res = await fetch(API + '/api/admin/check', { headers: getHeaders() });
+    if (res.ok) { hideLogin(); return true; }
+  } catch(e) {}
+  showLogin();
+  return false;
+}
+
+function showLogin() {
+  document.getElementById('loginOverlay').classList.remove('hidden');
+}
+
+function hideLogin() {
+  document.getElementById('loginOverlay').classList.add('hidden');
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  try {
+    const res = await fetch(API + '/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    if (!res.ok) { errEl.textContent = 'Invalid email or password'; return; }
+    const data = await res.json();
+    authToken = data.token;
+    localStorage.setItem('admin_token', authToken);
+    hideLogin();
+    refreshJobs();
+  } catch(e) {
+    errEl.textContent = 'Connection error';
+  }
+}
+
+function doLogout() {
+  authToken = '';
+  localStorage.removeItem('admin_token');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  showLogin();
+}
+
+async function refreshJobs() {
+  if (!await checkAuth()) return;
+  try {
+    const res = await fetch(API + '/api/admin/jobs', { headers: getHeaders() });
+    if (res.status === 401) { doLogout(); return; }
+    if (!res.ok) throw new Error('Failed');
+    allJobs = await res.json();
+    updateStats();
+    renderCharts();
+    renderJobs();
+  } catch(e) {
+    document.getElementById('jobsBody').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--error)">Failed to load jobs. API may be unavailable.</td></tr>`;
+  }
+}
+
+function updateStats() {
+  const total = allJobs.length;
+  const done = allJobs.filter(j => j.status === 'done').length;
+  const failed = allJobs.filter(j => j.status === 'failed').length;
+  const processing = allJobs.filter(j => j.status === 'processing' || j.status === 'queued').length;
+  const today = allJobs.filter(j => { try { return new Date(j.created_at).toDateString() === new Date().toDateString() } catch(e) { return false } }).length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statFailed').textContent = failed;
+  document.getElementById('statProcessing').textContent = processing;
+  document.getElementById('statToday').textContent = today;
+  document.getElementById('statDonePct').textContent = total ? Math.round(done/total*100) + '% success rate' : '';
+  document.getElementById('statFailedPct').textContent = total ? Math.round(failed/total*100) + '% failure rate' : '';
+}
+
+function renderCharts() {
+  // Donut chart
+  const total = allJobs.length || 1;
+  const done = allJobs.filter(j => j.status === 'done').length;
+  const failed = allJobs.filter(j => j.status === 'failed').length;
+  const processing = allJobs.filter(j => j.status === 'processing').length;
+  const queued = allJobs.filter(j => j.status === 'queued').length;
+  const circ = 100;
+  const segs = [
+    {id:'donutDone', val: done, color:'var(--success)', label:'Done'},
+    {id:'donutProcessing', val: processing, color:'var(--accent-1)', label:'Processing'},
+    {id:'donutFailed', val: failed, color:'var(--error)', label:'Failed'},
+    {id:'donutQueued', val: queued, color:'var(--warning)', label:'Queued'},
+  ];
+  let offset = 0;
+  segs.forEach(s => {
+    const pct = (s.val / total) * circ;
+    const el = document.getElementById(s.id);
+    el.style.strokeDasharray = pct + ' ' + (circ - pct);
+    el.style.strokeDashoffset = -offset;
+    offset += pct;
+  });
+  document.getElementById('donutLegend').innerHTML = segs.map(s =>
+    `<div class="donut-legend-item"><span class="dot" style="background:${s.color}"></span>${s.label} (${s.val})</div>`
+  ).join('');
+
+  // Style bar chart
+  const styleCounts = {};
+  allJobs.forEach(j => { const s = j.style || 'unknown'; styleCounts[s] = (styleCounts[s] || 0) + 1; });
+  const sorted = Object.entries(styleCounts).sort((a,b) => b[1] - a[1]).slice(0, 8);
+  const maxVal = Math.max(...sorted.map(s => s[1]), 1);
+  const colors = ['#6366F1','#8B5CF6','#A855F7','#22C55E','#F59E0B','#EF4444','#06B6D4','#EC4899'];
+  document.getElementById('styleChart').innerHTML = sorted.map(([style, count], i) =>
+    `<div class="chart-bar" style="height:${(count/maxVal)*100}%;background:${colors[i % colors.length]};transition-delay:${i*0.05}s" title="${style}: ${count}">
+      <span class="val">${count}</span>
+      <span class="lbl">${style.slice(0,6)}</span>
+    </div>`
+  ).join('');
+}
+
+function renderJobs() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filter = document.getElementById('filterSelect').value;
+  let filtered = allJobs;
+  if (filter !== 'all') filtered = filtered.filter(j => j.status === filter);
+  if (search) filtered = filtered.filter(j => 
+    (j.id && j.id.toLowerCase().includes(search)) ||
+    (j.topic && j.topic.toLowerCase().includes(search))
+  );
+  const tbody = document.getElementById('jobsBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    document.getElementById('emptyState').style.display = '';
+    return;
+  }
+  document.getElementById('emptyState').style.display = 'none';
+  tbody.innerHTML = filtered.slice().reverse().map(j => {
+    const statusClass = j.status === 'done' ? 'done' : j.status === 'failed' ? 'failed' : j.status === 'processing' ? 'processing' : 'queued';
+    const created = j.created_at ? new Date(j.created_at).toLocaleString() : '—';
+    const topic = j.topic || '—';
+    const style = j.style || '—';
+    const type = j.content_type || 'ebook';
+    const progress = j.progress || 0;
+    const idShort = j.id ? j.id.slice(0, 8) + '...' : '—';
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px" title="${j.id}">${idShort}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${topic}</td>
+      <td><span class="status-badge ${statusClass}">${j.status}</span></td>
+      <td><div class="progress-bar"><div class="fill" style="width:${progress}%"></div></div></td>
+      <td>${style}</td>
+      <td>${type}</td>
+      <td style="font-size:11px">${created}</td>
+      <td>
+        ${j.status === 'done' ? `<a href="${API}/api/download/${j.id}?format=pdf" class="btn-sm btn-primary" style="text-decoration:none;color:#fff">PDF</a> ` : ''}
+        ${j.status === 'done' ? `<a href="${API}/api/preview/${j.id}" class="btn-sm btn-primary" style="text-decoration:none;color:#fff" target="_blank">Preview</a> ` : ''}
+        ${j.status === 'failed' ? `<button class="btn-sm btn-primary" onclick="retryJob('${j.id}')">Retry</button> ` : ''}
+        <button class="btn-sm btn-danger" onclick="deleteJob('${j.id}')">×</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function deleteJob(jobId) {
+  if (!confirm('Delete job ' + jobId.slice(0,8) + '...?')) return;
+  try {
+    const res = await fetch(API + '/api/admin/jobs/' + jobId, {method: 'DELETE', headers: getHeaders()});
+    if (res.ok) refreshJobs();
+  } catch(e) {}
+}
+
+async function retryJob(jobId) {
+  try {
+    const res = await fetch(API + '/api/admin/jobs/' + jobId + '/retry', {method: 'POST', headers: getHeaders()});
+    if (res.ok) refreshJobs();
+  } catch(e) {}
+}
+
+async function exportCSV() {
+  if (!await checkAuth()) return;
+  try {
+    const res = await fetch(API + '/api/admin/jobs/export', { headers: getHeaders() });
+    if (res.status === 401) { doLogout(); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ai_publish_jobs.csv'; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {}
+}
+
+checkAuth().then(ok => { if (ok) refreshJobs(); });
+setInterval(refreshJobs, 10000);
+</script>
+</body>
+</html>

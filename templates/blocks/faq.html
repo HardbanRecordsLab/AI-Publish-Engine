@@ -1,0 +1,9 @@
+<div class="faq" style="margin: 0.5cm 0; page-break-inside: avoid;">
+  <h4 style="font-family: var(--font-heading); font-size: 11pt; color: var(--color-heading); margin-bottom: 0.3cm;">Frequently Asked Questions</h4>
+  {% for item in items %}
+  <div class="faq-item" style="margin-bottom: 0.3cm; padding: 0.2cm 0.3cm; background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+    <p style="font-weight: 600; font-size: 10pt; margin-bottom: 0.1cm; color: var(--color-accent);">Q: {{ item.question }}</p>
+    <p style="font-size: 10pt; margin: 0; line-height: 1.5;">A: {{ item.answer }}</p>
+  </div>
+  {% endfor %}
+</div>

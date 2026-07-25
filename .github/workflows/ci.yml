@@ -19,11 +19,16 @@ jobs:
           python-version: "3.12"
           cache: "pip"
       - run: pip install -r requirements.txt
-      - run: pip install ruff mypy pytest
+      - run: pip install ruff mypy pytest pip-audit
       - name: Lint
         run: ruff check backend/ --output-format=github
       - name: Type check
         run: mypy backend/ --ignore-missing-imports || true
+      - name: Dependency vulnerability scan
+        # Hard gate: 0 known vulnerabilities confirmed as of this workflow's
+        # introduction, so any new finding here is a real regression to
+        # triage, not noise to silence with `|| true`.
+        run: pip-audit -r requirements.txt
       - name: Test
         run: python -m pytest tests/ -x -q --timeout=30
         env:
@@ -51,6 +56,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Dependency vulnerability scan
+        run: npm audit --audit-level=high
 
   deploy:
     if: github.ref == 'refs/heads/main'

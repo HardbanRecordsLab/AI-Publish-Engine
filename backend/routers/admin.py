@@ -1,11 +1,20 @@
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse
 
+from backend.core import cost_tracker
 from backend.core.jobs import count_jobs, delete_job, get_all_jobs, get_job, update_job
 from backend.limiter import limiter
 from backend.routers.auth import require_admin
 
 router = APIRouter()
+
+
+@router.get("/api/admin/ai-costs", dependencies=[Depends(require_admin)])
+@limiter.limit("30/minute")
+def admin_ai_costs(request: Request, days: int = Query(7, ge=1, le=90)):
+    """Estimated AI provider spend — see backend/core/cost_tracker.py for
+    the pricing table and its accuracy caveats."""
+    return cost_tracker.get_summary(days)
 
 
 @router.get("/api/admin/jobs", dependencies=[Depends(require_admin)])

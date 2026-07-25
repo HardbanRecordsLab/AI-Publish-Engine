@@ -15,6 +15,7 @@ venv/
 # Runtime data / generated output
 outputs/
 jobs/jobs.json
+jobs/ai_cost_ledger.json
 
 # Logs
 logs/

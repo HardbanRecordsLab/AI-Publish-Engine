@@ -9,6 +9,7 @@ from openai import APIError, RateLimitError, Timeout
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from backend.config import settings
+from backend.core import cost_tracker
 from backend.core.tokens import generate_design_system as _token_design_system
 
 # ============================================================
@@ -177,10 +178,23 @@ def _call(name: str, messages: list[dict], max_tokens: int = 6000) -> str | None
     )
     content = res.choices[0].message.content
     logger.success(f"AI OK: {name}/{model} ({len(content)} chars)")
+    try:
+        usage = getattr(res, "usage", None)
+        if usage:
+            cost = cost_tracker.record_usage(
+                name, model,
+                prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+                completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+            )
+            logger.debug(f"{name}/{model}: ~${cost:.5f} this call, ${cost_tracker.get_daily_spend():.4f} today")
+    except Exception as e:
+        # Cost tracking must never break a successful AI call.
+        logger.warning(f"cost_tracker: failed to record usage for {name}/{model}: {e}")
     return content
 
 
 def _try_providers(system: str, user: str, preferred: str | None = None, max_tokens: int = 6000) -> str:
+    cost_tracker.check_budget()  # raises RuntimeError if today's spend already hit the ceiling
     order = _build_provider_order(preferred)
     last_error = None
     for name in order:

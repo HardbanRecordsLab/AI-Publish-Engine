@@ -30,14 +30,23 @@ Choose what type of content to generate:
 - **Landing Page** — Single-page promotional landing page
 - **Blog Post** — Single article/blog post
 
-### Template Selection (25 Themes)
+### Template Selection (20 Themes)
 
-Choose from **25 built-in themes** that control the visual appearance:
+Choose from **20 built-in themes** that control the visual appearance —
+this list is generated from the theme files actually shipped with the
+app (`GET /api/themes`), not hand-maintained, so it can't drift out of
+sync with reality the way this section previously did:
 
-- Modern, Classic, Minimal, Dark, Professional, Creative, Academic
-- Children's Book, Cookbook, Technical, Business, Romance, Sci-Fi
-- Fantasy, Mystery, Self-Help, Travel, Health & Fitness, Personal Finance
-- And more — each with custom color schemes, typography, and layouts
+- **AI & Tech**, **Classic Book**, **Business Pro**, **Cookbook**,
+  **Corporate Pro**, **Cyberpunk**, **Dark Premium**, **Education**,
+  **Financial**, **Future Forward**, **Health & Wellness**, **Luxury**,
+  **Magazine**, **Minimal Pro**, **Music**, **Real Estate**,
+  **Retro Vintage**, **Startup**, **Storyteller**, **Travel**
+
+Each theme defines its own color palette, typography, and cover style.
+If you need a look that isn't covered by these 20, use **AI Theme
+Generator** on the Generator screen to describe a custom theme in plain
+language instead of picking from the list.
 
 ### AI Provider Selection
 

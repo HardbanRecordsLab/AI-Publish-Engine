@@ -54,7 +54,8 @@ def api_generate_marketing(request: Request, job_id: str):
 
 # ─── Multi-language Publishing ──────────────────────────────────────
 @router.get("/api/languages")
-def api_languages():
+@limiter.limit("60/minute")
+def api_languages(request: Request):
     return [{"code": k, "name": v} for k, v in SUPPORTED_LANGUAGES.items()]
 
 
@@ -123,7 +124,8 @@ def api_coach_answer(request: Request, session_id: str, answer: str):
 
 
 @router.get("/api/coach/session/{session_id}")
-def api_coach_session(session_id: str):
+@limiter.limit("60/minute")
+def api_coach_session(request: Request, session_id: str):
     session = _coach_sessions.get(session_id)
     if not session:
         return JSONResponse({"error": "Session not found"}, status_code=404)
@@ -132,12 +134,14 @@ def api_coach_session(session_id: str):
 
 # ─── Direct Publishing ──────────────────────────────────────────────
 @router.get("/api/publish/platforms")
-def api_platforms():
+@limiter.limit("60/minute")
+def api_platforms(request: Request):
     return get_platforms()
 
 
 @router.post("/api/publish/metadata/{job_id}")
-def api_generate_metadata(job_id: str):
+@limiter.limit("30/minute")
+def api_generate_metadata(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -179,7 +183,8 @@ def _job_metadata(job: dict) -> dict:
 
 # ─── Platform compliance validators (ported from Kiro eBook Studio) ──
 @router.get("/api/publish/validate/{job_id}")
-def api_publish_validate(job_id: str, platform: str = "metadata", cover_path: str = None):
+@limiter.limit("30/minute")
+def api_publish_validate(request: Request, job_id: str, platform: str = "metadata", cover_path: str = None):
     """Validate a job's outputs against a store's technical requirements.
 
     platform: metadata | amazon-kdp | apple-books | epub
@@ -205,7 +210,8 @@ def api_publish_validate(job_id: str, platform: str = "metadata", cover_path: st
 
 # ─── Platform packaging (ported from Kiro eBook Studio) ──────────────
 @router.post("/api/publish/prepare/{job_id}")
-def api_publish_prepare(job_id: str, platform: str, cover_path: str = None):
+@limiter.limit("20/minute")
+def api_publish_prepare(request: Request, job_id: str, platform: str, cover_path: str = None):
     """Prepare a store-ready package: copies EPUB/PDF, resizes the cover to
     the store's required dimensions, writes metadata + validation JSON.
 
@@ -311,7 +317,8 @@ def api_beta_read(request: Request, job_id: str, provider: str = None):
 
 # ─── KDP Format Checker ─────────────────────────────────────────────
 @router.get("/api/format-check/{job_id}")
-def api_format_check(job_id: str, platform: str = "kdp"):
+@limiter.limit("30/minute")
+def api_format_check(request: Request, job_id: str, platform: str = "kdp"):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -326,7 +333,8 @@ def api_format_check(job_id: str, platform: str = "kdp"):
 
 # ─── Book Launch Page ───────────────────────────────────────────────
 @router.post("/api/launch-page/{job_id}")
-def api_launch_page(job_id: str, launch_date: str = None, accent_color: str = "#6366F1"):
+@limiter.limit("30/minute")
+def api_launch_page(request: Request, job_id: str, launch_date: str = None, accent_color: str = "#6366F1"):
     from fastapi.responses import HTMLResponse
     job = get_job(job_id)
     if not job:

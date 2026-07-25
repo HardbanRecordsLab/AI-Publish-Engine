@@ -1,17 +1,19 @@
 """WYSIWYG Chapter Editor — get/save edited chapters and rebuild HTML."""
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 
 from backend.core.builder import build_ebook_html
 from backend.core.jobs import get_job, update_job
+from backend.limiter import limiter
 
 router = APIRouter()
 
 
 @router.get("/api/editor/{job_id}/chapters")
-def get_chapters(job_id: str):
+@limiter.limit("60/minute")
+def get_chapters(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
@@ -44,7 +46,8 @@ def get_chapters(job_id: str):
 
 
 @router.put("/api/editor/{job_id}/chapters")
-def save_chapters(job_id: str, body: dict):
+@limiter.limit("20/minute")
+def save_chapters(request: Request, job_id: str, body: dict):
     job = get_job(job_id)
     if not job:
         raise HTTPException(404, "Job not found")

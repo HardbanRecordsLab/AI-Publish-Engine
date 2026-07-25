@@ -1,5 +1,5 @@
 """Book Series Manager REST endpoints."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from backend.core.jobs import get_job
@@ -13,17 +13,20 @@ from backend.core.series import (
     remove_book_from_series,
     update_series,
 )
+from backend.limiter import limiter
 
 router = APIRouter()
 
 
 @router.get("/api/series")
-def api_list_series():
+@limiter.limit("60/minute")
+def api_list_series(request: Request):
     return list_series()
 
 
 @router.get("/api/series/{series_id}")
-def api_get_series(series_id: str):
+@limiter.limit("60/minute")
+def api_get_series(request: Request, series_id: str):
     s = get_series(series_id)
     if not s:
         raise HTTPException(404, "Series not found")
@@ -31,7 +34,8 @@ def api_get_series(series_id: str):
 
 
 @router.post("/api/series")
-def api_create_series(body: dict):
+@limiter.limit("30/minute")
+def api_create_series(request: Request, body: dict):
     name = body.get("name", "").strip()
     if not name:
         raise HTTPException(400, "Series name is required")
@@ -42,7 +46,8 @@ def api_create_series(body: dict):
 
 
 @router.put("/api/series/{series_id}")
-def api_update_series(series_id: str, body: dict):
+@limiter.limit("30/minute")
+def api_update_series(request: Request, series_id: str, body: dict):
     result = update_series(series_id, body)
     if not result:
         raise HTTPException(404, "Series not found")
@@ -50,14 +55,16 @@ def api_update_series(series_id: str, body: dict):
 
 
 @router.delete("/api/series/{series_id}")
-def api_delete_series(series_id: str):
+@limiter.limit("30/minute")
+def api_delete_series(request: Request, series_id: str):
     if delete_series(series_id):
         return {"status": "deleted"}
     raise HTTPException(404, "Series not found")
 
 
 @router.post("/api/series/{series_id}/books")
-def api_add_book(series_id: str, body: dict):
+@limiter.limit("30/minute")
+def api_add_book(request: Request, series_id: str, body: dict):
     job_id = body.get("job_id", "").strip()
     if not job_id:
         raise HTTPException(400, "job_id is required")
@@ -73,7 +80,8 @@ def api_add_book(series_id: str, body: dict):
 
 
 @router.delete("/api/series/{series_id}/books/{job_id}")
-def api_remove_book(series_id: str, job_id: str):
+@limiter.limit("30/minute")
+def api_remove_book(request: Request, series_id: str, job_id: str):
     result = remove_book_from_series(series_id, job_id)
     if not result:
         raise HTTPException(404, "Series not found")
@@ -81,7 +89,8 @@ def api_remove_book(series_id: str, job_id: str):
 
 
 @router.get("/api/series/{series_id}/landing")
-def api_series_landing(series_id: str):
+@limiter.limit("30/minute")
+def api_series_landing(request: Request, series_id: str):
     s = get_series(series_id)
     if not s:
         raise HTTPException(404, "Series not found")

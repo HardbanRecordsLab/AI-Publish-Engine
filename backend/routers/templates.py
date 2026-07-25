@@ -2,12 +2,13 @@ import json
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from backend.config import settings
 from backend.core.ai import _try_providers
 from backend.core.color_engine import list_topics
+from backend.limiter import limiter
 from backend.themes import generate_theme_css, get_theme, list_themes
 
 router = APIRouter()
@@ -63,12 +64,14 @@ STYLE_THEME_PREVIEW_MAP = {
 
 
 @router.get("/api/templates")
-def get_templates():
+@limiter.limit("60/minute")
+def get_templates(request: Request):
     return TEMPLATES
 
 
 @router.get("/api/template-preview/{style}")
-def template_preview(style: str):
+@limiter.limit("60/minute")
+def template_preview(request: Request, style: str):
     theme_id = STYLE_THEME_PREVIEW_MAP.get(style, style)
     theme = get_theme(theme_id)
     if not theme:
@@ -113,17 +116,20 @@ body{{font-family:var(--font-body);background:var(--color-bg);color:var(--color-
 
 
 @router.get("/api/themes")
-def get_themes():
+@limiter.limit("60/minute")
+def get_themes(request: Request):
     return list_themes()
 
 
 @router.get("/api/topics")
-def get_topics():
+@limiter.limit("60/minute")
+def get_topics(request: Request):
     return list_topics()
 
 
 @router.post("/api/themes/generate")
-def generate_theme_from_description(description: str):
+@limiter.limit("10/minute")  # calls an AI provider — same ceiling as other AI-cost endpoints
+def generate_theme_from_description(request: Request, description: str):
     if not description or len(description) < 3:
         return JSONResponse({"error": "Description too short"}, status_code=400)
     existing_ids = ", ".join(f'"{t["id"]}"' for t in list_themes())
@@ -184,7 +190,8 @@ os.makedirs(str(CUSTOM_TEMPLATES_DIR), exist_ok=True)
 
 
 @router.post("/api/templates/upload")
-async def upload_custom_template(file: UploadFile = File(...), name: str = Form("")):
+@limiter.limit("20/minute")
+async def upload_custom_template(request: Request, file: UploadFile = File(...), name: str = Form("")):
     if not file.filename.lower().endswith(".html"):
         return JSONResponse({"error": "Only .html files allowed"}, status_code=400)
     content = await file.read()
@@ -198,7 +205,8 @@ async def upload_custom_template(file: UploadFile = File(...), name: str = Form(
 
 
 @router.get("/api/templates/custom")
-def list_custom_templates():
+@limiter.limit("60/minute")
+def list_custom_templates(request: Request):
     if not CUSTOM_TEMPLATES_DIR.exists():
         return []
     templates = []
@@ -212,7 +220,8 @@ def list_custom_templates():
 
 
 @router.get("/api/embed/{job_id}")
-def embed_book(job_id: str):
+@limiter.limit("60/minute")
+def embed_book(request: Request, job_id: str):
     """Return an embeddable iframe snippet for an interactive book."""
     from backend.core.jobs import get_job
     job = get_job(job_id)
@@ -233,7 +242,8 @@ def embed_book(job_id: str):
 
 
 @router.get("/api/guide")
-def get_guide():
+@limiter.limit("60/minute")
+def get_guide(request: Request):
     guide_path = Path(__file__).parent.parent.parent / "GUIDE.md"
     if guide_path.exists():
         return HTMLResponse(content=guide_path.read_text(encoding="utf-8"), media_type="text/markdown")

@@ -131,7 +131,8 @@ async def generate_batch(
 
 
 @router.get("/api/status/{job_id}")
-def get_status(job_id: str):
+@limiter.limit("120/minute")  # generous on purpose: the frontend polls this every ~5s during generation
+def get_status(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -147,7 +148,8 @@ def get_status(job_id: str):
 
 
 @router.get("/api/download/{job_id}")
-def download(job_id: str, format: str = Query("pdf", pattern="^(pdf|epub|docx|website|mobi)$")):
+@limiter.limit("30/minute")
+def download(request: Request, job_id: str, format: str = Query("pdf", pattern="^(pdf|epub|docx|website|mobi)$")):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -184,14 +186,16 @@ def download(job_id: str, format: str = Query("pdf", pattern="^(pdf|epub|docx|we
 
 
 @router.get("/api/print-sizes")
-def get_print_sizes():
+@limiter.limit("60/minute")
+def get_print_sizes(request: Request):
     from backend.core.pdf import TRIM_SIZES
     return [{"id": k, "label": v["label"], "width": v["width"], "height": v["height"]}
             for k, v in TRIM_SIZES.items()]
 
 
 @router.post("/api/download/{job_id}/print")
-def download_print(job_id: str, trim_size: str = Query("6x9"), isbn: str = Query("")):
+@limiter.limit("10/minute")
+def download_print(request: Request, job_id: str, trim_size: str = Query("6x9"), isbn: str = Query("")):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -213,7 +217,8 @@ def download_print(job_id: str, trim_size: str = Query("6x9"), isbn: str = Query
 
 
 @router.post("/api/download/{job_id}/mobi")
-def download_mobi(job_id: str):
+@limiter.limit("10/minute")
+def download_mobi(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -235,7 +240,8 @@ def download_mobi(job_id: str):
 
 
 @router.post("/api/download/{job_id}/kdp")
-def download_kdp_package(job_id: str, trim_size: str = Query("6x9")):
+@limiter.limit("10/minute")
+def download_kdp_package(request: Request, job_id: str, trim_size: str = Query("6x9")):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -254,7 +260,8 @@ def download_kdp_package(job_id: str, trim_size: str = Query("6x9")):
 
 
 @router.get("/api/preview/{job_id}")
-def preview(job_id: str):
+@limiter.limit("60/minute")
+def preview(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -264,7 +271,8 @@ def preview(job_id: str):
 
 
 @router.get("/api/reader/{job_id}")
-def reader(job_id: str):
+@limiter.limit("60/minute")
+def reader(request: Request, job_id: str):
     """Dedicated reader page for interactive books with full-screen immersive mode."""
     from datetime import datetime
     job = get_job(job_id)
@@ -309,7 +317,8 @@ body{{background:#f5f5f5;font-family:-apple-system,system-ui,sans-serif}}
 
 
 @router.post("/api/cancel/{job_id}")
-def cancel(job_id: str):
+@limiter.limit("30/minute")
+def cancel(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)

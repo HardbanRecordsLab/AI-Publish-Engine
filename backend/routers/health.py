@@ -2,10 +2,11 @@ import os
 import time
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from backend.core.ai import PROVIDERS
 from backend.core.tokens import list_themes
+from backend.limiter import limiter
 
 router = APIRouter()
 
@@ -13,7 +14,8 @@ START_TIME = time.time()
 
 
 @router.get("/api/health")
-def health():
+@limiter.limit("300/minute")  # generous on purpose: uptime monitors poll this frequently
+def health(request: Request):
     uptime = time.time() - START_TIME
     # Check DB connectivity
     db_ok = False
@@ -37,13 +39,15 @@ def health():
 
 
 @router.get("/api/health/check")
-def health_check():
+@limiter.limit("300/minute")  # generous on purpose: uptime monitors poll this frequently
+def health_check(request: Request):
     """Simple check for load balancers (minimal response)."""
     return {"status": "ok"}
 
 
 @router.get("/api/providers")
-def get_providers():
+@limiter.limit("60/minute")
+def get_providers(request: Request):
     return [
         {
             "id": k,

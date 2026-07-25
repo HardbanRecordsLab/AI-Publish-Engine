@@ -129,6 +129,7 @@ def admin_login(request: Request, body: LoginRequest):
 
 
 @router.get("/api/admin/check")
+@limiter.limit("60/minute")
 def admin_check(request: Request):
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer ") or not _verify_token(auth[7:]):

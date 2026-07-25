@@ -1,18 +1,21 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from backend.core.tokens import DAISYUI_MAP, TOPIC_MAP, get_tokens_for_ai
+from backend.limiter import limiter
 from backend.themes import get_theme, list_themes
 
 router = APIRouter(prefix="/api/design-tokens", tags=["design-tokens"])
 
 
 @router.get("/themes")
-def get_themes():
+@limiter.limit("60/minute")
+def get_themes(request: Request):
     return list_themes()
 
 
 @router.get("/themes/{theme_id}")
-def get_theme_detail(theme_id: str):
+@limiter.limit("60/minute")
+def get_theme_detail(request: Request, theme_id: str):
     t = get_theme(theme_id)
     if not t.get("id"):
         return {"error": "Theme not found"}
@@ -30,7 +33,8 @@ def get_theme_detail(theme_id: str):
 
 
 @router.get("/topic-map")
-def get_topic_map():
+@limiter.limit("60/minute")
+def get_topic_map(request: Request):
     return [
         {"topic": topic, "themes": styles}
         for topic, styles in sorted(TOPIC_MAP.items())
@@ -38,5 +42,6 @@ def get_topic_map():
 
 
 @router.get("/ai-context")
-def get_ai_context():
+@limiter.limit("60/minute")
+def get_ai_context(request: Request):
     return {"context": get_tokens_for_ai()}

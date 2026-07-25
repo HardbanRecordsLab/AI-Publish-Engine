@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse
 
 from backend.core.jobs import count_jobs, delete_job, get_all_jobs, get_job, update_job
+from backend.limiter import limiter
 from backend.routers.auth import require_admin
 
 router = APIRouter()
 
 
 @router.get("/api/admin/jobs", dependencies=[Depends(require_admin)])
-def admin_list_jobs(offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200)):
+@limiter.limit("60/minute")
+def admin_list_jobs(request: Request, offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200)):
     jobs = get_all_jobs(offset, limit)
     total = count_jobs()
     return {
@@ -28,13 +30,15 @@ def admin_list_jobs(offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, l
 
 
 @router.delete("/api/admin/jobs/{job_id}", dependencies=[Depends(require_admin)])
-def admin_delete_job(job_id: str):
+@limiter.limit("30/minute")
+def admin_delete_job(request: Request, job_id: str):
     delete_job(job_id)
     return {"status": "deleted"}
 
 
 @router.post("/api/admin/jobs/{job_id}/retry", dependencies=[Depends(require_admin)])
-def admin_retry_job(job_id: str):
+@limiter.limit("20/minute")
+def admin_retry_job(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
@@ -44,7 +48,8 @@ def admin_retry_job(job_id: str):
 
 
 @router.get("/api/admin/jobs/export", dependencies=[Depends(require_admin)])
-def admin_export_csv(limit: int = Query(10000, ge=1, le=50000)):
+@limiter.limit("10/minute")
+def admin_export_csv(request: Request, limit: int = Query(10000, ge=1, le=50000)):
     jobs = get_all_jobs(0, limit)
     import csv
     from io import StringIO

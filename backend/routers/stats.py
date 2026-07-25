@@ -1,12 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from backend.core.jobs import get_all_jobs
+from backend.limiter import limiter
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
 
 @router.get("/dashboard")
-def dashboard_stats():
+@limiter.limit("30/minute")
+def dashboard_stats(request: Request):
     jobs = get_all_jobs(0, 10000)
     total = len(jobs)
     statuses = {}

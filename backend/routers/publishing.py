@@ -2,7 +2,7 @@
 import json
 import os
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
 from backend.config import settings
@@ -114,7 +114,7 @@ def api_coach_start(request: Request):
 
 @router.post("/api/coach/answer")
 @limiter.limit("20/minute")
-def api_coach_answer(request: Request, session_id: str, answer: str):
+def api_coach_answer(request: Request, session_id: str, answer: str = Query(..., max_length=2000)):
     session = _coach_sessions.get(session_id)
     if not session:
         return JSONResponse({"error": "Session not found"}, status_code=404)

@@ -3,12 +3,31 @@ import json
 
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from backend.core.builder import build_ebook_html
 from backend.core.jobs import get_job, update_job
+from backend.core.prompt_safety import sanitize_text
 from backend.limiter import limiter
 
 router = APIRouter()
+
+
+class EditedSection(BaseModel):
+    index: int
+    heading: str = Field("", max_length=500)
+    content: str = Field("", max_length=20000)
+
+
+class EditedChapter(BaseModel):
+    index: int
+    title: str = Field("", max_length=500)
+    introduction: str = Field("", max_length=5000)
+    sections: list[EditedSection] = Field(default_factory=list)
+
+
+class SaveChaptersRequest(BaseModel):
+    chapters: list[EditedChapter]
 
 
 @router.get("/api/editor/{job_id}/chapters")
@@ -47,14 +66,14 @@ def get_chapters(request: Request, job_id: str):
 
 @router.put("/api/editor/{job_id}/chapters")
 @limiter.limit("20/minute")
-def save_chapters(request: Request, job_id: str, body: dict):
+def save_chapters(request: Request, job_id: str, body: SaveChaptersRequest):
     job = get_job(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
     if job["status"] != "done":
         raise HTTPException(400, "Job not ready yet")
 
-    edited_chapters = body.get("chapters")
+    edited_chapters = body.chapters
     if not edited_chapters:
         raise HTTPException(400, "No chapters provided")
 
@@ -66,19 +85,21 @@ def save_chapters(request: Request, job_id: str, body: dict):
     if isinstance(build_params, str):
         build_params = json.loads(build_params)
 
-    # Merge edited chapters into book_data
-    ch_map = {c["index"]: c for c in edited_chapters}
+    # Merge edited chapters into book_data. Field lengths are already capped
+    # by SaveChaptersRequest; sanitize_text() additionally strips control
+    # characters before this text can re-enter a prompt (proofread/
+    # translate/marketing) or get persisted.
+    ch_map = {c.index: c for c in edited_chapters}
     for i, ch in enumerate(book_data.get("chapters", [])):
         if i in ch_map:
             edited = ch_map[i]
-            ch["title"] = edited.get("title", ch["title"])
-            ch["introduction"] = edited.get("introduction", ch.get("introduction", ""))
-            edited_sections = edited.get("sections", [])
-            sec_map = {s["index"]: s for s in edited_sections}
+            ch["title"] = sanitize_text(edited.title, 500) or ch["title"]
+            ch["introduction"] = sanitize_text(edited.introduction, 5000)
+            sec_map = {s.index: s for s in edited.sections}
             for si, sec in enumerate(ch.get("sections", [])):
                 if si in sec_map:
-                    sec["heading"] = sec_map[si].get("heading", sec.get("heading", ""))
-                    sec["content"] = sec_map[si].get("content", sec.get("content", ""))
+                    sec["heading"] = sanitize_text(sec_map[si].heading, 500)
+                    sec["content"] = sanitize_text(sec_map[si].content, 20000)
 
     # Rebuild HTML
     try:

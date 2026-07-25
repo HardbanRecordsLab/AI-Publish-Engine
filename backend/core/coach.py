@@ -3,6 +3,7 @@ import json
 
 from backend.config import settings
 from backend.core.ai import _try_providers
+from backend.core.prompt_safety import fence
 
 INTERVIEW_QUESTIONS = [
     "What is the main topic or subject of your book?",
@@ -61,7 +62,7 @@ def _generate_book_spec(answers: dict) -> dict:
     ans_str = json.dumps(answers, indent=2)
     user = f"""Based on these interview answers, create a detailed book specification:
 
-{ans_str}
+{fence(ans_str)}
 
 Return JSON with:
 - title: compelling book title

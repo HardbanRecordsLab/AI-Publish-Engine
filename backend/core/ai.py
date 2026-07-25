@@ -10,6 +10,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 from backend.config import settings
 from backend.core import cost_tracker
+from backend.core.prompt_safety import INJECTION_GUARD, fence
 from backend.core.tokens import generate_design_system as _token_design_system
 
 # ============================================================
@@ -200,7 +201,7 @@ def _try_providers(system: str, user: str, preferred: str | None = None, max_tok
     for name in order:
         try:
             result = _call(name, [
-                {"role": "system", "content": system},
+                {"role": "system", "content": system + INJECTION_GUARD},
                 {"role": "user", "content": user},
             ], max_tokens=max_tokens)
             if result:
@@ -298,7 +299,7 @@ RULES:
 - NO markdown, NO backticks, NO explanations
 
 SOURCE:
-{trunc}"""
+{fence(trunc)}"""
 
     # Try primary provider first
     try:
@@ -309,7 +310,7 @@ SOURCE:
         strict_system = "CRITICAL: Respond with ONLY a raw JSON object. No markdown, no backticks, no explanations. Start with { and end with }."
         strict_user = f"""Convert this to JSON ebook. Respond with ONLY the JSON object:
 
-{trunc[:5000]}"""
+{fence(trunc[:5000])}"""
         # Force a different provider on retry (skip preferred to avoid same failure)
         raw = _try_providers(strict_system, strict_user, preferred=None)
         result = _clean_json(raw)

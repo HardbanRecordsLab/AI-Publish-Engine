@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Publishing Engine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/src/style.css">
 
 <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
@@ -16,11 +16,46 @@
 </head>
 <body>
 
+<!-- Icon sprite: hand-placed inline SVG symbols, Lucide-style (24x24, 1.75px stroke, round caps/joins, no fill). Static markup only — no icon-library JS. -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1V10"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.7c-1.6-1.3-4.2-2.2-7-2.2v13.2c2.8 0 5.4.9 7 2.2 1.6-1.3 4.2-2.2 7-2.2V4.5c-2.8 0-5.4.9-7 2.2Z"/><path d="M12 6.7v12.7"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4.2 1.2L4 16Z"/></symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M8.2 11.5h7.6M8.2 15h7.6M8.2 18.5h4.8"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8.2 12 3 3 8.2v7.6L12 21l9-5.2Z"/><path d="M3 8.2 12 13l9-4.8"/><path d="M12 13v8"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.3 12.4 11 15l5-5.6"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 12S5.8 5.3 12 5.3 21.8 12 21.8 12 18.2 18.7 12 18.7 2.2 12 2.2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-ruler" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6.5 8v3M10 8v3M13.5 8v3M17 8v3"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.4 2.6 3.8 6 3.8 9s-1.4 6.4-3.8 9c-2.4-2.6-3.8-6-3.8-9s1.4-6.4 3.8-9Z"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 20.5V4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v16.5"/><path d="M10.5 20.5V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v13.5"/><path d="M16.5 20.5V10.7a1 1 0 0 1 1.32-.95l2.5.9a1 1 0 0 1 .68.95v9.4"/></symbol>
+    <symbol id="i-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5.3 14.8c-1.4 1.4-1.8 4.7-1.8 4.7s3.3-.4 4.7-1.8c.8-.8.8-2 0-2.8-.8-.8-2.1-.9-2.9-.1Z"/><path d="M12 15 9.2 12.2c1-3 3-6.6 6.7-8.5 1.9-1 3.8-1 4.7 0s1 2.8 0 4.7c-1.9 3.7-5.5 5.7-8.6 6.6Z"/><circle cx="15" cy="9" r="1.4"/></symbol>
+    <symbol id="i-trending" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17.5 9.5 11l4 4L21 6.5"/><path d="M15 6.5h6v6"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5V4"/><path d="M6.5 9.5 12 4l5.5 5.5"/><path d="M4.5 19.5h15"/></symbol>
+    <symbol id="i-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5v19"/><path d="M16.5 6.8c0-1.8-2-3.1-4.5-3.1S7.5 5 7.5 6.8 9.5 9.7 12 9.7s4.5 1.2 4.5 3S14.5 15.8 12 15.8s-4.5-1.3-4.5-3.1"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="15" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2.5H6.5a1 1 0 0 0-1 1v17a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8Z"/><path d="M14 2.5V8h5.5"/><path d="M8.3 13h7.4M8.3 16.5h7.4M8.3 9.5h2.4"/></symbol>
+    <symbol id="i-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="9.5" rx="4"/><path d="M7.5 11v4M5.5 13h4"/><circle cx="15.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="18" cy="14.5" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 3 13 7.5 17.5 9 13 10.5 11.5 15 10 10.5 5.5 9 10 7.5Z"/><path d="M18.5 15 19.3 17.2 21.5 18 19.3 18.8 18.5 21 17.7 18.8 15.5 18 17.7 17.2Z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2 4.5 14h6l-1.2 8L20 9.5h-6.3Z"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 21H5.5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9.5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12.5"/><path d="M6.8 10.5 12 15.7l5.2-5.2"/><path d="M4.5 20.5h15"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.6a8.4 8.4 0 0 1-8.4 8.4 8.3 8.3 0 0 1-4-1L3.5 20l1.1-3.4a8.3 8.3 0 0 1-1-4A8.4 8.4 0 1 1 21 11.6Z"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5A8 8 0 1 0 17.7 17"/><path d="M20 5.5v6h-6"/></symbol>
+  </defs>
+</svg>
+
+<!-- Ambient mesh backdrop — pure CSS depth, no canvas/WebGL -->
+<div class="mesh-bg" aria-hidden="true"><div class="grain"></div></div>
+
 <!-- Login Overlay -->
 <div class="login-overlay" id="loginOverlay">
   <div class="login-card">
     <div class="login-logo">
-      <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="url(#lg)"/><path d="M8 12l3 3 5-7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="brand-mark" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="url(#lg)"/><path d="M8 12l3 3 5-7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>AI Publish</span>
     </div>
     <div class="login-sub">Sign in to continue</div>
@@ -40,38 +75,38 @@
 <!-- Sidebar -->
 <nav class="sidebar">
   <div class="sidebar-logo">
-    <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="url(#lg)"/><path d="M8 12l3 3 5-7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="url(#lg)"/><path d="M8 12l3 3 5-7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>AI Publish</span>
     <span class="badge">v2</span>
   </div>
   <div class="sidebar-section">Content</div>
   <div class="sidebar-nav">
-    <a class="sidebar-link active" data-panel="dashboard"><span class="icon">🏠</span>Dashboard</a>
-    <a class="sidebar-link" data-panel="generator"><span class="icon">📖</span>Generator</a>
-    <a class="sidebar-link" data-panel="editor"><span class="icon">✏️</span>Editor</a>
-    <a class="sidebar-link" data-panel="history"><span class="icon">📋</span>History</a>
-    <a class="sidebar-link" data-panel="batch"><span class="icon">📦</span>Batch Generator</a>
+    <a class="sidebar-link active" data-panel="dashboard"><span class="icon"><svg><use href="#i-home"/></svg></span><span class="label">Dashboard</span></a>
+    <a class="sidebar-link" data-panel="generator"><span class="icon"><svg><use href="#i-book"/></svg></span><span class="label">Generator</span></a>
+    <a class="sidebar-link" data-panel="editor"><span class="icon"><svg><use href="#i-edit"/></svg></span><span class="label">Editor</span></a>
+    <a class="sidebar-link" data-panel="history"><span class="icon"><svg><use href="#i-clipboard"/></svg></span><span class="label">History</span></a>
+    <a class="sidebar-link" data-panel="batch"><span class="icon"><svg><use href="#i-package"/></svg></span><span class="label">Batch Generator</span></a>
   </div>
   <div class="sidebar-section">AI Tools</div>
   <div class="sidebar-nav">
-    <a class="sidebar-link" data-panel="proofreader"><span class="icon">✅</span>Proofreader</a>
-    <a class="sidebar-link" data-panel="beta-reader"><span class="icon">👁️</span>Beta Reader</a>
-    <a class="sidebar-link" data-panel="coach"><span class="icon">🎯</span>Writing Coach</a>
-    <a class="sidebar-link" data-panel="format-checker"><span class="icon">📐</span>KDP Format Check</a>
-    <a class="sidebar-link" data-panel="translate"><span class="icon">🌍</span>Translation</a>
+    <a class="sidebar-link" data-panel="proofreader"><span class="icon"><svg><use href="#i-check-circle"/></svg></span><span class="label">Proofreader</span></a>
+    <a class="sidebar-link" data-panel="beta-reader"><span class="icon"><svg><use href="#i-eye"/></svg></span><span class="label">Beta Reader</span></a>
+    <a class="sidebar-link" data-panel="coach"><span class="icon"><svg><use href="#i-target"/></svg></span><span class="label">Writing Coach</span></a>
+    <a class="sidebar-link" data-panel="format-checker"><span class="icon"><svg><use href="#i-ruler"/></svg></span><span class="label">KDP Format Check</span></a>
+    <a class="sidebar-link" data-panel="translate"><span class="icon"><svg><use href="#i-globe"/></svg></span><span class="label">Translation</span></a>
   </div>
   <div class="sidebar-section">Business</div>
   <div class="sidebar-nav">
-    <a class="sidebar-link" data-panel="series"><span class="icon">📚</span>Series</a>
-    <a class="sidebar-link" data-panel="launch"><span class="icon">🚀</span>Launch Page</a>
-    <a class="sidebar-link" data-panel="marketing"><span class="icon">📈</span>Marketing</a>
-    <a class="sidebar-link" data-panel="publish"><span class="icon">📤</span>Publishing</a>
-    <a class="sidebar-link" data-panel="revenue"><span class="icon">💰</span>Revenue</a>
+    <a class="sidebar-link" data-panel="series"><span class="icon"><svg><use href="#i-library"/></svg></span><span class="label">Series</span></a>
+    <a class="sidebar-link" data-panel="launch"><span class="icon"><svg><use href="#i-rocket"/></svg></span><span class="label">Launch Page</span></a>
+    <a class="sidebar-link" data-panel="marketing"><span class="icon"><svg><use href="#i-trending"/></svg></span><span class="label">Marketing</span></a>
+    <a class="sidebar-link" data-panel="publish"><span class="icon"><svg><use href="#i-upload"/></svg></span><span class="label">Publishing</span></a>
+    <a class="sidebar-link" data-panel="revenue"><span class="icon"><svg><use href="#i-dollar"/></svg></span><span class="label">Revenue</span></a>
   </div>
   <div class="sidebar-section">System</div>
   <div class="sidebar-nav">
-    <a class="sidebar-link" data-panel="admin"><span class="icon">⚙️</span>Admin</a>
-    <a class="sidebar-link" href="/api/guide" target="_blank" style="color:var(--text-muted)"><span class="icon">📖</span>Guide</a>
+    <a class="sidebar-link" data-panel="admin"><span class="icon"><svg><use href="#i-sliders"/></svg></span><span class="label">Admin</span></a>
+    <a class="sidebar-link" href="/api/guide" target="_blank" style="color:var(--text-muted)"><span class="icon"><svg><use href="#i-book"/></svg></span><span class="label">Guide</span></a>
   </div>
   <div class="sidebar-footer">AI Publishing Engine v2</div>
 </nav>
@@ -83,36 +118,36 @@
     <div class="topbar-actions">
       <span class="provider-dot on" id="providerDot"></span>
       <span class="topbar-provider" id="providerName">openrouter</span>
-      <button class="btn btn-sm btn-secondary" onclick="doLogout()" style="font-size:11px;padding:4px 10px;margin-left:4px" title="Sign out">🚪</button>
+      <button class="btn btn-sm btn-secondary" onclick="doLogout()" style="font-size:11px;padding:5px 9px;margin-left:4px" title="Sign out"><svg><use href="#i-logout"/></svg></button>
     </div>
   </header>
 
   <!-- ==================== DASHBOARD ==================== -->
   <section class="panel active" id="panel-dashboard">
-    <div style="margin-bottom:20px">
-      <h1 style="font-size:22px;font-weight:800">Dashboard</h1>
-      <p style="font-size:13px;color:var(--text-muted);margin-top:4px">AI Publishing Engine — wszystkie narzędzia w jednym miejscu</p>
+    <div style="margin-bottom:22px">
+      <h1 style="font-size:26px;font-weight:800;letter-spacing:-.02em">Dashboard</h1>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:5px">AI Publishing Engine — wszystkie narzędzia w jednym miejscu</p>
     </div>
     <div class="grid-4" id="dashStats">
-      <div class="stat-card"><div class="val" id="dashJobs">-</div><div class="lbl">Total Jobs</div></div>
-      <div class="stat-card"><div class="val" id="dashDone">-</div><div class="lbl">Completed</div></div>
-      <div class="stat-card"><div class="val" id="dashSuccess">-</div><div class="lbl">Success Rate</div><div class="sub" id="dashSuccessSub"></div></div>
-      <div class="stat-card"><div class="val" id="dashToday">-</div><div class="lbl">Today</div></div>
+      <div class="stat-card tilt"><div class="val" id="dashJobs">-</div><div class="lbl">Total Jobs</div></div>
+      <div class="stat-card tilt"><div class="val" id="dashDone">-</div><div class="lbl">Completed</div></div>
+      <div class="stat-card tilt"><div class="val" id="dashSuccess">-</div><div class="lbl">Success Rate</div><div class="sub" id="dashSuccessSub"></div></div>
+      <div class="stat-card tilt"><div class="val" id="dashToday">-</div><div class="lbl">Today</div></div>
     </div>
-    <div style="margin-bottom:12px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px">Quick Actions</div>
+    <div style="margin:24px 0 12px;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Quick Actions</div>
     <div class="tool-grid" id="toolGrid">
-      <div class="tool-card" onclick="switchPanel('generator')"><div class="icon">📖</div><div class="name">Ebook Generator</div><div class="desc">Generate complete ebooks, websites, landing pages from any topic</div><span class="tag">AI</span></div>
-      <div class="tool-card" onclick="switchPanel('editor')"><div class="icon">✏️</div><div class="name">Chapter Editor</div><div class="desc">WYSIWYG editing of generated chapters and content blocks</div><span class="tag">Editor</span></div>
-      <div class="tool-card" onclick="switchPanel('proofreader')"><div class="icon">✅</div><div class="name">AI Proofreader</div><div class="desc">Grammar check, style suggestions, and originality analysis</div><span class="tag">AI</span></div>
-      <div class="tool-card" onclick="switchPanel('beta-reader')"><div class="icon">👁️</div><div class="name">Beta Reader</div><div class="desc">5 AI personas review your book from different perspectives</div><span class="tag">AI</span></div>
-      <div class="tool-card" onclick="switchPanel('coach')"><div class="icon">🎯</div><div class="name">Writing Coach</div><div class="desc">Interactive AI coaching for structure, pacing, and style</div><span class="tag">AI</span></div>
-      <div class="tool-card" onclick="switchPanel('format-checker')"><div class="icon">📐</div><div class="name">KDP Format Check</div><div class="desc">12-point checklist for Amazon KDP print-ready compliance</div><span class="tag">Utility</span></div>
-      <div class="tool-card" onclick="switchPanel('series')"><div class="icon">📚</div><div class="name">Book Series</div><div class="desc">Manage series, organize books, generate series landing pages</div><span class="tag">Management</span></div>
-      <div class="tool-card" onclick="switchPanel('launch')"><div class="icon">🚀</div><div class="name">Launch Page</div><div class="desc">Generate book launch countdown pages with email capture</div><span class="tag">Marketing</span></div>
-      <div class="tool-card" onclick="switchPanel('marketing')"><div class="icon">📈</div><div class="name">Marketing Content</div><div class="desc">Generate blurbs, descriptions, social posts, ad copy</div><span class="tag">Marketing</span></div>
-      <div class="tool-card" onclick="switchPanel('revenue')"><div class="icon">💰</div><div class="name">Revenue Dashboard</div><div class="desc">Track earnings, expenses, and profitability per book</div><span class="tag">Finance</span></div>
-      <div class="tool-card" onclick="switchPanel('history')"><div class="icon">📋</div><div class="name">Job History</div><div class="desc">View and manage all past generation jobs</div><span class="tag">System</span></div>
-      <div class="tool-card" onclick="switchPanel('admin')"><div class="icon">⚙️</div><div class="name">Admin Panel</div><div class="desc">System administration, job management, export</div><span class="tag">System</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('generator')"><div class="icon-chip"><svg><use href="#i-book"/></svg></div><div class="name">Ebook Generator</div><div class="desc">Generate complete ebooks, websites, landing pages from any topic</div><span class="tag">AI</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('editor')"><div class="icon-chip"><svg><use href="#i-edit"/></svg></div><div class="name">Chapter Editor</div><div class="desc">WYSIWYG editing of generated chapters and content blocks</div><span class="tag">Editor</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('proofreader')"><div class="icon-chip"><svg><use href="#i-check-circle"/></svg></div><div class="name">AI Proofreader</div><div class="desc">Grammar check, style suggestions, and originality analysis</div><span class="tag">AI</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('beta-reader')"><div class="icon-chip"><svg><use href="#i-eye"/></svg></div><div class="name">Beta Reader</div><div class="desc">5 AI personas review your book from different perspectives</div><span class="tag">AI</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('coach')"><div class="icon-chip"><svg><use href="#i-target"/></svg></div><div class="name">Writing Coach</div><div class="desc">Interactive AI coaching for structure, pacing, and style</div><span class="tag">AI</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('format-checker')"><div class="icon-chip"><svg><use href="#i-ruler"/></svg></div><div class="name">KDP Format Check</div><div class="desc">12-point checklist for Amazon KDP print-ready compliance</div><span class="tag">Utility</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('series')"><div class="icon-chip"><svg><use href="#i-library"/></svg></div><div class="name">Book Series</div><div class="desc">Manage series, organize books, generate series landing pages</div><span class="tag">Management</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('launch')"><div class="icon-chip"><svg><use href="#i-rocket"/></svg></div><div class="name">Launch Page</div><div class="desc">Generate book launch countdown pages with email capture</div><span class="tag">Marketing</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('marketing')"><div class="icon-chip"><svg><use href="#i-trending"/></svg></div><div class="name">Marketing Content</div><div class="desc">Generate blurbs, descriptions, social posts, ad copy</div><span class="tag">Marketing</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('revenue')"><div class="icon-chip"><svg><use href="#i-dollar"/></svg></div><div class="name">Revenue Dashboard</div><div class="desc">Track earnings, expenses, and profitability per book</div><span class="tag">Finance</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('history')"><div class="icon-chip"><svg><use href="#i-clipboard"/></svg></div><div class="name">Job History</div><div class="desc">View and manage all past generation jobs</div><span class="tag">System</span></div>
+      <div class="tool-card tilt" onclick="switchPanel('admin')"><div class="icon-chip"><svg><use href="#i-sliders"/></svg></div><div class="name">Admin Panel</div><div class="desc">System administration, job management, export</div><span class="tag">System</span></div>
     </div>
   </section>
 
@@ -121,7 +156,7 @@
     <div class="two-col">
       <div>
         <div class="card">
-          <div class="card-title">Content Specs</div>
+          <div class="card-title"><svg><use href="#i-file-text"/></svg>Content Specs</div>
           <div class="form-group">
             <label class="form-label">Topic / Description</label>
             <textarea class="form-textarea" id="topicInput" placeholder="E.g., A beginner's guide to artificial intelligence..." rows="3"></textarea>
@@ -166,28 +201,28 @@
           </div>
         </div>
         <div class="card" style="margin-top:12px">
-          <div class="card-title">Output Type</div>
+          <div class="card-title"><svg><use href="#i-grid"/></svg>Output Type</div>
           <div class="content-tabs" id="contentTabs">
-            <button class="content-tab active" data-type="ebook"><span class="tab-icon">📖</span>Ebook</button>
-            <button class="content-tab" data-type="website"><span class="tab-icon">🌐</span>Website</button>
-            <button class="content-tab" data-type="landing-page"><span class="tab-icon">🏠</span>Landing</button>
-            <button class="content-tab" data-type="blog-post"><span class="tab-icon">📝</span>Blog</button>
-            <button class="content-tab" data-type="interactive-book"><span class="tab-icon">🎮</span>Interactive</button>
+            <button class="content-tab active" data-type="ebook"><span class="tab-icon"><svg><use href="#i-book"/></svg></span>Ebook</button>
+            <button class="content-tab" data-type="website"><span class="tab-icon"><svg><use href="#i-globe"/></svg></span>Website</button>
+            <button class="content-tab" data-type="landing-page"><span class="tab-icon"><svg><use href="#i-home"/></svg></span>Landing</button>
+            <button class="content-tab" data-type="blog-post"><span class="tab-icon"><svg><use href="#i-file-text"/></svg></span>Blog</button>
+            <button class="content-tab" data-type="interactive-book"><span class="tab-icon"><svg><use href="#i-gamepad"/></svg></span>Interactive</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
             <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Template</span>
-            <button class="btn btn-sm btn-secondary" onclick="showThemeGenerator()" style="font-size:10px;padding:3px 8px">✨ AI Theme</button>
-            <button class="btn btn-sm btn-secondary" onclick="showCustomTemplates()" style="font-size:10px;padding:3px 8px">📂 Custom</button>
+            <button class="btn btn-sm btn-secondary" onclick="showThemeGenerator()" style="font-size:10px;padding:4px 9px"><svg><use href="#i-sparkles"/></svg> AI Theme</button>
+            <button class="btn btn-sm btn-secondary" onclick="showCustomTemplates()" style="font-size:10px;padding:4px 9px"><svg><use href="#i-folder"/></svg> Custom</button>
           </div>
           <div class="template-grid" id="templateGrid"></div>
-          <div id="themeGenArea" class="hidden" style="margin-top:10px;padding:12px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border)">
-            <div style="font-size:12px;font-weight:600;margin-bottom:6px">✨ AI Theme Generator</div>
+          <div id="themeGenArea" class="hidden" style="margin-top:10px;padding:12px;background:rgba(7,11,20,.5);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg style="width:14px;height:14px;color:var(--accent-2)"><use href="#i-sparkles"/></svg>AI Theme Generator</div>
             <div class="form-group"><input class="form-input" id="themePrompt" placeholder="Describe a theme... e.g., dark ocean with gold accents"></div>
             <button class="btn btn-sm btn-primary" onclick="genTheme()">Generate Theme</button>
             <div id="themeResult" style="font-size:11px;color:var(--text-secondary);margin-top:4px"></div>
           </div>
-          <div id="customTmplArea" class="hidden" style="margin-top:10px;padding:12px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border)">
-            <div style="font-size:12px;font-weight:600;margin-bottom:6px">📂 Custom Templates</div>
+          <div id="customTmplArea" class="hidden" style="margin-top:10px;padding:12px;background:rgba(7,11,20,.5);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg style="width:14px;height:14px;color:var(--accent-1)"><use href="#i-folder"/></svg>Custom Templates</div>
             <input type="file" id="customTmplInput" accept=".html" style="font-size:11px;margin-bottom:6px">
             <button class="btn btn-sm btn-primary" onclick="uploadTemplate()">Upload</button>
             <div id="customTmplList" style="font-size:11px;color:var(--text-secondary);margin-top:6px"></div>
@@ -196,13 +231,13 @@
       </div>
       <div>
         <div class="card">
-          <div class="card-title">Output Formats</div>
+          <div class="card-title"><svg><use href="#i-package"/></svg>Output Formats</div>
           <div class="format-chips" id="formatChips"></div>
         </div>
         <div class="card" style="margin-top:12px">
-          <div class="card-title">Source Files</div>
+          <div class="card-title"><svg><use href="#i-folder"/></svg>Source Files</div>
           <div class="drop-zone" id="dropZone">
-            <div class="drop-zone-icon">📂</div>
+            <div class="drop-zone-icon"><svg><use href="#i-folder"/></svg></div>
             <div class="drop-zone-text">Drop files here</div>
             <div class="drop-zone-hint">Supports .txt .md .docx .pdf</div>
             <div id="fileList" style="margin-top:6px;text-align:left"></div>
@@ -211,7 +246,7 @@
         </div>
         <div class="action-bar" style="margin-top:12px">
           <select class="provider-select" id="providerSelect"><option value="">Loading...</option></select>
-          <button class="btn btn-primary" id="generateBtn"><span>⚡</span> Generate</button>
+          <button class="btn btn-primary" id="generateBtn"><svg><use href="#i-zap"/></svg> Generate</button>
         </div>
         <div class="progress-section" id="progressSection">
           <div class="card">
@@ -220,7 +255,7 @@
             <div class="progress-stats"><span id="progressStatus">Starting...</span><span id="progressPct">0%</span></div>
           </div>
         </div>
-        <div class="result-card" id="resultCard">
+        <div class="result-card tilt" id="resultCard">
           <div class="result-title" id="resultTitle">Ready</div>
           <div class="result-meta" id="resultMeta"></div>
           <div class="result-formats" id="resultFormats"></div>
@@ -236,7 +271,7 @@
   <!-- ==================== EDITOR ==================== -->
   <section class="panel" id="panel-editor">
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">Chapter Editor</div>
+      <div class="card-title"><svg><use href="#i-edit"/></svg>Chapter Editor</div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Job ID</label>
@@ -253,16 +288,16 @@
   <!-- ==================== HISTORY ==================== -->
   <section class="panel" id="panel-history">
     <div class="card">
-      <div class="card-title">Generation History</div>
+      <div class="card-title"><svg><use href="#i-clipboard"/></svg>Generation History</div>
       <div class="table-wrap"><table><thead><tr><th>Job ID</th><th>Topic</th><th>Status</th><th>Type</th><th>Style</th><th>Created</th><th>Actions</th></tr></thead><tbody id="historyBody"></tbody></table></div>
-      <div class="empty-state" id="historyEmpty"><div class="empty-state-icon">📋</div>No jobs found</div>
+      <div class="empty-state" id="historyEmpty"><div class="empty-state-icon"><svg><use href="#i-clipboard"/></svg></div>No jobs found</div>
     </div>
   </section>
 
   <!-- ==================== PROOFREADER ==================== -->
   <section class="panel" id="panel-proofreader">
     <div class="card">
-      <div class="card-title">AI Proofreader</div>
+      <div class="card-title"><svg><use href="#i-check-circle"/></svg>AI Proofreader</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Grammar check, style suggestions, and originality analysis for any chapter.</p>
       <div class="form-row">
         <div class="form-group">
@@ -282,7 +317,7 @@
   <!-- ==================== BETA READER ==================== -->
   <section class="panel" id="panel-beta-reader">
     <div class="card">
-      <div class="card-title">Beta Reader</div>
+      <div class="card-title"><svg><use href="#i-eye"/></svg>Beta Reader</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">5 AI personas read your book and provide feedback from different perspectives.</p>
       <div class="form-group">
         <label class="form-label">Job ID</label>
@@ -298,7 +333,7 @@
     <div class="two-col">
       <div>
         <div class="card">
-          <div class="card-title">🎯 AI Writing Coach</div>
+          <div class="card-title"><svg><use href="#i-target"/></svg>AI Writing Coach</div>
           <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Interactive coaching session. Ask a question, get advice, continue the conversation.</p>
           <div class="form-group">
             <label class="form-label">Your message</label>
@@ -312,7 +347,7 @@
       </div>
       <div>
         <div class="card" style="max-height:500px;overflow-y:auto" id="coachCard">
-          <div class="card-title">Conversation</div>
+          <div class="card-title"><svg><use href="#i-message"/></svg>Conversation</div>
           <div id="coachContent" style="font-size:13px;color:var(--text-muted)">Start a coaching session to begin.</div>
           <div id="coachReplyArea" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
             <div class="form-group">
@@ -328,7 +363,7 @@
   <!-- ==================== FORMAT CHECKER ==================== -->
   <section class="panel" id="panel-format-checker">
     <div class="card">
-      <div class="card-title">KDP Format Checker</div>
+      <div class="card-title"><svg><use href="#i-ruler"/></svg>KDP Format Checker</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">12-point checklist to ensure your ebook is print-ready for Amazon KDP.</p>
       <div class="form-group">
         <label class="form-label">Job ID</label>
@@ -342,7 +377,7 @@
   <!-- ==================== SERIES ==================== -->
   <section class="panel" id="panel-series">
     <div class="card">
-      <div class="card-title">Book Series Manager</div>
+      <div class="card-title"><svg><use href="#i-library"/></svg>Book Series Manager</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Create and manage book series, organize your titles.</p>
       <div class="form-row">
         <div class="form-group">
@@ -362,7 +397,7 @@
   <!-- ==================== LAUNCH ==================== -->
   <section class="panel" id="panel-launch">
     <div class="card">
-      <div class="card-title">Launch Page Generator</div>
+      <div class="card-title"><svg><use href="#i-rocket"/></svg>Launch Page Generator</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate a countdown landing page for your book launch with email capture.</p>
       <div class="form-group">
         <label class="form-label">Job ID</label>
@@ -376,7 +411,7 @@
   <!-- ==================== MARKETING ==================== -->
   <section class="panel" id="panel-marketing">
     <div class="card">
-      <div class="card-title">Marketing Content Generator</div>
+      <div class="card-title"><svg><use href="#i-trending"/></svg>Marketing Content Generator</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate blurbs, descriptions, social media posts, and ad copy for your book.</p>
       <div class="form-group">
         <label class="form-label">Job ID</label>
@@ -390,7 +425,7 @@
   <!-- ==================== REVENUE ==================== -->
   <section class="panel" id="panel-revenue">
     <div class="card">
-      <div class="card-title">Revenue Dashboard</div>
+      <div class="card-title"><svg><use href="#i-dollar"/></svg>Revenue Dashboard</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Track your book earnings, expenses, and profitability.</p>
       <div id="revenueContent"></div>
     </div>
@@ -401,7 +436,7 @@
     <div class="two-col">
       <div>
         <div class="card">
-          <div class="card-title">🌍 Translate Book</div>
+          <div class="card-title"><svg><use href="#i-globe"/></svg>Translate Book</div>
           <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Translate a completed book into up to 5 languages at once.</p>
           <div class="form-group">
             <label class="form-label">Job ID</label>
@@ -417,7 +452,7 @@
       </div>
       <div>
         <div class="card">
-          <div class="card-title">Translation Results</div>
+          <div class="card-title"><svg><use href="#i-globe"/></svg>Translation Results</div>
           <div id="transResult" style="font-size:13px;color:var(--text-secondary)">Enter a Job ID and select languages, then translate.</div>
         </div>
       </div>
@@ -429,7 +464,7 @@
     <div class="two-col">
       <div>
         <div class="card">
-          <div class="card-title">📤 Publish & Metadata</div>
+          <div class="card-title"><svg><use href="#i-upload"/></svg>Publish &amp; Metadata</div>
           <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate ONIX, KDP, and Google Play metadata. View supported platforms.</p>
           <div class="form-group">
             <label class="form-label">Job ID</label>
@@ -441,13 +476,13 @@
           </div>
         </div>
         <div class="card" style="margin-top:12px">
-          <div class="card-title">Supported Platforms</div>
+          <div class="card-title"><svg><use href="#i-globe"/></svg>Supported Platforms</div>
           <div id="pubPlatforms" style="font-size:13px;color:var(--text-muted)">Click "Show Platforms" to load.</div>
         </div>
       </div>
       <div>
         <div class="card">
-          <div class="card-title">Metadata Output</div>
+          <div class="card-title"><svg><use href="#i-file-text"/></svg>Metadata Output</div>
           <div id="pubResult" style="font-size:13px;color:var(--text-secondary)">Enter a Job ID and generate metadata.</div>
         </div>
       </div>
@@ -457,10 +492,10 @@
   <!-- ==================== BATCH ==================== -->
   <section class="panel" id="panel-batch">
     <div class="card">
-      <div class="card-title">📦 Batch Generator</div>
+      <div class="card-title"><svg><use href="#i-package"/></svg>Batch Generator</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate multiple files at once — each file becomes a separate job.</p>
       <div class="drop-zone" id="batchDropZone">
-        <div class="drop-zone-icon">📂</div>
+        <div class="drop-zone-icon"><svg><use href="#i-folder"/></svg></div>
         <div class="drop-zone-text">Drop files here or click to select</div>
         <div class="drop-zone-hint">Supports .txt .md .docx .pdf</div>
         <div id="batchFileList" style="margin-top:6px;text-align:left"></div>
@@ -477,11 +512,11 @@
   <!-- ==================== ADMIN ==================== -->
   <section class="panel" id="panel-admin">
     <div class="card">
-      <div class="card-title">Admin Panel</div>
+      <div class="card-title"><svg><use href="#i-sliders"/></svg>Admin Panel</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">System administration — job management, retries, cancel, and export.</p>
       <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button class="btn btn-sm btn-secondary" onclick="adminRefresh()">Refresh</button>
-        <button class="btn btn-sm btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+        <button class="btn btn-sm btn-secondary" onclick="adminRefresh()"><svg><use href="#i-refresh"/></svg> Refresh</button>
+        <button class="btn btn-sm btn-secondary" onclick="exportCSV()"><svg><use href="#i-download"/></svg> Export CSV</button>
       </div>
       <div class="table-wrap"><table><thead><tr><th>ID</th><th>Topic</th><th>Status</th><th>Progress</th><th>Style</th><th>Created</th><th>Actions</th></tr></thead><tbody id="adminBody"></tbody></table></div>
     </div>
@@ -499,6 +534,44 @@
 </svg>
 
 <script type="module" src="/src/app.js"></script>
+
+<!-- Decorative 3D tilt micro-interaction — purely additive, touches only inline transform style on
+     .tilt / .template-card / .result-card elements. Never reads or writes app state, ids, or the
+     classes app.js depends on for logic. Safe no-op if elements are absent. -->
+<script>
+(function(){
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var MAX_DEG = 7, raf = null, activeEl = null, rx = 0, ry = 0;
+  function paint(){
+    raf = null;
+    if (!activeEl) return;
+    activeEl.style.transform = 'perspective(900px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg) translateY(-4px)';
+  }
+  function findTarget(e){
+    return e.target && e.target.closest ? e.target.closest('.tilt, .template-card, .result-card') : null;
+  }
+  function onMove(e){
+    var el = findTarget(e);
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    var px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+    rx = (0.5 - py) * MAX_DEG;
+    ry = (px - 0.5) * MAX_DEG;
+    activeEl = el;
+    if (!raf) raf = requestAnimationFrame(paint);
+  }
+  function onOut(e){
+    var el = findTarget(e);
+    if (!el) return;
+    if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+    el.style.transform = '';
+    if (activeEl === el) activeEl = null;
+  }
+  document.addEventListener('pointermove', onMove, { passive: true });
+  document.addEventListener('pointerout', onOut, { passive: true });
+})();
+</script>
 
 </body>
 </html>

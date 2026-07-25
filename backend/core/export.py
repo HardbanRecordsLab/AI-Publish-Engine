@@ -504,9 +504,23 @@ def export_mobi(epub_path: str, output_path: str) -> str:
     if not epub_path or not os.path.exists(epub_path):
         raise RuntimeError(f"Source EPUB not found: {epub_path}")
     try:
+        env = os.environ.copy()
+        # On Debian/Ubuntu, a system-wide (non-venv) pip-installed lxml under
+        # /usr/local/lib/pythonX.Y/dist-packages shadows the apt-installed
+        # python3-lxml that Calibre's html5-parser was built against, so
+        # ebook-convert fails with "html5-parser and lxml are using different
+        # versions of libxml2". Prepending the apt site-packages dir to
+        # PYTHONPATH (only if it exists — harmless no-op elsewhere, e.g.
+        # local Windows dev) makes Python resolve the matching lxml first,
+        # without touching any system-wide package for other services on
+        # the box that may depend on the newer pip-installed lxml.
+        apt_dist_packages = "/usr/lib/python3/dist-packages"
+        if os.path.isdir(apt_dist_packages):
+            existing = env.get("PYTHONPATH", "")
+            env["PYTHONPATH"] = f"{apt_dist_packages}{os.pathsep}{existing}" if existing else apt_dist_packages
         result = subprocess.run(
             ["ebook-convert", epub_path, output_path],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=120, env=env,
         )
         if result.returncode != 0:
             raise RuntimeError(f"ebook-convert failed: {result.stderr[:200]}")

@@ -1,6 +1,7 @@
 """PostgreSQL connection manager for job storage."""
 import os
 from contextlib import contextmanager
+from urllib.parse import urlsplit, urlunsplit
 
 import psycopg2
 import psycopg2.extras
@@ -15,6 +16,19 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 _pool = None
 
 
+def _redact_dsn(url: str) -> str:
+    """Return a DSN safe to log: host/port/db visible, credentials masked."""
+    try:
+        parts = urlsplit(url)
+        if parts.password:
+            netloc = parts.netloc.replace(f":{parts.password}@", ":***@")
+        else:
+            netloc = parts.netloc
+        return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+    except Exception:
+        return "<unparsable DSN>"
+
+
 def get_pool():
     global _pool
     if _pool is None:
@@ -22,7 +36,7 @@ def get_pool():
             _pool = psycopg2.pool.ThreadedConnectionPool(
                 minconn=1, maxconn=5, dsn=DATABASE_URL,
             )
-            logger.info(f"PostgreSQL pool created ({DATABASE_URL[:40]}...)")
+            logger.info(f"PostgreSQL pool created ({_redact_dsn(DATABASE_URL)})")
         except Exception as e:
             logger.warning(f"PostgreSQL pool failed: {e}")
             _pool = None

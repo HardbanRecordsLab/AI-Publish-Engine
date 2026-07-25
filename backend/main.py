@@ -26,6 +26,22 @@ from backend.routers import (
     templates_router,
 )
 
+# Error tracking — entirely opt-in. With no SENTRY_DSN set, sentry_sdk.init()
+# is never called and every sentry_sdk.* call below becomes a documented
+# no-op, so this has zero effect on anyone who hasn't set up a Sentry
+# project. See backend/config.py for the related settings.
+if settings.sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        integrations=[FastApiIntegration()],
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+    )
+    logger.info(f"Sentry error tracking enabled (environment={settings.sentry_environment})")
+
 
 async def _stale_job_watchdog():
     """Periodically fail jobs stuck in queued/processing (e.g. after a server
@@ -67,6 +83,9 @@ app.add_middleware(CORSMiddleware, allow_origins=_cors, allow_methods=["*"], all
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}")
+    if settings.sentry_dsn:
+        import sentry_sdk
+        sentry_sdk.capture_exception(exc)
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error", "detail": str(exc)},

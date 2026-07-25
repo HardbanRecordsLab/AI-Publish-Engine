@@ -30,5 +30,13 @@ class Settings(BaseSettings):
     # CORS — comma-separated allowed origins. Empty string = allow all ("*").
     cors_origins: str = ""
 
+    # Error tracking (Sentry). Empty = disabled entirely, zero overhead —
+    # see backend/main.py. Get a DSN from a (free-tier) Sentry project.
+    sentry_dsn: str = ""
+    sentry_environment: str = "production"
+    # Fraction of requests to sample for performance tracing (0.0-1.0).
+    # Errors are always captured regardless of this value.
+    sentry_traces_sample_rate: float = 0.0
+
 
 settings = Settings()

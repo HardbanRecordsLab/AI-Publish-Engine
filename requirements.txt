@@ -8,6 +8,11 @@ starlette>=0.37.0
 slowapi>=0.1.9
 
 # =========================
+# Error Tracking (opt-in — see SENTRY_DSN in .env.example)
+# =========================
+sentry-sdk[fastapi]>=2.0.0
+
+# =========================
 # Configuration & Validation
 # =========================
 python-dotenv>=1.0.0

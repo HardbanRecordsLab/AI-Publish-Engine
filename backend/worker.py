@@ -24,7 +24,7 @@ from backend.core.builder import build_ebook_html
 from backend.core.export import build_docx, build_epub
 from backend.core.interactive import build_interactive_book
 from backend.core.jobs import update_job
-from backend.core.pdf import html_to_pdf
+from backend.core.pdf import html_to_pdf_async
 from backend.core.website import build_website
 from backend.orchestrator import Orchestrator, PipelineContext
 from backend.ws_manager import clear_cancel, is_cancelled, update_progress
@@ -174,7 +174,7 @@ async def process_job(ctx):
             logger.success(f"Job {job_id}: {pipeline_ctx.ebook_dict.get('title')} (website: {os.path.getsize(website_path)} bytes)")
         else:
             pdf_path = os.path.join(OUTPUT_DIR, f"{job_id}.pdf")
-            html_to_pdf(html, pdf_path)
+            await html_to_pdf_async(html, pdf_path)
 
             epub_path = os.path.join(OUTPUT_DIR, f"{job_id}.epub")
             build_epub(pipeline_ctx.ebook_dict, style, pipeline_ctx.infographics, epub_path,

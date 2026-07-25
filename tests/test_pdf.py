@@ -1,6 +1,10 @@
+import asyncio
 import os
 import tempfile
-from backend.core.pdf import html_to_pdf
+
+import pytest
+
+from backend.core.pdf import html_to_pdf, html_to_pdf_async
 
 
 SAMPLE_HTML = """<!DOCTYPE html>
@@ -37,3 +41,57 @@ def test_html_to_pdf_returns_valid_pdf():
     finally:
         if os.path.exists(out):
             os.unlink(out)
+
+
+class TestNestedEventLoopRegression:
+    """worker.py's process_job() is `async def` and runs inside an event
+    loop started by `asyncio.run(process_job(ctx))` in a worker thread
+    (backend/routers/jobs.py's _queue_job). It used to call the *sync*
+    html_to_pdf(), which does `asyncio.run(_generate(...))` internally —
+    a nested asyncio.run() call, which Python raises
+    "cannot be called from a running event loop" for.
+
+    This broke PDF generation for every single job in production from
+    2026-07-05 (confirmed in backend/logs/err__2026-07-06_00-00-00.log)
+    until this fix, and no existing test caught it because
+    test_html_to_pdf_creates_file() above only ever calls html_to_pdf()
+    from a plain sync test function with no event loop running — it
+    can't reproduce the bug. These tests specifically simulate the
+    worker-thread call shape.
+    """
+
+    def test_sync_html_to_pdf_raises_when_called_from_a_running_loop(self):
+        """Documents the exact failure mode that broke production, so
+        nobody accidentally reintroduces `html_to_pdf(...)` (the sync
+        version) into worker.py's async process_job()."""
+
+        async def simulate_process_job():
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                out = f.name
+            try:
+                html_to_pdf(SAMPLE_HTML, out)  # sync call from async code — must fail
+            finally:
+                if os.path.exists(out):
+                    os.unlink(out)
+
+        with pytest.raises(RuntimeError, match="cannot be called from a running event loop"):
+            asyncio.run(simulate_process_job())
+
+    def test_async_html_to_pdf_succeeds_when_called_from_a_running_loop(self):
+        """The fix: worker.py now awaits html_to_pdf_async() instead,
+        which works correctly from inside process_job()'s own loop —
+        this is the same call shape as the real worker thread."""
+
+        async def simulate_process_job():
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                out = f.name
+            try:
+                await html_to_pdf_async(SAMPLE_HTML, out)
+                assert os.path.exists(out)
+                with open(out, "rb") as fh:
+                    assert fh.read(5) == b"%PDF-"
+            finally:
+                if os.path.exists(out):
+                    os.unlink(out)
+
+        asyncio.run(simulate_process_job())

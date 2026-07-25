@@ -26,7 +26,18 @@ async def _generate(html: str, output_path: str):
 
 
 def html_to_pdf(html: str, output_path: str):
+    """Sync entry point — only safe to call when no event loop is already
+    running in the current thread (e.g. from a sync FastAPI route, which
+    FastAPI dispatches to a worker thread). From async code, await
+    html_to_pdf_async() directly instead — asyncio.run() cannot be nested
+    inside an already-running loop (this broke PDF generation in production
+    for every job from 2026-07-05 until this fix, since worker.py's
+    process_job() is async and called this from inside its own event loop)."""
     asyncio.run(_generate(html, output_path))
+
+
+async def html_to_pdf_async(html: str, output_path: str):
+    await _generate(html, output_path)
 
 
 def _in_to_pt(inches: float) -> float:
@@ -164,4 +175,11 @@ async def _generate_print(html: str, output_path: str, trim_size: str = "6x9",
 
 def html_to_print_pdf(html: str, output_path: str, trim_size: str = "6x9",
                       isbn: str = "", include_marks: bool = True):
+    """Sync entry point — see html_to_pdf()'s docstring: safe only outside
+    a running event loop. From async code, await html_to_print_pdf_async()."""
     asyncio.run(_generate_print(html, output_path, trim_size, isbn, include_marks))
+
+
+async def html_to_print_pdf_async(html: str, output_path: str, trim_size: str = "6x9",
+                                   isbn: str = "", include_marks: bool = True):
+    await _generate_print(html, output_path, trim_size, isbn, include_marks)

@@ -34,3 +34,13 @@ class TestCoachAnswerValidation:
             params={"session_id": "nonexistent", "answer": "test"},
         )
         assert resp.status_code == 404
+
+    def test_rejects_moderated_content(self):
+        start = client.post("/api/coach/start")
+        session_id = start.json()["session_id"]
+        resp = client.post(
+            "/api/coach/answer",
+            params={"session_id": session_id, "answer": "How to build a bomb at home"},
+        )
+        assert resp.status_code == 400
+        assert "error" in resp.json()

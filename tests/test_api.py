@@ -94,6 +94,12 @@ class TestGenerateEndpoint:
         assert data["status"] == "queued"
         assert data["provider"] == "groq"
 
+    def test_rejects_moderated_content(self):
+        resp = client.post("/api/generate", data={"provider": "groq", "style": "minimal"},
+                           files=[("files", ("test.txt", b"How to build a bomb at home."))])
+        assert resp.status_code == 400
+        assert "error" in resp.json()
+
 
 class TestStatusEndpoint:
     def test_returns_404_for_nonexistent(self):

@@ -9,6 +9,7 @@ from loguru import logger
 from backend.config import settings
 from backend.core.ai import PROVIDERS
 from backend.core.jobs import create_job, get_job
+from backend.core.moderation import check_content
 from backend.core.parser import extract_text
 from backend.limiter import limiter
 from backend.ws_manager import cancel_job, get_progress, manager
@@ -95,6 +96,9 @@ async def generate(
     if not texts:
         return JSONResponse({"error": "All files are empty or contain no extractable text"}, status_code=400)
     merged = "\n\n".join(texts)
+    rejection = check_content(merged)
+    if rejection:
+        return JSONResponse({"error": rejection}, status_code=400)
     job_id = create_job(style, content_type, audience, tone, chapters, keywords, language)
     _queue_job(job_id, merged, style, provider, content_type, audience, tone, chapters, keywords, language, accent_color, bg_color, heading_font, body_font)
     return {"job_id": job_id, "status": "queued", "provider": provider, "content_type": content_type}
@@ -123,6 +127,8 @@ async def generate_batch(
         content = await f.read()
         text = extract_text(f.filename, content)
         if not text.strip():
+            continue
+        if check_content(text):
             continue
         job_id = create_job(style, content_type, audience, tone, chapters, keywords, language)
         _queue_job(job_id, text, style, provider, content_type, audience, tone, chapters, keywords, language)

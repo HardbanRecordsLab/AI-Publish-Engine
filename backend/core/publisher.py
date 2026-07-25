@@ -3,6 +3,18 @@ from datetime import datetime
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
 
+# Every book from this pipeline is AI-generated — surfaced in metadata output
+# so publishers remember to declare it where the platform requires that.
+# Confirmed requirement: Amazon KDP's "Content Rights" step (since 2023) asks
+# authors to disclose AI-generated/AI-assisted content. Other platforms'
+# policies vary and change — verify current requirements before publishing.
+AI_CONTENT_DISCLOSURE = (
+    "This book was generated with AI assistance by AI Publishing Engine. "
+    "Amazon KDP requires disclosing AI-generated or AI-assisted content in "
+    "the 'Content Rights' section of the KDP dashboard — check the current "
+    "AI-content policy of any other platform before publishing there too."
+)
+
 PLATFORMS = {
     "amazon_kdp": {
         "name": "Amazon KDP",
@@ -228,6 +240,7 @@ def generate_kdp_metadata(ebook_dict: dict) -> dict:
         "isbn": "Use Amazon's free ASIN or purchase ISBN from Bowker",
         "pricing": "Set royalty to 70% for 2.99-9.99 USD range",
         "categories": "Select 2 categories and 7 keywords in KDP dashboard",
+        "ai_content_disclosure": AI_CONTENT_DISCLOSURE,
     }
 
 
@@ -244,6 +257,7 @@ def generate_google_play_metadata(ebook_dict: dict) -> dict:
             "countries": ["ALL"],
         },
         "pricing": {"currency": "USD", "amount": 9.99},
+        "ai_content_disclosure": AI_CONTENT_DISCLOSURE,
     }
 
 
@@ -266,4 +280,5 @@ def generate_polish_metadata(ebook_dict: dict) -> dict:
         },
         "vat": "5% VAT na ebooki w Polsce (23% na drukowane)",
         "dystrybucja": "Przez Publio Direct lub własne konto na każdej platformie",
+        "ujawnienie_tresci_ai": AI_CONTENT_DISCLOSURE,
     }

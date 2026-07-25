@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from backend.config import settings
 from backend.core.beta_reader import beta_read
 from backend.core.coach import process_answer, start_interview
+from backend.core.moderation import check_content
 from backend.core.format_checker import check_kdp_requirements
 from backend.core.jobs import get_job
 from backend.core.launch_page import generate_launch_page
@@ -118,6 +119,9 @@ def api_coach_answer(request: Request, session_id: str, answer: str = Query(...,
     session = _coach_sessions.get(session_id)
     if not session:
         return JSONResponse({"error": "Session not found"}, status_code=404)
+    rejection = check_content(answer)
+    if rejection:
+        return JSONResponse({"error": rejection}, status_code=400)
     session = process_answer(session, answer)
     _coach_sessions[session_id] = session
     return session

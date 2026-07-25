@@ -30,6 +30,13 @@ jobs:
           GROQ_API_KEY: test-key
           AI_PROVIDER: mistral
 
+  # Sanity-checks that `npm run build` still succeeds. NOT used for
+  # deployment — production Nginx serves frontend/index.html, admin.html
+  # and frontend/src/*.js|.css directly as static files (see the Nginx
+  # config in GUIDE.md), not a Vite-bundled frontend/dist/. There is no
+  # bare-specifier import anywhere in frontend/src/app.js, so the raw
+  # source works unbundled; this job exists only to catch syntax errors
+  # before they'd otherwise go unnoticed.
   build-frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -44,11 +51,6 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
 
   deploy:
     if: github.ref == 'refs/heads/main'
@@ -56,21 +58,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download frontend build
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
       - name: Deploy to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "."
+          # Only the directories the app actually needs — never the repo
+          # root ("."), which would also ship tests/, docs, and .github/.
+          # .env, outputs/, jobs/, logs/ and venv/ are runtime state or
+          # secrets and are gitignored, so they're never in this checkout
+          # to begin with; scp-action doesn't delete files that aren't in
+          # the source, so they're untouched on the server either way.
+          source: "backend/,frontend/,alembic/,alembic.ini,requirements.txt"
           target: "/var/www/ai-publish-engine/"
           strip_components: 0
-      - name: Restart app
+      - name: Install deps, run migrations, restart
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -80,8 +83,11 @@ jobs:
             cd /var/www/ai-publish-engine
             source venv/bin/activate
             pip install -r requirements.txt -q
-            cd frontend
-            npm ci && npm run build
-            cd ..
+            # alembic upgrade head runs automatically inside the app on
+            # startup (backend/core/database.py) — no separate migration
+            # step needed here. It is a no-op against the existing
+            # production schema unless a new migration was added.
             pm2 restart ai-publish-engine
+            sleep 5
+            curl -sf http://127.0.0.1:9109/api/health || (echo "Health check failed after deploy" && exit 1)
             pm2 status

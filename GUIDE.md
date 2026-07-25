@@ -19,10 +19,15 @@ ssh root@84.247.162.167
 ### Stack
 
 - **Python 3.12** (FastAPI) — backend API
-- **PostgreSQL** — database (runs locally or via Docker)
-- **Redis** (optional) — job queue via arq
+- **PostgreSQL** — database, in a Docker container shared with other
+  services on the same VPS (falls back to a local JSON file if unreachable)
 - **Nginx** — reverse proxy (host-level)
 - **PM2** — process manager
+
+There is no job queue. An earlier Redis/`arq` integration was removed —
+generation jobs run in a plain Python `threading.Thread` per request. If you
+need horizontal worker scaling later, that's the place to reintroduce a real
+queue rather than assuming one already exists.
 
 ---
 
@@ -72,31 +77,51 @@ systemctl restart nginx     # reload nginx
 
 ## Database — PostgreSQL
 
-### Connection info
+The production database runs inside a Docker container (`hbrl-postgres`)
+that is **shared with other, unrelated services on the same VPS** — it is
+not a dedicated container for this app. Confirmed by direct inspection;
+do not assume `docker restart`/`docker rm` on this container only affects
+AI Publish Engine.
+
+### Connection info (production)
 
 | Field | Value |
 |-------|-------|
-| Host | localhost |
+| Host | 127.0.0.1 (bound to localhost only) |
 | Port | 5432 |
-| Database | `aipublish` |
-| User | `aipublish` |
-| Password | *(in .env file)* |
+| Container | `hbrl-postgres` |
+| Database | `ai_publish_engine` |
+| User | `hbrl_admin` |
+| Password | *(in `.env`, `DATABASE_URL`)* |
 
-### Useful commands
+For local development, `docker-compose.yml` in this repo spins up a
+**separate, disposable** Postgres (`aipublish`/`aipublish`) — not the same
+database as production, and not something you connect to over SSH.
+
+### Useful commands (production, over SSH)
 
 ```bash
-# Connect to PostgreSQL container
-docker exec -it postgres-db psql -U aipublish -d aipublish
+# Connect to the shared PostgreSQL container
+docker exec -it hbrl-postgres psql -U hbrl_admin -d ai_publish_engine
 
 # List tables
-docker exec -it postgres-db psql -U aipublish -d aipublish -c '\dt'
+docker exec -it hbrl-postgres psql -U hbrl_admin -d ai_publish_engine -c '\dt'
 
 # Backup database
-docker exec -t postgres-db pg_dump -U aipublish aipublish > backup.sql
+docker exec -t hbrl-postgres pg_dump -U hbrl_admin ai_publish_engine > backup.sql
 
 # Restore database
-cat backup.sql | docker exec -i postgres-db psql -U aipublish aipublish
+cat backup.sql | docker exec -i hbrl-postgres psql -U hbrl_admin ai_publish_engine
 ```
+
+### Migrations
+
+Schema is managed by Alembic (`alembic/`). `backend/core/database.py` runs
+`alembic upgrade head` automatically on startup. On a *fresh* database this
+creates the schema from scratch; on the existing production database (whose
+tables were originally created by hand) it's already stamped at the current
+head, so `upgrade` is a no-op there — it only matters for the next migration
+you add.
 
 ---
 
@@ -140,24 +165,46 @@ Per-provider model override (optional):
 
 ## Updating the App (Re-deploy)
 
+**As of this writing there is no `git pull`-based deploy** — the server has
+no git remote configured (`git status` on the VPS reports "not a git
+repository" until you deliberately set one up; see the CI/CD section below
+if that has since changed). The verified, working process is a manual
+sync over SSH:
+
 ```bash
-cd /var/www/ai-publish-engine
+# From your local machine, with the repo at its latest committed state:
 
-# 1. Pull latest code
-git pull origin main
+# 1. Package the code that actually changed (never .env, outputs/, jobs/,
+#    logs/, venv/ — those are runtime state or secrets, not code)
+tar --exclude="__pycache__" -czf /tmp/deploy.tar.gz backend frontend alembic requirements.txt
 
-# 2. Install new dependencies
-source venv/bin/activate
-pip install -r requirements.txt
+# 2. Ship it
+scp -i ~/.ssh/id_ed25519 /tmp/deploy.tar.gz root@84.247.162.167:/tmp/
 
-# 3. Run database migrations (auto-applied on startup)
-
-# 4. Restart the app
-pm2 restart ai-publish-engine
-
-# 5. Verify
-pm2 status
+# 3. On the server: extract, install, restart
+ssh -i ~/.ssh/id_ed25519 root@84.247.162.167 '
+  cd /var/www/ai-publish-engine
+  tar -xzf /tmp/deploy.tar.gz
+  source venv/bin/activate
+  pip install -r requirements.txt -q
+  pm2 restart ai-publish-engine
+  sleep 3
+  curl -s http://127.0.0.1:9109/api/health
+'
 ```
+
+**Before restarting, always diff the live database schema against what
+your new code expects** (`\d jobs` / `\d admins` in psql) — a prior deploy
+this way shipped code that assumed a column (`jobs.updated_at`) the live
+table didn't have, which would have broken every job status update had it
+not been caught before the restart. `alembic upgrade head` runs
+automatically on startup but only helps if a migration for the new column
+was actually written first.
+
+If a GitHub remote has since been wired up (see `.github/workflows/ci.yml`),
+prefer pushing to `main` and letting CI deploy — but verify that workflow
+is actually green before trusting it; it was dormant (never once run) for
+a long stretch of this project's history.
 
 ---
 

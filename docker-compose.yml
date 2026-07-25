@@ -1,9 +1,21 @@
+# Local development only.
+#
+# Production does NOT use this file — the live app runs via PM2 + a venv
+# directly on the VPS (see GUIDE.md), against a PostgreSQL instance shared
+# with other unrelated services on that box (different DB name/user than
+# the defaults below). This compose file's only job is to give a developer
+# a disposable local Postgres to point their own .env's DATABASE_URL at,
+# e.g. DATABASE_URL=postgresql://aipublish:changeme@localhost:5432/aipublish
+#
+# There used to be an `app` service here too (`build: .`), but no
+# Dockerfile has ever existed in this repo — that service could never
+# have started. Removed rather than leaving a config that silently fails.
 version: "3.9"
 
 services:
   db:
     image: postgres:16-alpine
-    container_name: aipublish-db
+    container_name: aipublish-dev-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: aipublish
@@ -18,22 +30,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-
-  app:
-    build: .
-    container_name: aipublish-app
-    restart: unless-stopped
-    ports:
-      - "9109:9109"
-    env_file:
-      - .env
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - ./outputs:/app/outputs
-      - ./jobs:/app/jobs
-      - ./logs:/app/logs
 
 volumes:
   pgdata:

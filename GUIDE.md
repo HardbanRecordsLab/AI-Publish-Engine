@@ -123,6 +123,28 @@ tables were originally created by hand) it's already stamped at the current
 head, so `upgrade` is a no-op there — it only matters for the next migration
 you add.
 
+### Automated backups
+
+`ai_publish_engine` is backed up **daily at 04:00** by
+`/srv/hbrl/scripts/backup_hbrl_db.sh` — a script shared with other
+HardbanRecordsLab services on this box (it backs up several databases in
+the same `hbrl-postgres` container in one pass). Output goes to
+`/srv/hbrl/backups/ai_publish_engine_<timestamp>.sql.gz`, retained 7 days.
+This app's database was **not** in that script's list before this change;
+if the backup schedule or retention ever needs to change, edit that shared
+script directly (back up the original first — it's not part of this repo).
+
+For an on-demand backup (e.g. right before a risky migration or deploy),
+run `scripts/backup_db.sh` on the VPS — same mechanism, same destination,
+just triggered manually instead of by cron.
+
+Restore:
+
+```bash
+zcat /srv/hbrl/backups/ai_publish_engine_<timestamp>.sql.gz | \
+  docker exec -i hbrl-postgres psql -U hbrl_admin ai_publish_engine
+```
+
 ---
 
 ## Logs Location

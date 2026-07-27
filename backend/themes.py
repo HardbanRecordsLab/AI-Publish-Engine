@@ -1,5 +1,15 @@
-"""Theme registry — 20 professional design themes (auto-loaded from CSS).
-Each theme defines complete design tokens for the AI Design Engine."""
+"""Theme registry — 50 professional design themes (auto-loaded from CSS).
+Each theme defines complete design tokens for the AI Design Engine.
+
+Covers ebook styling directly (backend/core/builder.py) and, via the same
+get_theme(style) lookup, the color/font tokens for website/landing-page/
+blog-post output (backend/core/website.py) and interactive-book output
+(backend/core/interactive.py) — one shared palette pool, five content
+types. Palettes are adapted from established MIT-licensed open-source
+color systems (Open Color, Nord, Catppuccin, Dracula, Solarized, GitHub
+Primer) paired with OFL-licensed Google Fonts — not copied verbatim HTML/
+CSS, since none of those upstream projects ship ebook page templates.
+"""
 
 from pathlib import Path
 
@@ -13,11 +23,20 @@ _COVER_ICONS = {
     "cookbook": "mdi:silverware-fork-knife", "travel": "mdi:compass", "real_estate": "mdi:home-city",
     "music": "mdi:music-note", "startup": "mdi:rocket-launch", "cyberpunk": "mdi:lightning-bolt",
     "retro": "mdi:record-player", "future": "mdi:wave",
+    # Restored phantom themes (previously listed here with no matching
+    # theme.css — see git history) plus the 25 new themes added alongside.
+    "modern": "mdi:shape-outline", "wellness": "mdi:spa", "academic": "mdi:school-outline",
+    "technical": "mdi:code-braces", "creative": "mdi:palette",
+    "landing": "mdi:rocket", "blog": "mdi:pencil", "docs": "mdi:file-document-outline",
+    "portfolio": "mdi:image-multiple", "saas": "mdi:cloud-outline", "product": "mdi:package-variant",
+    "leadgen": "mdi:bullhorn", "tutorial": "mdi:compass-outline", "listicle": "mdi:format-list-numbered",
+    "interview": "mdi:microphone-outline",
+    "legal": "mdi:scale-balance", "medical": "mdi:medical-bag", "nonprofit": "mdi:hand-heart",
+    "kids": "mdi:teddy-bear", "fantasy": "mdi:sword-cross", "scifi": "mdi:rocket-launch-outline",
+    "wedding": "mdi:ring", "fitness": "mdi:dumbbell", "fashion": "mdi:hanger",
+    "architecture": "mdi:office-building-outline", "podcast": "mdi:podcast", "newsletter": "mdi:email-newsletter",
+    "agency": "mdi:domain", "government": "mdi:bank", "nature_eco": "mdi:leaf",
 }
-# NOTE: "modern", "academic", "creative", "technical" and "wellness" used to
-# have entries here but have no matching templates/themes/<name>/theme.css —
-# get_theme() silently falls back to "minimal" for them. Removed rather than
-# left dangling; add them back once (if) real theme.css files are authored.
 
 _THEMES = {}
 _SPACING = {}
@@ -34,7 +53,7 @@ for d in sorted(_THEMES_DIR.iterdir()):
         if t:
             _THEMES[name] = {
                 "id": name,
-                "name": name.replace("_", " ").title(),
+                "name": t.get("label") or name.replace("_", " ").title(),
                 "vibe": t.get("vibe", ""),
                 "colors": t["colors"],
                 "fonts": t["fonts"],

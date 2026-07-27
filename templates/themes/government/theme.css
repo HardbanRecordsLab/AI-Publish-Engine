@@ -1,0 +1,40 @@
+/* Government Formal - official measured dependable */
+:root {
+  --color-bg: #FFFFFF;
+  --color-surface: #F1F3F9;
+  --color-text: #1F2733;
+  --color-heading: #0F1620;
+  --color-accent: #1864AB;
+  --color-secondary: #EDF2FF;
+  --color-muted: #6C7A89;
+  --color-border: #D3D9E3;
+  --color-highlight: #EDF2FF;
+  --color-success: #2B8A3E;
+  --color-warning: #E67700;
+  --color-error: #C92A2A;
+  --color-info: #364FC7;
+  --font-heading: 'Merriweather', Georgia, serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', -apple-system, sans-serif;
+  --font-size-h1: 34pt;
+  --font-size-h2: 19pt;
+  --font-size-h3: 13.5pt;
+  --font-size-body: 10.5pt;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  --line-height: 1.8;
+  --cover-gradient: linear-gradient(135deg, #F1F3F9 0%, #FFFFFF 100%);
+  --accent-gradient: linear-gradient(135deg, #1864AB 0%, #364FC7 100%);
+  --content-width: 14cm;
+}

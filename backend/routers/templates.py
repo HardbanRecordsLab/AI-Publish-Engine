@@ -46,20 +46,16 @@ TEMPLATES = {
     ],
 }
 
+# "professional" is the only style id with no matching templates/themes/
+# folder — builder.py's own STYLE_THEME_MAP aliases it to "business" for
+# real generation, so the preview does the same here. Every other id below
+# now has a real templates/themes/<id>/theme.css (see git history), so the
+# preview endpoint's default `.get(style, style)` fallback resolves them
+# correctly without needing an entry — a stale entry here would silently
+# make the live preview show a different theme than actual generation
+# produces, which is exactly the bug this map used to paper over.
 STYLE_THEME_PREVIEW_MAP = {
-    "professional": "business", "minimal": "minimal", "creative": "creative",
-    "academic": "academic", "modern": "modern", "dark": "dark",
-    "business": "business", "finance": "finance", "technical": "technical",
-    "wellness": "wellness",
-    "landing": "startup", "blog": "travel", "docs": "technical",
-    "portfolio": "creative", "startup": "startup", "saas": "future",
-    "product": "luxury", "leadgen": "business",
-    "tutorial": "education", "listicle": "magazine", "interview": "corporate", "ai": "ai",
-    "book": "book", "cookbook": "cookbook", "corporate": "corporate",
-    "cyberpunk": "cyberpunk", "education": "education", "future": "future",
-    "health": "health", "luxury": "luxury", "magazine": "magazine",
-    "music": "music", "real_estate": "real_estate", "retro": "retro",
-    "travel": "travel",
+    "professional": "business",
 }
 
 

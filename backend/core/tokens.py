@@ -56,6 +56,18 @@ def _parse_comment(css: str) -> str:
     return m.group(1).strip() if m else ""
 
 
+def _split_label_vibe(comment: str) -> tuple[str, str]:
+    """Theme comments are '<Label> - <vibe words>' (older files use an
+    em-dash '<Label> — <vibe words>'). Split into a clean display label
+    and a short vibe description. Falls back to no label (caller then
+    derives one from the folder name) if no separator is present."""
+    for sep in (" — ", " - "):
+        if sep in comment:
+            label, _, vibe = comment.partition(sep)
+            return label.strip(), vibe.strip()
+    return "", comment
+
+
 def _parse_var(css: str, name: str) -> str:
     m = re.search(rf"--{name}:\s*(.+?);", css)
     return m.group(1).strip() if m else ""
@@ -70,9 +82,11 @@ def _load_theme(name: str) -> dict[str, Any] | None:
         css = css_file.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         css = css_file.read_text(encoding="cp1252")
-    vibe = _parse_comment(css)
+    comment = _parse_comment(css)
+    label, vibe = _split_label_vibe(comment)
     return {
         "theme": name,
+        "label": label,
         "vibe": vibe,
         "colors": {
             "background": _parse_var(css, "color-bg"),

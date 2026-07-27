@@ -30,23 +30,36 @@ Choose what type of content to generate:
 - **Landing Page** — Single-page promotional landing page
 - **Blog Post** — Single article/blog post
 
-### Template Selection (20 Themes)
+### Template Selection (50 Themes)
 
-Choose from **20 built-in themes** that control the visual appearance —
+Choose from **50 built-in themes** that control the visual appearance —
 this list is generated from the theme files actually shipped with the
 app (`GET /api/themes`), not hand-maintained, so it can't drift out of
-sync with reality the way this section previously did:
+sync with reality the way this section previously did. The same palettes
+also drive the color/font styling for website, landing-page, blog-post,
+and interactive-book output, not just ebooks.
 
-- **AI & Tech**, **Classic Book**, **Business Pro**, **Cookbook**,
-  **Corporate Pro**, **Cyberpunk**, **Dark Premium**, **Education**,
-  **Financial**, **Future Forward**, **Health & Wellness**, **Luxury**,
-  **Magazine**, **Minimal Pro**, **Music**, **Real Estate**,
-  **Retro Vintage**, **Startup**, **Storyteller**, **Travel**
+- **AI & Tech**, **Academic Press**, **Agency Premium**, **Architecture
+  Structural**, **Blog Editorial**, **Business Pro**, **Classic Book**,
+  **Cookbook**, **Corporate Pro**, **Creative Studio**, **Cyberpunk**,
+  **Dark Premium**, **Docs Clear**, **Education**, **Fantasy Realm**,
+  **Fashion Chic**, **Financial**, **Fitness Power**, **Future Forward**,
+  **Government Formal**, **Health & Wellness**, **Interview
+  Conversational**, **Kids Playful**, **Landing Launch**, **Leadgen
+  Punch**, **Legal Counsel**, **Listicle Punchy**, **Luxury**,
+  **Magazine**, **Medical Clean**, **Minimal Pro**, **Modern Edge**,
+  **Music**, **Nature Eco**, **Newsletter Friendly**, **Nonprofit Hope**,
+  **Podcast Audio**, **Portfolio Showcase**, **Product Crisp**, **Real
+  Estate**, **Retro Vintage**, **SaaS Product**, **Sci-Fi Frontier**,
+  **Startup**, **Storyteller**, **Technical Blueprint**, **Travel**,
+  **Tutorial Friendly**, **Wedding Elegance**, **Wellness Calm**
 
 Each theme defines its own color palette, typography, and cover style.
-If you need a look that isn't covered by these 20, use **AI Theme
-Generator** on the Generator screen to describe a custom theme in plain
-language instead of picking from the list.
+Palettes are adapted from established MIT-licensed open-source color
+systems (Open Color, Nord, Catppuccin, Dracula, Solarized) paired with
+OFL-licensed Google Fonts. If you need a look that isn't covered by
+these 50, use **AI Theme Generator** on the Generator screen to describe
+a custom theme in plain language instead of picking from the list.
 
 ### AI Provider Selection
 

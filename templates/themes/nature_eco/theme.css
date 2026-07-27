@@ -1,0 +1,40 @@
+/* Nature Eco - organic earthy sustainable */
+:root {
+  --color-bg: #FBFDF7;
+  --color-surface: #F4FCE3;
+  --color-text: #26311E;
+  --color-heading: #16200F;
+  --color-accent: #5C940D;
+  --color-secondary: #EBFBEE;
+  --color-muted: #7E9169;
+  --color-border: #DBEDA8;
+  --color-highlight: #EBFBEE;
+  --color-success: #2B8A3E;
+  --color-warning: #E67700;
+  --color-error: #C92A2A;
+  --color-info: #099268;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'Karla', -apple-system, sans-serif;
+  --font-size-h1: 38pt;
+  --font-size-h2: 21pt;
+  --font-size-h3: 14.5pt;
+  --font-size-body: 10.5pt;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  --line-height: 1.8;
+  --cover-gradient: linear-gradient(135deg, #F4FCE3 0%, #FBFDF7 100%);
+  --accent-gradient: linear-gradient(135deg, #5C940D 0%, #82C91E 100%);
+  --content-width: 14cm;
+}

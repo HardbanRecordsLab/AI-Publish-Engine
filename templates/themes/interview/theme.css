@@ -1,0 +1,40 @@
+/* Interview Conversational - editorial reflective personal */
+:root {
+  --color-bg: #FCFAFF;
+  --color-surface: #F8F0FC;
+  --color-text: #241C2B;
+  --color-heading: #140E19;
+  --color-accent: #9C36B5;
+  --color-secondary: #F3F0FF;
+  --color-muted: #8A7A93;
+  --color-border: #E9D6F1;
+  --color-highlight: #F3F0FF;
+  --color-success: #2F9E44;
+  --color-warning: #F08C00;
+  --color-error: #E03131;
+  --color-info: #7950F2;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'Lora', Georgia, serif;
+  --font-size-h1: 36pt;
+  --font-size-h2: 20.5pt;
+  --font-size-h3: 14pt;
+  --font-size-body: 11pt;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  --line-height: 1.85;
+  --cover-gradient: linear-gradient(135deg, #F8F0FC 0%, #FCFAFF 100%);
+  --accent-gradient: linear-gradient(135deg, #9C36B5 0%, #BE4BDB 100%);
+  --content-width: 14cm;
+}

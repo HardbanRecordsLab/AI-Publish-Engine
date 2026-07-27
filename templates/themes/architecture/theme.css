@@ -1,0 +1,40 @@
+/* Architecture Structural - minimal precise monumental */
+:root {
+  --color-bg: #FFFFFF;
+  --color-surface: #F8F9FA;
+  --color-text: #212529;
+  --color-heading: #000000;
+  --color-accent: #343A40;
+  --color-secondary: #F1F3F5;
+  --color-muted: #868E96;
+  --color-border: #CED4DA;
+  --color-highlight: #E9ECEF;
+  --color-success: #2B8A3E;
+  --color-warning: #E67700;
+  --color-error: #C92A2A;
+  --color-info: #495057;
+  --font-heading: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-size-h1: 38pt;
+  --font-size-h2: 21pt;
+  --font-size-h3: 14.5pt;
+  --font-size-body: 10.5pt;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  --line-height: 1.7;
+  --cover-gradient: linear-gradient(135deg, #F1F3F5 0%, #FFFFFF 100%);
+  --accent-gradient: linear-gradient(135deg, #343A40 0%, #495057 100%);
+  --content-width: 14cm;
+}

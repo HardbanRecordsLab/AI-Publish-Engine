@@ -114,4 +114,4 @@ psycopg2-binary>=2.9.0
 sqlalchemy>=2.0.0
 alembic>=1.13.0
 aiosqlite>=0.20.0
-bcrypt>=4.1.0
+bcrypt>=5.0.0

@@ -10,6 +10,11 @@ line-length = 120
 select = ["E", "F", "W", "I", "N", "UP", "SIM", "PL"]
 ignore = [
     "PLR0913",  # too-many-arguments
+    "PLR0917",  # too-many-positional-arguments — same shape as PLR0913 above (job
+                # config functions like create_job/_queue_job genuinely take this many
+                # named params); only appeared once CI's unpinned `pip install ruff`
+                # picked up a newer ruff release that added the rule, 2026-09-22 — see
+                # the ruff version pin below, so a future rule addition doesn't repeat this
     "PLR2004",  # magic-value-comparison
     # 2026-09-22: `ruff check backend/` had been failing CI on every push since before
     # this repo's history here (327 violations on main, none from any change that

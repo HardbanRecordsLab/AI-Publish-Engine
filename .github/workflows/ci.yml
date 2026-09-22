@@ -19,7 +19,13 @@ jobs:
           python-version: "3.12"
           cache: "pip"
       - run: pip install -r requirements.txt
-      - run: pip install ruff mypy pytest pip-audit
+      # ruff pinned: unpinned, this job picked up a ruff release mid-audit (2026-09-22)
+      # that added a new lint rule and failed CI again the same day it had just been
+      # fixed. mypy/pytest/pip-audit stay unpinned on purpose — mypy is `|| true`
+      # below, and pytest/pip-audit *should* run against their latest release (a new
+      # test-runner incompatibility or a freshly published CVE are both genuinely
+      # worth knowing about immediately, unlike a linter's opinion changing).
+      - run: pip install ruff==0.16.8 mypy pytest pip-audit
       - name: Lint
         run: ruff check backend/ --output-format=github
       - name: Type check

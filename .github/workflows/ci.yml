@@ -19,6 +19,13 @@ jobs:
           python-version: "3.12"
           cache: "pip"
       - run: pip install -r requirements.txt
+      # Seventh independent pre-existing gap in this same chain, unmasked only once
+      # the six fixes above let the suite run past test_config.py: test_pdf.py needs
+      # a real Chromium binary, which `pip install playwright` does NOT provide — it
+      # installs only the Python driver. A fresh runner has no cached browser at all,
+      # so this step had never once succeeded in CI (2026-09-22). --with-deps also
+      # pulls the OS-level shared libs Chromium needs on a bare ubuntu-latest image.
+      - run: playwright install --with-deps chromium
       # ruff pinned: unpinned, this job picked up a ruff release mid-audit (2026-09-22)
       # that added a new lint rule and failed CI again the same day it had just been
       # fixed. mypy/pytest/pip-audit stay unpinned on purpose — mypy is `|| true`

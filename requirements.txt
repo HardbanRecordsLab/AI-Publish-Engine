@@ -90,7 +90,7 @@ tqdm>=4.66.0
 # CSS / HTML Processing
 # =========================
 cssutils>=2.9.0
-tinycss2>=1.2.0
+tinycss2>=1.5.1
 
 # =========================
 # Testing

@@ -1,5 +1,21 @@
+import os
+
 import pytest
 from backend.core.ai import analyze_text, plan_infographics, generate_design_system, _clean_json, _extract_json_array
+
+# TestAnalyzeText / TestPlanInfographics make real network calls to real AI providers —
+# genuine integration tests, not unit tests, and they were never going to pass against
+# conftest.py's/CI's placeholder GROQ_API_KEY ("test-placeholder-key" / "test-key"):
+# every provider correctly rejects it (401/429/404 depending on provider), _try_providers
+# exhausts its whole fallback chain, and the call raises. Confirmed 2026-09-22: `pytest -x`
+# (as CI actually runs it) aborted the entire suite on the first of these, independent of
+# anything else fixed that day. Opt-in only, like any test that needs live external
+# credentials — set RUN_LIVE_AI_TESTS=1 (with real provider keys in the environment) to
+# exercise these for real.
+live_ai = pytest.mark.skipif(
+    os.getenv("RUN_LIVE_AI_TESTS") != "1",
+    reason="needs a real AI provider key; set RUN_LIVE_AI_TESTS=1 to run against live providers",
+)
 
 
 class TestCleanJson:
@@ -53,6 +69,7 @@ class TestGenerateDesignSystem:
         assert ds["theme"] == "minimal"
 
 
+@live_ai
 class TestAnalyzeText:
     def test_returns_structured_ebook(self, sample_text):
         result = analyze_text(sample_text)
@@ -78,6 +95,7 @@ class TestAnalyzeText:
         assert result.get("summary")
 
 
+@live_ai
 class TestPlanInfographics:
     def test_returns_list(self, sample_analysis, sample_design):
         result = plan_infographics(sample_analysis, sample_design)

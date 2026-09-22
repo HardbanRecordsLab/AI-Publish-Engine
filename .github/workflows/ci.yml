@@ -25,7 +25,10 @@ jobs:
       # below, and pytest/pip-audit *should* run against their latest release (a new
       # test-runner incompatibility or a freshly published CVE are both genuinely
       # worth knowing about immediately, unlike a linter's opinion changing).
-      - run: pip install ruff==0.16.8 mypy pytest pip-audit
+      # pytest-timeout was missing here even though the Test step below has always
+      # passed --timeout=30 — pytest rejects an unrecognized CLI flag outright, so
+      # this step could never have passed, independent of anything else (2026-09-22).
+      - run: pip install ruff==0.16.8 mypy pytest pytest-timeout pip-audit
       - name: Lint
         run: ruff check backend/ --output-format=github
       - name: Type check

@@ -111,6 +111,27 @@ jobs:
             # step needed here. It is a no-op against the existing
             # production schema unless a new migration was added.
             pm2 restart ai-publish-engine
-            sleep 5
-            curl -sf http://127.0.0.1:9109/api/health || (echo "Health check failed after deploy" && exit 1)
+            # Health check gate, fixed 2026-09-22 — caught live, on the very first
+            # deploy this job ever actually ran end-to-end (everything before it was
+            # blocked by lint/test failures, so this line had never once executed in
+            # anger). Two independent bugs in it: (1) the `exit 1` was inside a
+            # `(...)` subshell, which only ends the subshell, not this script — the
+            # step reported success even though "Health check failed after deploy"
+            # printed for real. (2) a single curl after a blind `sleep 5` is a race:
+            # this app runs two alembic passes and opens its DB pool before
+            # /api/health answers, which took ~10s here — so a fixed 5s sleep failed
+            # on a deploy that was actually fine. Replaced with a real retry loop
+            # (up to 40s) and a top-level `exit 1` that genuinely fails the step.
+            ok=""
+            for i in $(seq 1 20); do
+              if curl -sf http://127.0.0.1:9109/api/health > /dev/null; then
+                ok=1
+                break
+              fi
+              sleep 2
+            done
             pm2 status
+            if [ -z "$ok" ]; then
+              echo "Health check failed after deploy"
+              exit 1
+            fi

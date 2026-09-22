@@ -52,7 +52,9 @@ export async function getJobStatus(jobId) {
 }
 
 export async function generateBook(formData) {
-  const res = await fetch(API + "/api/generate", { method: "POST", body: formData });
+  const token = getToken();
+  const headers = token ? { Authorization: "Bearer " + token } : {};
+  const res = await fetch(API + "/api/generate", { method: "POST", headers, body: formData });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }

@@ -2,7 +2,7 @@
 import json
 import os
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from backend.config import settings
@@ -25,6 +25,7 @@ from backend.core.publisher import (
 )
 from backend.core.translator import SUPPORTED_LANGUAGES, translate_book
 from backend.limiter import limiter
+from backend.routers.auth import require_admin
 
 router = APIRouter()
 
@@ -33,7 +34,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 # ─── Marketing Suite ────────────────────────────────────────────────
-@router.post("/api/marketing/generate/{job_id}")
+@router.post("/api/marketing/generate/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 def api_generate_marketing(request: Request, job_id: str):
     job = get_job(job_id)
@@ -60,7 +61,7 @@ def api_languages(request: Request):
     return [{"code": k, "name": v} for k, v in SUPPORTED_LANGUAGES.items()]
 
 
-@router.post("/api/translate/{job_id}")
+@router.post("/api/translate/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("5/minute")
 async def api_translate(request: Request, job_id: str, languages: str = "pl,de,fr,es"):
     job = get_job(job_id)
@@ -105,7 +106,7 @@ async def api_translate(request: Request, job_id: str, languages: str = "pl,de,f
 _coach_sessions = {}
 
 
-@router.post("/api/coach/start")
+@router.post("/api/coach/start", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 def api_coach_start(request: Request):
     session = start_interview()
@@ -113,7 +114,7 @@ def api_coach_start(request: Request):
     return session
 
 
-@router.post("/api/coach/answer")
+@router.post("/api/coach/answer", dependencies=[Depends(require_admin)])
 @limiter.limit("20/minute")
 def api_coach_answer(request: Request, session_id: str, answer: str = Query(..., max_length=2000)):
     session = _coach_sessions.get(session_id)
@@ -143,7 +144,7 @@ def api_platforms(request: Request):
     return get_platforms()
 
 
-@router.post("/api/publish/metadata/{job_id}")
+@router.post("/api/publish/metadata/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def api_generate_metadata(request: Request, job_id: str):
     job = get_job(job_id)
@@ -213,7 +214,7 @@ def api_publish_validate(request: Request, job_id: str, platform: str = "metadat
 
 
 # ─── Platform packaging (ported from Kiro eBook Studio) ──────────────
-@router.post("/api/publish/prepare/{job_id}")
+@router.post("/api/publish/prepare/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("20/minute")
 def api_publish_prepare(request: Request, job_id: str, platform: str, cover_path: str = None):
     """Prepare a store-ready package: copies EPUB/PDF, resizes the cover to
@@ -244,7 +245,7 @@ def api_publish_prepare(request: Request, job_id: str, platform: str, cover_path
 
 
 # ─── AI Proofreader ──────────────────────────────────────────────────
-@router.post("/api/proofread/{job_id}")
+@router.post("/api/proofread/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 def api_proofread(request: Request, job_id: str, provider: str = None):
     job = get_job(job_id)
@@ -266,7 +267,7 @@ def api_proofread(request: Request, job_id: str, provider: str = None):
         return JSONResponse({"error": f"Proofread failed: {e}"}, status_code=500)
 
 
-@router.post("/api/proofread/{job_id}/chapter/{chapter_index}")
+@router.post("/api/proofread/{job_id}/chapter/{chapter_index}", dependencies=[Depends(require_admin)])
 @limiter.limit("20/minute")
 def api_proofread_chapter(request: Request, job_id: str, chapter_index: int, provider: str = None):
     job = get_job(job_id)
@@ -302,7 +303,7 @@ def api_proofread_chapter(request: Request, job_id: str, chapter_index: int, pro
 
 
 # ─── AI Beta Reader ──────────────────────────────────────────────────
-@router.post("/api/beta-read/{job_id}")
+@router.post("/api/beta-read/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 def api_beta_read(request: Request, job_id: str, provider: str = None):
     job = get_job(job_id)
@@ -336,7 +337,7 @@ def api_format_check(request: Request, job_id: str, platform: str = "kdp"):
 
 
 # ─── Book Launch Page ───────────────────────────────────────────────
-@router.post("/api/launch-page/{job_id}")
+@router.post("/api/launch-page/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def api_launch_page(request: Request, job_id: str, launch_date: str = None, accent_color: str = "#6366F1"):
     from fastapi.responses import HTMLResponse

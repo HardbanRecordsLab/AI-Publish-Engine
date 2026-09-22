@@ -13,6 +13,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from backend.core.publish_validators import validate_metadata, validate_kdp, validate_apple_books, validate_epub
 from backend.core.publish_prep import prepare_kdp, prepare_apple_books, prepare_kobo, prepare_google_play, PREPARERS
 
+from backend.routers.auth import _make_token
+
+# /api/publish/prepare/* requires admin login as of 2026-09-22 (see test_api.py::TestGenerateRequiresAuth).
+ADMIN_AUTH = {"Authorization": f"Bearer {_make_token('test-admin@example.com')}"}
+
 
 def _make_fake_epub(path: str, valid: bool = True) -> None:
     with zipfile.ZipFile(path, "w") as zf:
@@ -241,7 +246,7 @@ class TestPublishEndpoints:
         job_id = self._make_done_job(tmp_path)
         try:
             client = TestClient(app)
-            resp = client.post(f"/api/publish/prepare/{job_id}", params={"platform": "kobo"})
+            resp = client.post(f"/api/publish/prepare/{job_id}", headers=ADMIN_AUTH, params={"platform": "kobo"})
             assert resp.status_code == 200, resp.text
             data = resp.json()
             assert data["platform"] == "kobo"
@@ -257,7 +262,7 @@ class TestPublishEndpoints:
         job_id = self._make_done_job(tmp_path)
         try:
             client = TestClient(app)
-            resp = client.post(f"/api/publish/prepare/{job_id}", params={"platform": "nonexistent"})
+            resp = client.post(f"/api/publish/prepare/{job_id}", headers=ADMIN_AUTH, params={"platform": "nonexistent"})
             assert resp.status_code == 400
         finally:
             delete_job(job_id)
@@ -267,5 +272,5 @@ class TestPublishEndpoints:
         from backend.main import app
 
         client = TestClient(app)
-        resp = client.post("/api/publish/prepare/does-not-exist", params={"platform": "kobo"})
+        resp = client.post("/api/publish/prepare/does-not-exist", headers=ADMIN_AUTH, params={"platform": "kobo"})
         assert resp.status_code == 404

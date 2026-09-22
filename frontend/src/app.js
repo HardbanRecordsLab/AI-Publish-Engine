@@ -82,7 +82,7 @@ document.querySelectorAll('.sidebar-link[data-panel]').forEach(link => {
 
 // ==================== API HELPERS ====================
 async function api(path, opts = {}) {
-  const headers = { 'Content-Type': 'application/json', ...opts.headers };
+  const headers = { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {}), ...opts.headers };
   if (opts.noJson) delete headers['Content-Type'];
   const res = await fetch(API + path, { ...opts, headers });
   if (!res.ok && opts.noFail) return null;
@@ -207,7 +207,7 @@ async function generate() {
 
   showProgress();
   try {
-    const res = await fetch(API + '/api/generate', { method: 'POST', body: formData });
+    const res = await fetch(API + '/api/generate', { method: 'POST', headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}, body: formData });
     const data = await res.json();
     if (data.job_id) {
       pollJob(data.job_id);
@@ -649,7 +649,7 @@ async function runBatch() {
     const formData = new FormData();
     batchFiles.forEach(f => formData.append('files', f));
     if (provider) formData.append('provider', provider);
-    const res = await fetch(API + '/api/generate-batch', { method: 'POST', body: formData });
+    const res = await fetch(API + '/api/generate-batch', { method: 'POST', headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}, body: formData });
     const data = await res.json();
     result.innerHTML = '<div style="font-size:13px;color:var(--text-secondary)">Batch started. ' + (data.jobs || data.job_ids || []).length + ' jobs created.</div>' +
       '<pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap;margin-top:8px">' + JSON.stringify(data, null, 2) + '</pre>';

@@ -2,7 +2,7 @@ import asyncio
 import os
 import threading
 
-from fastapi import APIRouter, File, Form, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from loguru import logger
 
@@ -12,6 +12,7 @@ from backend.core.jobs import create_job, get_job
 from backend.core.moderation import check_content
 from backend.core.parser import extract_text
 from backend.limiter import limiter
+from backend.routers.auth import require_admin
 from backend.ws_manager import cancel_job, get_progress, manager
 
 router = APIRouter()
@@ -56,7 +57,7 @@ def _queue_job(job_id: str, text: str, style: str, provider: str = None,
     logger.info(f"Job {job_id} started in background thread")
 
 
-@router.post("/api/generate")
+@router.post("/api/generate", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 async def generate(
     request: Request,
@@ -104,7 +105,7 @@ async def generate(
     return {"job_id": job_id, "status": "queued", "provider": provider, "content_type": content_type}
 
 
-@router.post("/api/generate-batch")
+@router.post("/api/generate-batch", dependencies=[Depends(require_admin)])
 @limiter.limit("5/minute")
 async def generate_batch(
     request: Request,
@@ -199,7 +200,7 @@ def get_print_sizes(request: Request):
             for k, v in TRIM_SIZES.items()]
 
 
-@router.post("/api/download/{job_id}/print")
+@router.post("/api/download/{job_id}/print", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 def download_print(request: Request, job_id: str, trim_size: str = Query("6x9"), isbn: str = Query("")):
     job = get_job(job_id)
@@ -222,7 +223,7 @@ def download_print(request: Request, job_id: str, trim_size: str = Query("6x9"),
     return FileResponse(print_path, media_type="application/pdf", filename=f"{job_id}_print_{trim_size}.pdf")
 
 
-@router.post("/api/download/{job_id}/mobi")
+@router.post("/api/download/{job_id}/mobi", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 def download_mobi(request: Request, job_id: str):
     job = get_job(job_id)
@@ -245,7 +246,7 @@ def download_mobi(request: Request, job_id: str):
     return FileResponse(mobi_path, media_type="application/x-mobipocket-ebook", filename=f"{job_id}.mobi")
 
 
-@router.post("/api/download/{job_id}/kdp")
+@router.post("/api/download/{job_id}/kdp", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 def download_kdp_package(request: Request, job_id: str, trim_size: str = Query("6x9")):
     job = get_job(job_id)

@@ -244,10 +244,38 @@ function showResult(job) {
   ).join('') +
   `<a class="result-format-btn" href="${API}/api/preview/${id}" target="_blank">👁️ Preview</a>` +
   `<a class="result-format-btn" href="${API}/api/editor/${id}/chapters" target="_blank">✏️ Edit</a>` +
-  `<a class="result-format-btn" href="${API}/api/download/${id}/print" target="_blank">🖨️ Print PDF</a>` +
+  `<button class="result-format-btn" onclick="downloadPrintPdf('${id}', this)">🖨️ Print PDF</button>` +
   (isInteractive ? `<a class="result-format-btn" href="${API}/api/reader/${id}" target="_blank">📖 Read Online</a>` : '') +
   `<button class="result-format-btn" onclick="showEmbedCode('${id}')">🔗 Embed</button>`;
   document.getElementById('resultCard').classList.add('visible');
+}
+
+// 2026-09-22: was a plain <a href> straight to a POST-only endpoint — native
+// links can only navigate via GET, so this button silently 404/405'd for as
+// long as it's existed, independent of the same-day auth-gate fix. POST +
+// blob download, same pattern as exportCSV() above.
+async function downloadPrintPdf(jobId, btn) {
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Rendering...'; btn.disabled = true; }
+  try {
+    const res = await fetch(API + `/api/download/${jobId}/print`, {
+      method: 'POST',
+      headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {},
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${jobId}_print.pdf`; a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Print PDF failed: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = label; btn.disabled = false; }
+  }
 }
 
 let pollInterval = null;

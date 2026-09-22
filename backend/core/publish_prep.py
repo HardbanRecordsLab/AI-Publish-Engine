@@ -46,8 +46,8 @@ def _resize_cover(src_path: str, dest_path: str, size: tuple) -> bool:
     try:
         from PIL import ImageOps
         with Image.open(src_path) as img:
-            img = img.convert("RGB")
-            fitted = ImageOps.fit(img, (width, height), method=Image.LANCZOS)
+            rgb_img = img.convert("RGB")
+            fitted = ImageOps.fit(rgb_img, (width, height), method=Image.LANCZOS)
             fitted.save(dest_path, "JPEG", quality=quality)
         return True
     except Exception:

@@ -30,29 +30,6 @@ def check_kdp_requirements(html: str, check_type: str = "kdp") -> dict:
     }
 
 
-_kdp_checks = [
-    ("Page numbers present", lambda h: _has_pages(h)),
-    ("Table of contents", lambda h: _has_toc(h)),
-    ("No hyperlinks to external sites", lambda h: _check_external_links(h)),
-    ("Copyright page present", lambda h: "copyright" in h.lower()),
-    ("Title page present", lambda h: "<h1>" in h or "cover" in h.lower()),
-    ("No empty pages", lambda h: _check_empty_pages(h)),
-    ("UTF-8 encoding", lambda h: "UTF-8" in h or "utf-8" in h),
-    ("Images have alt text", lambda h: _check_alt_text(h)),
-    ("No JavaScript errors", lambda h: _check_js(h)),
-    ("Font sizes sufficient", lambda h: _check_font_sizes(h)),
-    ("No orphan headers", lambda h: _check_orphans(h)),
-    ("Body font minimum 10pt", lambda h: _check_body_font(h)),
-    ("No tables without headers", lambda h: _check_table_headers(h)),
-]
-
-
-_ingram_checks = _kdp_checks + [
-    ("Bleed settings present", lambda h: "bleed" in h.lower() or "crop" in h.lower()),
-    ("ISBN present", lambda h: "isbn" in h.lower()),
-]
-
-
 def _has_pages(html: str) -> bool:
     return True  # page numbers are added at PDF render time by Playwright
 
@@ -118,3 +95,30 @@ def _check_table_headers(html: str) -> bool | str:
         if "<th" not in t:
             return "Found table(s) without header cells (<th>)"
     return True
+
+
+# Defined after the helper functions above (not lambdas any more, so these are eager,
+# module-load-time name lookups — moving the list below its dependencies, rather than
+# reverting to lambda wrappers, is the real fix; see the 2026-09-22 F821 regression
+# this caused when the list was still above the functions).
+_kdp_checks = [
+    ("Page numbers present", _has_pages),
+    ("Table of contents", _has_toc),
+    ("No hyperlinks to external sites", _check_external_links),
+    ("Copyright page present", lambda h: "copyright" in h.lower()),
+    ("Title page present", lambda h: "<h1>" in h or "cover" in h.lower()),
+    ("No empty pages", _check_empty_pages),
+    ("UTF-8 encoding", lambda h: "UTF-8" in h or "utf-8" in h),
+    ("Images have alt text", _check_alt_text),
+    ("No JavaScript errors", _check_js),
+    ("Font sizes sufficient", _check_font_sizes),
+    ("No orphan headers", _check_orphans),
+    ("Body font minimum 10pt", _check_body_font),
+    ("No tables without headers", _check_table_headers),
+]
+
+
+_ingram_checks = _kdp_checks + [
+    ("Bleed settings present", lambda h: "bleed" in h.lower() or "crop" in h.lower()),
+    ("ISBN present", lambda h: "isbn" in h.lower()),
+]

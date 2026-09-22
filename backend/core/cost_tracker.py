@@ -15,7 +15,7 @@ signal for the budget ceiling, not a reconciliation-grade billing figure.
 import json
 import os
 import threading
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from loguru import logger
@@ -75,7 +75,7 @@ def record_usage(provider: str, model: str, prompt_tokens: int, completion_token
         day = data["days"].setdefault(_today(), {"total_usd": 0.0, "calls": []})
         day["total_usd"] = round(day["total_usd"] + cost, 6)
         day["calls"].append({
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "provider": provider,
             "model": model,
             "prompt_tokens": prompt_tokens,

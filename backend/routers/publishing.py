@@ -8,11 +8,11 @@ from fastapi.responses import JSONResponse
 from backend.config import settings
 from backend.core.beta_reader import beta_read
 from backend.core.coach import process_answer, start_interview
-from backend.core.moderation import check_content
 from backend.core.format_checker import check_kdp_requirements
 from backend.core.jobs import get_job
 from backend.core.launch_page import generate_launch_page
 from backend.core.marketing import generate_all_marketing
+from backend.core.moderation import check_content
 from backend.core.proofreader import full_proofread, grammar_check, originality_check
 from backend.core.publish_prep import PREPARERS
 from backend.core.publish_validators import validate_apple_books, validate_epub, validate_kdp, validate_metadata
@@ -189,8 +189,10 @@ def _job_metadata(job: dict) -> dict:
 # ─── Platform compliance validators (ported from Kiro eBook Studio) ──
 @router.get("/api/publish/validate/{job_id}")
 @limiter.limit("30/minute")
-def api_publish_validate(request: Request, job_id: str, platform: str = "metadata", cover_path: str = None):
+def api_publish_validate(request: Request, job_id: str, platform: str = "metadata", cover_path: str = None):  # noqa: PLR0911
     """Validate a job's outputs against a store's technical requirements.
+    One return per platform branch is the clearest shape for a simple dispatcher; splitting
+    it up to satisfy the 6-return limit would add indirection for no real readability gain.
 
     platform: metadata | amazon-kdp | apple-books | epub
     """

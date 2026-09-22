@@ -518,7 +518,10 @@ def export_mobi(epub_path: str, output_path: str) -> str:
         if os.path.isdir(apt_dist_packages):
             existing = env.get("PYTHONPATH", "")
             env["PYTHONPATH"] = f"{apt_dist_packages}{os.pathsep}{existing}" if existing else apt_dist_packages
-        result = subprocess.run(
+        # check=True would raise CalledProcessError with no message truncation control;
+        # the explicit returncode check below raises a RuntimeError with a bounded,
+        # more useful stderr excerpt instead — intentional, not an oversight.
+        result = subprocess.run(  # noqa: PLW1510
             ["ebook-convert", epub_path, output_path],
             capture_output=True, text=True, timeout=120, env=env,
         )

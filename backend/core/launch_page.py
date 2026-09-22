@@ -10,10 +10,7 @@ def generate_launch_page(ebook_dict: dict, launch_date: str = None,
     chapters = ebook_dict.get("chapters", [])
     topic = ebook_dict.get("topic", "general")
 
-    if not launch_date:
-        launch_date_obj = datetime.now() + timedelta(days=30)
-    else:
-        launch_date_obj = datetime.fromisoformat(launch_date)
+    launch_date_obj = datetime.now() + timedelta(days=30) if not launch_date else datetime.fromisoformat(launch_date)
 
     launch_ts = int(launch_date_obj.timestamp() * 1000)
     launch_str = launch_date_obj.strftime("%B %d, %Y")

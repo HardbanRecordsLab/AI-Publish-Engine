@@ -20,10 +20,7 @@ def _redact_dsn(url: str) -> str:
     """Return a DSN safe to log: host/port/db visible, credentials masked."""
     try:
         parts = urlsplit(url)
-        if parts.password:
-            netloc = parts.netloc.replace(f":{parts.password}@", ":***@")
-        else:
-            netloc = parts.netloc
+        netloc = parts.netloc.replace(f":{parts.password}@", ":***@") if parts.password else parts.netloc
         return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
     except Exception:
         return "<unparsable DSN>"
@@ -82,13 +79,12 @@ def create_job(style="minimal", content_type="ebook", audience="", tone="", chap
     from datetime import datetime
     job_id = str(uuid.uuid4())
     try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """INSERT INTO jobs (id, status, progress, style, content_type, audience, tone, chapters, keywords, language, created_at)
-                       VALUES (%s, 'queued', 0, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (job_id, style, content_type, audience, tone, chapters, keywords, language, datetime.now()),
-                )
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO jobs (id, status, progress, style, content_type, audience, tone, chapters, keywords, language, created_at)
+                   VALUES (%s, 'queued', 0, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (job_id, style, content_type, audience, tone, chapters, keywords, language, datetime.now()),
+            )
     except Exception as e:
         logger.warning(f"create_job DB failed: {e}, falling back to memory")
         from backend.core.jobs_fallback import create_job as fb
@@ -202,19 +198,18 @@ def fail_stale_jobs(timeout_minutes: int):
     (e.g. server restart, deploy, crash) without ever writing an error.
     """
     try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """UPDATE jobs SET status = 'failed',
-                           error = 'Przekroczono limit czasu — proces prawdopodobnie został przerwany (np. restart serwera).',
-                           updated_at = NOW()
-                       WHERE status IN ('queued', 'processing')
-                         AND updated_at < NOW() - (%s || ' minutes')::interval
-                       RETURNING id""",
-                    (timeout_minutes,),
-                )
-                ids = [row[0] for row in cur.fetchall()]
-                return ids
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """UPDATE jobs SET status = 'failed',
+                       error = 'Przekroczono limit czasu — proces prawdopodobnie został przerwany (np. restart serwera).',
+                       updated_at = NOW()
+                   WHERE status IN ('queued', 'processing')
+                     AND updated_at < NOW() - (%s || ' minutes')::interval
+                   RETURNING id""",
+                (timeout_minutes,),
+            )
+            ids = [row[0] for row in cur.fetchall()]
+            return ids
     except Exception as e:
         logger.warning(f"fail_stale_jobs DB failed: {e}")
         from backend.core.jobs_fallback import fail_stale_jobs as fb

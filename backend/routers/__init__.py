@@ -8,3 +8,16 @@ from backend.routers.publishing import router as publishing_router
 from backend.routers.series import router as series_router
 from backend.routers.stats import router as stats_router
 from backend.routers.templates import router as templates_router
+
+__all__ = [
+    "admin_router",
+    "auth_router",
+    "design_tokens_router",
+    "editor_router",
+    "health_router",
+    "jobs_router",
+    "publishing_router",
+    "series_router",
+    "stats_router",
+    "templates_router",
+]

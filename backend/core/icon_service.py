@@ -10,7 +10,7 @@ CACHE = {}
 
 def get_icon_svg(icon_name: str, color: str = "currentColor", width: int = 24, height: int = 24) -> str:
     """Fetch an SVG icon from Iconify. Caches results in memory.
-    
+
     Args:
         icon_name: e.g. "mdi:home", "fa-solid:book", "heroicons:academic-cap"
         color: CSS color string

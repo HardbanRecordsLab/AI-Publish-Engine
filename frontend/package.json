@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "alpinejs": "^3.14.0"
+    "alpinejs": "^3.17.4"
   },
   "devDependencies": {
     "vite": "^6.0.0"

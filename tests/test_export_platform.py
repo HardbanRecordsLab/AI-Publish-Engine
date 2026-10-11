@@ -81,7 +81,9 @@ class TestThemeGenerateEndpoint:
         monkeypatch.setattr(templates_module, "_try_providers", lambda *a, **kw: fake_theme_json)
 
         client = TestClient(app)
-        resp = client.post("/api/themes/generate", params={"description": "a calm ocean sunset theme"})
+        from backend.routers.auth import _make_token
+        auth = {"Authorization": f"Bearer {_make_token('test-admin@example.com')}"}
+        resp = client.post("/api/themes/generate", params={"description": "a calm ocean sunset theme"}, headers=auth)
 
         assert resp.status_code == 200, resp.text
         data = resp.json()

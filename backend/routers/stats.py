@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 
 from backend.core.jobs import get_all_jobs
 from backend.limiter import limiter
+from backend.routers.auth import require_admin
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
 
-@router.get("/dashboard")
+@router.get("/dashboard", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def dashboard_stats(request: Request):
     jobs = get_all_jobs(0, 10000)

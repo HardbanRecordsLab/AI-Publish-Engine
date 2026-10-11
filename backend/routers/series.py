@@ -1,5 +1,5 @@
 """Book Series Manager REST endpoints."""
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from backend.core.jobs import get_job
@@ -14,17 +14,18 @@ from backend.core.series import (
     update_series,
 )
 from backend.limiter import limiter
+from backend.routers.auth import require_admin
 
 router = APIRouter()
 
 
-@router.get("/api/series")
+@router.get("/api/series", dependencies=[Depends(require_admin)])
 @limiter.limit("60/minute")
 def api_list_series(request: Request):
     return list_series()
 
 
-@router.get("/api/series/{series_id}")
+@router.get("/api/series/{series_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("60/minute")
 def api_get_series(request: Request, series_id: str):
     s = get_series(series_id)
@@ -33,7 +34,7 @@ def api_get_series(request: Request, series_id: str):
     return s
 
 
-@router.post("/api/series")
+@router.post("/api/series", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def api_create_series(request: Request, body: dict):
     name = body.get("name", "").strip()
@@ -45,7 +46,7 @@ def api_create_series(request: Request, body: dict):
     return create_series(name, description, author, genre)
 
 
-@router.put("/api/series/{series_id}")
+@router.put("/api/series/{series_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def api_update_series(request: Request, series_id: str, body: dict):
     result = update_series(series_id, body)
@@ -54,7 +55,7 @@ def api_update_series(request: Request, series_id: str, body: dict):
     return result
 
 
-@router.delete("/api/series/{series_id}")
+@router.delete("/api/series/{series_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def api_delete_series(request: Request, series_id: str):
     if delete_series(series_id):
@@ -62,7 +63,7 @@ def api_delete_series(request: Request, series_id: str):
     raise HTTPException(404, "Series not found")
 
 
-@router.post("/api/series/{series_id}/books")
+@router.post("/api/series/{series_id}/books", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def api_add_book(request: Request, series_id: str, body: dict):
     job_id = body.get("job_id", "").strip()
@@ -79,7 +80,7 @@ def api_add_book(request: Request, series_id: str, body: dict):
     return result
 
 
-@router.delete("/api/series/{series_id}/books/{job_id}")
+@router.delete("/api/series/{series_id}/books/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def api_remove_book(request: Request, series_id: str, job_id: str):
     result = remove_book_from_series(series_id, job_id)

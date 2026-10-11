@@ -1,14 +1,16 @@
 import json
 import os
+import re
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from backend.config import settings
 from backend.core.ai import _try_providers
 from backend.core.color_engine import list_topics
 from backend.limiter import limiter
+from backend.routers.auth import require_admin
 from backend.themes import generate_theme_css, get_theme, list_themes
 
 router = APIRouter()
@@ -123,7 +125,7 @@ def get_topics(request: Request):
     return list_topics()
 
 
-@router.post("/api/themes/generate")
+@router.post("/api/themes/generate", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")  # calls an AI provider — same ceiling as other AI-cost endpoints
 def generate_theme_from_description(request: Request, description: str):
     if not description or len(description) < 3:
@@ -185,17 +187,31 @@ CUSTOM_TEMPLATES_DIR = Path(__file__).parent.parent.parent / "templates" / "cust
 os.makedirs(str(CUSTOM_TEMPLATES_DIR), exist_ok=True)
 
 
-@router.post("/api/templates/upload")
+_TEMPLATE_NAME_RE = re.compile(r"[^A-Za-z0-9_-]+")
+
+
+@router.post("/api/templates/upload", dependencies=[Depends(require_admin)])
 @limiter.limit("20/minute")
 async def upload_custom_template(request: Request, file: UploadFile = File(...), name: str = Form("")):
-    if not file.filename.lower().endswith(".html"):
+    if not file.filename or not file.filename.lower().endswith(".html"):
         return JSONResponse({"error": "Only .html files allowed"}, status_code=400)
     content = await file.read()
-    text = content.decode("utf-8")
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        return JSONResponse({"error": "Template must be UTF-8 text"}, status_code=400)
     if "{{title}}" not in text and "{{content}}" not in text:
         return JSONResponse({"error": "Template must contain {{title}} or {{content}} placeholder"}, status_code=400)
-    safe_name = name or file.filename.rsplit(".", 1)[0]
-    filepath = CUSTOM_TEMPLATES_DIR / f"{safe_name}.html"
+    # Name comes from the client — strip everything but [A-Za-z0-9_-] so it can
+    # never contain a path separator or "..", and confirm the result stays inside
+    # CUSTOM_TEMPLATES_DIR (previously "../../frontend/index" overwrote files).
+    raw_name = name or Path(file.filename).stem
+    safe_name = _TEMPLATE_NAME_RE.sub("-", raw_name).strip("-")[:64]
+    if not safe_name:
+        return JSONResponse({"error": "Invalid template name"}, status_code=400)
+    filepath = (CUSTOM_TEMPLATES_DIR / f"{safe_name}.html").resolve()
+    if filepath.parent != CUSTOM_TEMPLATES_DIR.resolve():
+        return JSONResponse({"error": "Invalid template name"}, status_code=400)
     filepath.write_text(text, encoding="utf-8")
     return {"name": safe_name, "path": str(filepath)}
 

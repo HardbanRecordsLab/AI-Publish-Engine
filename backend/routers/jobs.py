@@ -323,7 +323,7 @@ body{{background:#f5f5f5;font-family:-apple-system,system-ui,sans-serif}}
 </html>""")
 
 
-@router.post("/api/cancel/{job_id}")
+@router.post("/api/cancel/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("30/minute")
 def cancel(request: Request, job_id: str):
     job = get_job(job_id)

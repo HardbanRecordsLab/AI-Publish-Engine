@@ -728,8 +728,13 @@ async function uploadTemplate() {
   try {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(API + '/api/templates/upload', { method: 'POST', body: formData });
+    const res = await fetch(API + '/api/templates/upload', {
+      method: 'POST',
+      body: formData,
+      headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}
+    });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.detail || ('HTTP ' + res.status));
     list.innerHTML = '<span style="color:var(--success)">Uploaded: ' + (data.name || 'ok') + '</span>';
     loadCustomTemplates();
   } catch(e) { list.innerHTML = '<span style="color:var(--error)">Upload failed</span>'; }

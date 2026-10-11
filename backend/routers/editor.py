@@ -1,7 +1,7 @@
 """WYSIWYG Chapter Editor — get/save edited chapters and rebuild HTML."""
 import json
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -9,6 +9,7 @@ from backend.core.builder import build_ebook_html
 from backend.core.jobs import get_job, update_job
 from backend.core.prompt_safety import sanitize_text
 from backend.limiter import limiter
+from backend.routers.auth import require_admin
 
 router = APIRouter()
 
@@ -64,7 +65,7 @@ def get_chapters(request: Request, job_id: str):
     }
 
 
-@router.put("/api/editor/{job_id}/chapters")
+@router.put("/api/editor/{job_id}/chapters", dependencies=[Depends(require_admin)])
 @limiter.limit("20/minute")
 def save_chapters(request: Request, job_id: str, body: SaveChaptersRequest):
     job = get_job(job_id)

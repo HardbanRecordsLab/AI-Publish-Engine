@@ -183,6 +183,11 @@ def _call(name: str, messages: list[dict], max_tokens: int = 6000,
         **extra,
     )
     content = res.choices[0].message.content
+    if not content:
+        # Reasoning models can spend the whole budget thinking and return no text — treat as a miss so the
+        # caller falls back to the next provider instead of crashing on len(None).
+        logger.warning(f"{name}/{model}: empty response")
+        return None
     logger.success(f"AI OK: {name}/{model} ({len(content)} chars)")
     try:
         usage = getattr(res, "usage", None)

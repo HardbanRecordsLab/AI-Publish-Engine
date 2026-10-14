@@ -171,12 +171,16 @@ def _call(name: str, messages: list[dict], max_tokens: int = 6000,
     _throttle(name)
     model = model or _model(name)
     logger.info(f"AI call: {name}/{model}")
+    # OpenRouter: route only to providers that neither store nor train on prompts (same rule as
+    # DROPIFY, MasteringPro, HRL Books and Sync Hub).
+    extra = {"extra_body": {"provider": {"data_collection": "deny"}}} if name == "openrouter" else {}
     res = client.chat.completions.create(
         model=model,
         messages=messages,
         temperature=temperature,
         max_tokens=max_tokens,
         timeout=timeout,
+        **extra,
     )
     content = res.choices[0].message.content
     logger.success(f"AI OK: {name}/{model} ({len(content)} chars)")

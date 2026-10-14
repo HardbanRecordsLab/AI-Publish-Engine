@@ -110,6 +110,7 @@ class TestEditorialAgent:
         monkeypatch.setattr(editorial_agent, "_write_chapter", fake_write)
         monkeypatch.setattr(editorial_agent, "update_job", lambda *a, **k: None)
         monkeypatch.setattr(editorial_agent, "is_cancelled", lambda job_id: False)
+        monkeypatch.setattr(editorial_agent, "REVIEW_ENABLED", False)
 
         ctx = PipelineContext(job_id="t", text="x", style="m", language="Polish")
         ctx.ebook_dict = {
@@ -176,3 +177,78 @@ class TestWriterModel:
         monkeypatch.setattr(ai, "_try_providers", fallback)
         ai.write_chapter(OUTLINE["chapters"][0], book=OUTLINE, chapter_index=0)
         assert len(fallback.calls) == 1
+
+
+class TestReviewAndRevise:
+    def _run(self, monkeypatch, review, words=600):
+        from backend.agents import editorial_agent
+
+        writes = []
+
+        def fake_write(ch, **kwargs):
+            writes.append(kwargs.get("revision_notes"))
+            text = " ".join(["word"] * words)
+            return dict(ch, sections=[{"heading": "h", "content": text}])
+
+        monkeypatch.setattr(editorial_agent, "_write_chapter", fake_write)
+        monkeypatch.setattr(editorial_agent, "_review_chapter", lambda ch, **k: review)
+        monkeypatch.setattr(editorial_agent, "update_job", lambda *a, **k: None)
+        monkeypatch.setattr(editorial_agent, "is_cancelled", lambda job_id: False)
+        monkeypatch.setattr(editorial_agent, "REVIEW_ENABLED", True)
+        ctx = PipelineContext(job_id="t", text="x", style="m")
+        ctx.ebook_dict = {"chapters": [{"title": "One", "sections": [{"heading": "h", "content": "c"}]}],
+                          "conclusion": {}}
+        ctx = editorial_agent.EditorialAgent().run(ctx)
+        return writes, ctx
+
+    def test_good_chapter_is_not_rewritten(self, monkeypatch):
+        writes, ctx = self._run(monkeypatch, {"score": 8, "issues": ["minor"]})
+        assert writes == [None]
+        assert ctx.chapter_reviews == [{"chapter": 1, "words": 600, "revised": False, "score": 8}]
+
+    def test_weak_chapter_is_rewritten_once_with_notes(self, monkeypatch):
+        writes, ctx = self._run(monkeypatch, {"score": 4, "issues": ["Section h is generic"]})
+        assert writes == [None, ["Section h is generic"]]
+        assert ctx.chapter_reviews[0]["revised"] is True
+
+    def test_too_short_chapter_is_rewritten_even_if_scored_well(self, monkeypatch):
+        writes, _ = self._run(monkeypatch, {"score": 9, "issues": []}, words=100)
+        assert len(writes) == 2 and "far too short" in writes[1][0]
+
+    def test_review_score_is_clamped(self, monkeypatch):
+        monkeypatch.setattr(ai, "_writer_json", lambda *a, **k: {"score": "15", "issues": "nope"})
+        result = ai.review_chapter({"sections": []}, book={}, chapter_index=0)
+        assert result == {"score": 10, "issues": []}
+
+
+class TestNoFabrication:
+    def test_finalization_never_returns_references(self, monkeypatch):
+        monkeypatch.setattr(ai, "_writer_json", lambda *a, **k: {
+            "introduction": "x", "references": ["Fake, Book, 2020"]})
+        assert "references" not in ai.generate_ebook_sections(OUTLINE, "minimal", language="Polish")
+
+    def test_secondary_prompts_carry_the_language(self, monkeypatch):
+        prompts = []
+        monkeypatch.setattr(ai, "_writer_json", lambda s, u, *a, **k: prompts.append(u) or {})
+        monkeypatch.setattr(ai, "_try_providers", lambda s, u, *a, **k: prompts.append(u) or "{}")
+        ai.generate_ebook_sections(OUTLINE, "minimal", language="Polish")
+        ai.structure_chapter(OUTLINE["chapters"][0], 0, language="Polish")
+        ai.plan_infographics(OUTLINE, {}, language="Polish")
+        assert len(prompts) == 3
+        assert all("Write ALL text values in Polish" in p for p in prompts)
+
+
+class TestMarketingAndTranslation:
+    def test_marketing_uses_writer_and_copy_rules(self, monkeypatch):
+        from backend.core import marketing
+        seen = []
+        monkeypatch.setattr(marketing, "writer_json", lambda s, u, p=None: seen.append(u) or {"ok": 1})
+        assert marketing.generate_amazon_listing(OUTLINE) == {"ok": 1}
+        assert "Do not invent statistics" in seen[0]
+        assert "<<<UNTRUSTED_DATA>>>" in seen[0]
+
+    def test_translation_keeps_non_text_list_items(self, monkeypatch):
+        from backend.core import translator
+        monkeypatch.setattr(translator, "writer_text", lambda s, u, *a, **k: "T:" + u)
+        out = translator.translate_book({"tags": ["a", 3, {"k": "b"}]}, "Polish")
+        assert out["tags"] == ["T:a", 3, {"k": "T:b"}]

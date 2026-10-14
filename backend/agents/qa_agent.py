@@ -23,6 +23,7 @@ class QAAgent(BaseAgent):
             html_snippet = ctx.html[:3000] if ctx.html else ""
             report = _qa_check(ctx.ebook_dict, ctx.design, html_snippet, ctx.provider)
             report["local_issues"] = local_issues
+            report["chapter_reviews"] = ctx.chapter_reviews
             ctx.qa_report = report
             score = report.get("score", 0)
             passed = report.get("passed", False)
@@ -37,6 +38,7 @@ class QAAgent(BaseAgent):
                 "score": 50,
                 "summary": "AI quality check unavailable",
                 "passed": len(local_issues) == 0,
+                "chapter_reviews": ctx.chapter_reviews,
             }
 
         ctx.set_progress(85)

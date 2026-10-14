@@ -205,12 +205,24 @@ Chapter writing (optional):
    they don't repeat each other. Target length per section depends on the
    output type (ebook ≈ 550 words, blog post ≈ 300, website/landing page
    shorter). A chapter whose call fails keeps its outline draft.
+   Each written chapter then gets an editor's review (score 1-10 plus
+   concrete fixes). A chapter scoring below `AI_REVIEW_MIN_SCORE`
+   (default 7), or far under its target length, is rewritten once with
+   those notes. Scores land in the job's QA report (`chapter_reviews`).
+   `AI_CHAPTER_REVIEW=0` turns the review off.
 4. **StructureAgent** then adds summaries, FAQs and checklists from the
    finished text, followed by fact-check, design, cover and finalization.
 
-The number of AI calls is unchanged from the earlier "polish only"
-editorial pass, but each chapter call now returns several times more text,
-so jobs take longer and cost more tokens per book.
+Expect 2-3 writer-model calls per chapter (write, review, sometimes a
+rewrite), so jobs take longer and cost more tokens per book than the old
+single-call generation.
+
+The writer model is also used for the outline, the introduction/back-cover
+copy, the marketing suite (Amazon listing, social, press, emails) and
+translations. Every reader-facing prompt carries the job's language, and
+none may invent statistics, testimonials, credentials or sources: the
+References section is no longer AI-generated at all, since it used to come
+back with fabricated citations.
 
 ---
 

@@ -1,8 +1,16 @@
 """AI Marketing Suite — generates Amazon listing, social media, press materials from book content."""
-import json
-
 from backend.config import settings
-from backend.core.ai import _try_providers
+from backend.core.ai import writer_json
+from backend.core.prompt_safety import fence
+
+# Reader-facing sales copy: matches the book's language, and never invents
+# what a buyer would take as fact.
+_COPY_RULES = """
+RULES:
+- Write in the same language as the book details above
+- Do not invent statistics, testimonials, reviews, awards, bestseller claims,
+  or author credentials/achievements not given above
+- Only JSON, no markdown"""
 
 
 def _book_summary(ebook_dict: dict) -> str:
@@ -11,10 +19,10 @@ def _book_summary(ebook_dict: dict) -> str:
     summary = ebook_dict.get("summary", "")
     chapters = ebook_dict.get("chapters", [])
     ch_info = "\n".join(
-        f"- {ch.get('title', '')}: {ch.get('introduction', '')[:100]}"
-        for ch in chapters[:5]
+        f"- {ch.get('title', '')}: {ch.get('introduction', '')[:200]} {ch.get('key_takeaway', '')[:200]}"
+        for ch in chapters[:15]
     )
-    return f"Title: {title}\nAuthor: {author}\nSummary: {summary}\nChapters:\n{ch_info}"
+    return fence(f"Title: {title}\nAuthor: {author}\nSummary: {summary}\nChapters:\n{ch_info}", 6000)
 
 
 def generate_amazon_listing(ebook_dict: dict) -> dict:
@@ -33,8 +41,7 @@ Return JSON:
 - categories: 2 Amazon categories from Business & Money, Computers & Technology, Education & Reference, Health & Wellness, Self-Help, Science & Math, Arts & Photography
 - target_audience: who is this book for
 - price_suggestion: suggested USD price"""
-    raw = _try_providers(system, user, preferred=settings.ai_provider)
-    return json.loads(raw)
+    return writer_json(system, user + _COPY_RULES, settings.ai_provider)
 
 
 def generate_social_media(ebook_dict: dict) -> dict:
@@ -49,8 +56,7 @@ Return JSON:
 - linkedin: 2 long-form LinkedIn posts as array
 - instagram: 3 Instagram captions with hashtags as array
 - facebook: 2 Facebook posts as array"""
-    raw = _try_providers(system, user, preferred=settings.ai_provider)
-    return json.loads(raw)
+    return writer_json(system, user + _COPY_RULES, settings.ai_provider)
 
 
 def generate_press_release(ebook_dict: dict) -> dict:
@@ -66,8 +72,7 @@ Return JSON:
 - boilerplate: standard company/author boilerplate (2-3 sentences)
 - talking_points: 5 key talking points as array
 - hook: one-line hook for journalists"""
-    raw = _try_providers(system, user, preferred=settings.ai_provider)
-    return json.loads(raw)
+    return writer_json(system, user + _COPY_RULES, settings.ai_provider)
 
 
 def generate_email_sequence(ebook_dict: dict) -> dict:
@@ -83,8 +88,7 @@ Return JSON:
   - preview: preview text
   - body: full email body (plain text, 100-200 words each)
 - sequence_name: name for this sequence"""
-    raw = _try_providers(system, user, preferred=settings.ai_provider)
-    return json.loads(raw)
+    return writer_json(system, user + _COPY_RULES, settings.ai_provider)
 
 
 def generate_all_marketing(ebook_dict: dict) -> dict:

@@ -34,6 +34,7 @@ class PipelineContext(BaseModel):
     research: dict[str, Any] = Field(default_factory=dict)
     fact_check: list[dict[str, Any]] = Field(default_factory=list)
     qa_report: dict[str, Any] = Field(default_factory=dict)
+    chapter_reviews: list[dict[str, Any]] = Field(default_factory=list)
     introduction: str = ""
     author_bio: str = ""
     references: list[str] = Field(default_factory=list)

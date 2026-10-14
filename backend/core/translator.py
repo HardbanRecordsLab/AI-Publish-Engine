@@ -1,6 +1,6 @@
 """Multi-language publishing — translate + regenerate books in N languages."""
 from backend.config import settings
-from backend.core.ai import _try_providers
+from backend.core.ai import writer_text
 from backend.core.prompt_safety import sanitize_text
 
 SUPPORTED_LANGUAGES = {
@@ -24,7 +24,7 @@ def _translate_text(text: str, target_lang: str, source_lang: str = "en") -> str
         "Return only the translated text, nothing else."
     )
     user = sanitize_text(text, max_chars=8000)
-    return _try_providers(system, user, preferred=settings.ai_provider, max_tokens=8000)
+    return writer_text(system, user, settings.ai_provider, temperature=0.2, max_tokens=8000)
 
 
 def translate_book(ebook_dict: dict, target_lang: str) -> dict:
@@ -41,7 +41,7 @@ def translate_book(ebook_dict: dict, target_lang: str) -> dict:
                 elif isinstance(item, str) and item.strip():
                     translated[key].append(_translate_text(item, target_lang))
                 else:
-                    translated[key] = item
+                    translated[key].append(item)
         elif isinstance(value, dict):
             translated[key] = _translate_dict(value, target_lang)
         else:
@@ -62,7 +62,7 @@ def _translate_dict(d: dict, target_lang: str) -> dict:
                 elif isinstance(item, str) and item.strip():
                     result[k].append(_translate_text(item, target_lang))
                 else:
-                    result[k] = item
+                    result[k].append(item)
         elif isinstance(v, dict):
             result[k] = _translate_dict(v, target_lang)
         else:

@@ -17,7 +17,7 @@ class StructureAgent(BaseAgent):
 
         for ci, ch in enumerate(chapters):
             try:
-                enriched = _structure_chapter(ch, ci, ctx.provider)
+                enriched = _structure_chapter(ch, ci, ctx.provider, language=ctx.language)
                 summary = enriched.get("chapter_summary")
                 faq = enriched.get("faq")
                 checklist = enriched.get("checklist")

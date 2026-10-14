@@ -6,7 +6,7 @@ from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
 class FinalizationAgent(BaseAgent):
-    """Generates final ebook sections: introduction, about author, references, glossary, back cover."""
+    """Generates final ebook sections: introduction, about author, glossary, back cover."""
 
     def __init__(self):
         super().__init__("FinalizationAgent")
@@ -14,10 +14,10 @@ class FinalizationAgent(BaseAgent):
     def run(self, ctx: PipelineContext) -> PipelineContext:
         logger.info("FinalizationAgent: generating final ebook sections")
         try:
-            sections = _generate_sections(ctx.ebook_dict, ctx.style, ctx.provider)
+            sections = _generate_sections(ctx.ebook_dict, ctx.style, ctx.provider, language=ctx.language)
             ctx.introduction = sections.get("introduction", "")
             ctx.author_bio = sections.get("author_bio", "")
-            ctx.references = sections.get("references", [])
+            ctx.references = []  # never AI-generated: they came back fabricated
             ctx.glossary_terms = sections.get("glossary_terms", [])
             ctx.back_cover_blurb = sections.get("back_cover_blurb", "")
             ctx.back_cover_tagline = sections.get("back_cover_tagline", "")

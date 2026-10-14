@@ -11,7 +11,7 @@ class InfographicArchitectAgent(BaseAgent):
         super().__init__("InfographicArchitectAgent")
 
     def run(self, ctx: PipelineContext) -> PipelineContext:
-        ctx.infographics = _plan_infographics(ctx.ebook_dict, ctx.design, ctx.provider) or []
+        ctx.infographics = _plan_infographics(ctx.ebook_dict, ctx.design, ctx.provider, language=ctx.language) or []
         ctx.set_progress(68)
         logger.success(
             f"InfographicArchitectAgent: {len(ctx.infographics)} infographics planned"

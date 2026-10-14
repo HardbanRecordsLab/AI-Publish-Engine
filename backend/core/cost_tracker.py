@@ -26,6 +26,8 @@ PRICING: dict[str, tuple[float, float]] = {
     "gemini/gemini-2.0-flash-001": (0.10, 0.40),
     "groq/llama-3.1-8b-instant": (0.05, 0.08),
     "openrouter/qwen/qwen-2.5-72b-instruct": (0.35, 0.40),
+    # Varies by the endpoint OpenRouter routes to; DeepSeek's own rate is ~0.44/0.87.
+    "openrouter/deepseek/deepseek-v4-pro": (0.45, 1.00),
     "mistral/mistral-small-latest": (0.20, 0.60),
     "openai/gpt-4o-mini": (0.15, 0.60),
     "cohere/command-r-plus": (2.50, 10.00),

@@ -186,6 +186,13 @@ Per-provider model override (optional):
 Chapter writing (optional):
 - `AI_WRITING_TEMPERATURE` (default `0.75`) and `AI_WRITING_TIMEOUT_SECONDS`
   (default `180`) apply only to the per-chapter writing calls.
+- `AI_WRITER_PROVIDER` (default `openrouter`), `AI_WRITER_MODEL` (default
+  `deepseek/deepseek-v4-pro`), `AI_WRITER_MAX_TOKENS` (default `12000`):
+  the model chapters are written with first. Chosen for near-frontier
+  long-form writing quality at a low per-token price. Requires
+  `OPENROUTER_API_KEY`; without it, or if the call fails or returns bad
+  JSON, writing falls back to the normal provider chain. Empty
+  `AI_WRITER_PROVIDER` disables it.
 
 ### How content is generated
 

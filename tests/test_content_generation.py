@@ -60,6 +60,11 @@ class TestAnalyzeTextBrief:
 
 
 class TestWriteChapter:
+    @pytest.fixture(autouse=True)
+    def _no_writer_model(self, monkeypatch):
+        # Exercise the provider-chain path only; TestWriterModel covers the writer.
+        monkeypatch.setattr(ai, "WRITER_PROVIDER", "")
+
     def test_expands_prose_and_keeps_other_fields(self, monkeypatch):
         written = {"title": "Start", "introduction": "Hook.", "key_takeaway": "KT",
                    "sections": [{"heading": "A", "content": "Para 1.\n\nPara 2."}]}
@@ -132,3 +137,42 @@ class TestParagraphBreaks:
         assert paragraph_breaks("One.\nTwo.") == "One.\nTwo."
         assert paragraph_breaks("") == ""
         assert paragraph_breaks(None) == ""
+
+
+class TestWriterModel:
+    CHAPTER = {"title": "T", "introduction": "I", "key_takeaway": "K",
+               "sections": [{"heading": "H", "content": "Full text."}]}
+
+    def test_writer_model_is_tried_first(self, monkeypatch):
+        calls = []
+
+        def fake_call(name, messages, **kw):
+            calls.append((name, kw.get("model"), kw.get("max_tokens")))
+            return json.dumps(self.CHAPTER)
+
+        monkeypatch.setattr(ai, "_call", fake_call)
+        monkeypatch.setattr(ai, "_try_providers", lambda *a, **k: pytest.fail("fallback used"))
+        ai.write_chapter(OUTLINE["chapters"][0], book=OUTLINE, chapter_index=0)
+        assert calls == [(ai.WRITER_PROVIDER, ai.WRITER_MODEL, ai.WRITER_MAX_TOKENS)]
+
+    def test_falls_back_on_error_or_bad_json(self, monkeypatch):
+        for writer_result in (RuntimeError("401"), "not json at all", None):
+            def fake_call(name, messages, _r=writer_result, **kw):
+                if isinstance(_r, Exception):
+                    raise _r
+                return _r
+
+            fallback = _FakeProviders(json.dumps(self.CHAPTER))
+            monkeypatch.setattr(ai, "_call", fake_call)
+            monkeypatch.setattr(ai, "_try_providers", fallback)
+            result = ai.write_chapter(OUTLINE["chapters"][0], book=OUTLINE, chapter_index=0)
+            assert result["sections"][0]["content"] == "Full text."
+            assert len(fallback.calls) == 1
+
+    def test_disabled_writer_goes_straight_to_chain(self, monkeypatch):
+        monkeypatch.setattr(ai, "WRITER_PROVIDER", "")
+        monkeypatch.setattr(ai, "_call", lambda *a, **k: pytest.fail("writer used"))
+        fallback = _FakeProviders(json.dumps(self.CHAPTER))
+        monkeypatch.setattr(ai, "_try_providers", fallback)
+        ai.write_chapter(OUTLINE["chapters"][0], book=OUTLINE, chapter_index=0)
+        assert len(fallback.calls) == 1

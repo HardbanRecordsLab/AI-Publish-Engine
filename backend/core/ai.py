@@ -163,13 +163,13 @@ def _throttle(name: str):
     before_sleep=lambda retry_state: logger.warning(f"Retry #{retry_state.attempt_number} after {retry_state.outcome.exception()}"),
 )
 def _call(name: str, messages: list[dict], max_tokens: int = 6000,
-          temperature: float = 0.1, timeout: float = 60) -> str | None:
+          temperature: float = 0.1, timeout: float = 60, model: str | None = None) -> str | None:
     client = _client(name)
     if not client:
         logger.debug(f"{name}: no API key, skipping")
         return None
     _throttle(name)
-    model = _model(name)
+    model = model or _model(name)
     logger.info(f"AI call: {name}/{model}")
     res = client.chat.completions.create(
         model=model,
@@ -280,6 +280,34 @@ _WORDS_PER_SECTION = {
 # review calls stay near-deterministic.
 WRITING_TEMPERATURE = float(os.getenv("AI_WRITING_TEMPERATURE", "0.75"))
 WRITING_TIMEOUT = float(os.getenv("AI_WRITING_TIMEOUT_SECONDS", "180"))
+
+# Chapter writing is where model quality shows most, so it goes to a
+# dedicated model first: DeepSeek V4 Pro via OpenRouter — near-frontier
+# long-form writing at a small fraction of Claude/GPT prices. Without an
+# OPENROUTER_API_KEY (or if that call fails) it falls back to the normal
+# provider chain. Set AI_WRITER_PROVIDER="" to disable.
+WRITER_PROVIDER = os.getenv("AI_WRITER_PROVIDER", "openrouter")
+WRITER_MODEL = os.getenv("AI_WRITER_MODEL", "deepseek/deepseek-v4-pro")
+WRITER_MAX_TOKENS = int(os.getenv("AI_WRITER_MAX_TOKENS", "12000"))
+
+
+def _write_json(system: str, user: str, provider: str | None) -> dict:
+    """Prose call returning JSON: the dedicated writer model first, then the
+    provider chain (also when the writer's JSON doesn't parse)."""
+    if WRITER_PROVIDER in PROVIDERS:
+        cost_tracker.check_budget()  # raises once today's ceiling is reached
+        try:
+            result = _call(WRITER_PROVIDER, [
+                {"role": "system", "content": system + INJECTION_GUARD},
+                {"role": "user", "content": user},
+            ], max_tokens=WRITER_MAX_TOKENS, temperature=WRITING_TEMPERATURE,
+                timeout=WRITING_TIMEOUT, model=WRITER_MODEL or None)
+            if result:
+                return _clean_json(result)
+        except Exception as e:
+            logger.warning(f"writer {WRITER_PROVIDER}/{WRITER_MODEL} failed, falling back: {e}")
+    return _clean_json(_try_providers(system, user, preferred=provider, max_tokens=8000,
+                                      temperature=WRITING_TEMPERATURE, timeout=WRITING_TIMEOUT))
 
 
 def words_per_section(content_type: str) -> int:
@@ -546,9 +574,7 @@ RULES:
 {_language_rule(language)}
 - Only JSON, no markdown fences"""
 
-    raw = _try_providers(system, user, preferred=provider, max_tokens=8000,
-                         temperature=WRITING_TEMPERATURE, timeout=WRITING_TIMEOUT)
-    written = _clean_json(raw)
+    written = _write_json(system, user, provider)
 
     sections = written.get("sections")
     if not isinstance(sections, list) or not sections:

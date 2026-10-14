@@ -19,5 +19,5 @@ class ResearchAgent(BaseAgent):
         except Exception as e:
             logger.warning(f"ResearchAgent skipped ({e})")
             ctx.research = {"chapters": [], "overall_suggestions": {}}
-        ctx.set_progress(45)
+        ctx.set_progress(37)
         return ctx

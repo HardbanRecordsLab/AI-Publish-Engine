@@ -13,7 +13,10 @@ class AnalysisAgent(BaseAgent):
 
     def run(self, ctx: PipelineContext) -> PipelineContext:
         logger.info(f"AnalysisAgent: analyzing {len(ctx.text)} chars")
-        raw = _analyze_text(ctx.text, ctx.provider)
+        raw = _analyze_text(
+            ctx.text, ctx.provider, audience=ctx.audience, tone=ctx.tone,
+            chapters=ctx.chapters, keywords=ctx.keywords, language=ctx.language,
+        )
 
         doc = ContentBlock(type="document", data={
             "title": raw.get("title", ""),

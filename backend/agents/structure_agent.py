@@ -30,14 +30,14 @@ class StructureAgent(BaseAgent):
                     ch["checklist"] = checklist
 
                 logger.info(f"  Ch{ci+1}: enriched")
-                # Intermediate progress: 36 → 43 over chapters
-                pct = 36 + int(7 * (ci + 1) / max(len(chapters), 1))
+                # Intermediate progress: 53 → 58 over chapters
+                pct = 53 + int(5 * (ci + 1) / max(len(chapters), 1))
                 ctx.set_progress(pct)
                 update_job(ctx.job_id, "processing", pct)
             except Exception as e:
                 logger.warning(f"  Ch{ci+1}: skipped ({e})")
 
-        ctx.set_progress(43)
+        ctx.set_progress(58)
         total = sum(
             1 for ch in chapters
             if ch.get("chapter_summary") or ch.get("faq") or ch.get("checklist")

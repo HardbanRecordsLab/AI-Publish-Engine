@@ -69,9 +69,11 @@ async def process_job(ctx):
 
         pre_build = Orchestrator([
             AnalysisAgent(),
-            StructureAgent(),
             ResearchAgent(),
             EditorialAgent(),
+            # After EditorialAgent so summaries/FAQ/checklists are built from
+            # the full chapter text rather than the outline drafts.
+            StructureAgent(),
             FactCheckAgent(),
             DesignSystemAgent(),
             InfographicArchitectAgent(),

@@ -183,6 +183,28 @@ Configuration is in `/var/www/ai-publish-engine/.env`.
 Per-provider model override (optional):
 - `GROQ_MODEL`, `GEMINI_MODEL`, `OPENROUTER_MODEL`, `MISTRAL_MODEL`, `OPENAI_MODEL`
 
+Chapter writing (optional):
+- `AI_WRITING_TEMPERATURE` (default `0.75`) and `AI_WRITING_TIMEOUT_SECONDS`
+  (default `180`) apply only to the per-chapter writing calls.
+
+### How content is generated
+
+1. **AnalysisAgent** turns the source text into an outline (chapters,
+   sections, a one-paragraph draft per section), following the form's
+   language, audience, tone, chapter count and keywords.
+2. **ResearchAgent** suggests examples, sources and ideas per chapter.
+3. **EditorialAgent** writes every chapter out in full, one AI call per
+   chapter, using the research notes and a summary of earlier chapters so
+   they don't repeat each other. Target length per section depends on the
+   output type (ebook ≈ 550 words, blog post ≈ 300, website/landing page
+   shorter). A chapter whose call fails keeps its outline draft.
+4. **StructureAgent** then adds summaries, FAQs and checklists from the
+   finished text, followed by fact-check, design, cover and finalization.
+
+The number of AI calls is unchanged from the earlier "polish only"
+editorial pass, but each chapter call now returns several times more text,
+so jobs take longer and cost more tokens per book.
+
 ---
 
 ## Updating the App (Re-deploy)

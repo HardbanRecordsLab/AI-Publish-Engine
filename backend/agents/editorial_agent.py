@@ -1,20 +1,24 @@
 from loguru import logger
 
-from backend.core.ai import editorial_rewrite_chapter as _rewrite_chapter
+from backend.core.ai import build_brief, words_per_section
+from backend.core.ai import write_chapter as _write_chapter
 from backend.core.jobs import update_job
 from backend.models.content_block import ContentBlock
 from backend.orchestrator.agent import BaseAgent, PipelineContext
+from backend.ws_manager import is_cancelled
 
 
 class EditorialAgent(BaseAgent):
-    """Improves chapter writing: grammar, flow, transitions, tone consistency."""
+    """Writes each chapter out in full from the outline, using the research notes."""
 
     def __init__(self):
         super().__init__("EditorialAgent")
 
     def run(self, ctx: PipelineContext) -> PipelineContext:
         chapters = ctx.ebook_dict.get("chapters", [])
-        logger.info(f"EditorialAgent: editing {len(chapters)} chapters")
+        logger.info(f"EditorialAgent: writing {len(chapters)} chapters")
+        brief = build_brief(ctx.audience, ctx.tone, ctx.keywords, ctx.language)
+        target_words = words_per_section(ctx.content_type)
 
         research_chapters = {}
         if ctx.research:
@@ -22,25 +26,40 @@ class EditorialAgent(BaseAgent):
                 research_chapters[rc.get("index")] = rc
 
         improved = []
+        previous_summaries: list[str] = []
         for i, ch in enumerate(chapters):
+            if is_cancelled(ctx.job_id):
+                # The orchestrator marks the job cancelled before the next agent.
+                improved.extend(chapters[i:])
+                break
             try:
-                r = research_chapters.get(i)
-                edited = _rewrite_chapter(ch, r, ctx.provider)
-                improved.append(edited)
-                logger.info(f"  Ch{i+1}: edited")
-                # Intermediate progress: 46 → 55 over chapters
-                pct = 46 + int(9 * (i + 1) / max(len(chapters), 1))
-                ctx.set_progress(pct)
-                update_job(ctx.job_id, "processing", pct)
+                written = _write_chapter(
+                    ch, book=ctx.ebook_dict, chapter_index=i,
+                    research_suggestions=research_chapters.get(i),
+                    previous_summaries=previous_summaries,
+                    words_per_section=target_words, brief=brief,
+                    language=ctx.language, provider=ctx.provider,
+                )
+                improved.append(written)
+                words = sum(len(s.get("content", "").split()) for s in written.get("sections", []))
+                logger.info(f"  Ch{i+1}: written ({words} words)")
             except Exception as e:
-                logger.warning(f"  Ch{i+1}: skipped ({e})")
+                logger.warning(f"  Ch{i+1}: kept outline draft ({e})")
+                written = ch
                 improved.append(ch)
+            previous_summaries.append(
+                f"Ch{i+1} {written.get('title', '')}: {written.get('key_takeaway', '')}"
+            )
+            # Intermediate progress: 37 → 53 over chapters (the longest step)
+            pct = 37 + int(16 * (i + 1) / max(len(chapters), 1))
+            ctx.set_progress(pct)
+            update_job(ctx.job_id, "processing", pct)
 
         ctx.ebook_dict["chapters"] = improved
 
         ctx.document = _rebuild_document(ctx.ebook_dict)
-        ctx.set_progress(55)
-        logger.success(f"EditorialAgent: {len(improved)} chapters processed")
+        ctx.set_progress(53)
+        logger.success(f"EditorialAgent: {len(improved)} chapters written")
         return ctx
 
 

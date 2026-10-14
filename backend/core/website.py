@@ -4,6 +4,7 @@ from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
 
+from backend.core.builder import paragraph_breaks
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.core.tokens import DAISYUI_MAP
@@ -79,7 +80,7 @@ def _build_website_generic(title, subtitle, author, summary, chapters,
         <section class="section">
             <h2>{ch.get('title', '')}</h2>
             {ch.get('introduction', '') and f'<p class="lead">{ch["introduction"]}</p>' or ''}
-            {''.join(f'<div class="content-block"><h3>{s.get("heading", "")}</h3><p>{s.get("content", "")}</p></div>'
+            {''.join(f'<div class="content-block"><h3>{s.get("heading", "")}</h3><p>{paragraph_breaks(s.get("content", ""))}</p></div>'
                      for s in ch.get('sections', []))}
         </section>"""
 
@@ -200,7 +201,7 @@ def _build_blog_post(title, subtitle, author, summary, chapters,
         for s in ch.get("sections", []):
             content_html += f"""
             <h2>{s.get('heading', '')}</h2>
-            <p>{s.get('content', '')}</p>"""
+            <p>{paragraph_breaks(s.get('content', ''))}</p>"""
 
     return f"""<!DOCTYPE html>
 <html lang="en">

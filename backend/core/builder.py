@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
@@ -14,6 +15,12 @@ env = Environment(loader=FileSystemLoader([
     os.path.join(TEMPLATE_DIR, "blocks"),
     os.path.join(TEMPLATE_DIR, "themes"),
 ]))
+
+def paragraph_breaks(text: str) -> str:
+    """Render the blank-line paragraph breaks of AI-written prose inside the
+    single <p> each template wraps section content in."""
+    return re.sub(r"\n\s*\n+", "<br><br>", (text or "").strip())
+
 
 # Style → theme mapping for display names that differ from theme IDs
 STYLE_THEME_MAP = {
@@ -137,7 +144,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         for si, sec in enumerate(ch.get("sections", [])):
             sections.append({
                 "heading": sec.get("heading", ""),
-                "content": sec.get("content", ""),
+                "content": paragraph_breaks(sec.get("content", "")),
             })
             # Insert infographic after this section if exists
             key = f"{ci}_{si}"
@@ -178,7 +185,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     if conclusion:
         conc_html = env.get_template("conclusion.html").render(
             title=conclusion.get("title", "Conclusion"),
-            content=conclusion.get("content", ""),
+            content=paragraph_breaks(conclusion.get("content", "")),
         )
         pages.append(conc_html)
 

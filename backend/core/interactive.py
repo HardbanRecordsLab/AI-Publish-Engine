@@ -4,6 +4,7 @@ from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
 
+from backend.core.builder import paragraph_breaks
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.themes import get_theme
@@ -115,7 +116,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
             sections_html += f"""
             <div class="iq-section">
               <h3 class="iq-sec-heading">{sec.get("heading", "")}</h3>
-              <div class="iq-sec-content"><p>{sec.get("content", "")}</p></div>
+              <div class="iq-sec-content"><p>{paragraph_breaks(sec.get("content", ""))}</p></div>
             </div>"""
 
         # Infographics

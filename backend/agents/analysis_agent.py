@@ -21,7 +21,8 @@ class AnalysisAgent(BaseAgent):
         doc = ContentBlock(type="document", data={
             "title": raw.get("title", ""),
             "subtitle": raw.get("subtitle", ""),
-            "author": raw.get("author", "AI Design Engine"),
+            # Only the name the user gave: never an invented or tool name.
+            "author": ctx.author,
             "topic": raw.get("topic", "general"),
             "tone": raw.get("tone", "professional"),
             "audience": raw.get("audience", ""),

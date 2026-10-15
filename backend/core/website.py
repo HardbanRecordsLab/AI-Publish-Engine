@@ -56,7 +56,7 @@ def build_website(structure: dict, style: str, infographics: list,
 
     title = structure.get("title", "Page")
     subtitle = structure.get("subtitle", "")
-    author = structure.get("author", "AI Design Engine")
+    author = structure.get("author", "")
     summary = structure.get("summary", "")
     chapters = structure.get("chapters", [])
 
@@ -252,7 +252,7 @@ def build_tailwind_website(structure: dict, style: str = "minimal",
     """Build a website using Tailwind + daisyUI components (from CMLP patterns)."""
     title = structure.get("title", "Page")
     subtitle = structure.get("subtitle", "")
-    author = structure.get("author", "AI Design Engine")
+    author = structure.get("author", "")
     summary = structure.get("summary", "")
     chapters = structure.get("chapters", [])
     conclusion = structure.get("conclusion", {})

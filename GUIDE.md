@@ -184,10 +184,11 @@ Per-provider model override (optional):
 - `GROQ_MODEL`, `GEMINI_MODEL`, `OPENROUTER_MODEL`, `MISTRAL_MODEL`, `OPENAI_MODEL`
 
 Book output (optional):
-- `BOOK_BRAND` (default `AI Publishing Engine`): tool brand printed in
-  generated books — publisher line and "Created with …" on the copyright
-  page, back cover, interactive-book footer. Empty = publish under the
-  author's name only.
+- `BOOK_BRAND` (default empty): optional tool brand printed in generated
+  books — publisher line and "Created with …" on the copyright page, back
+  cover, interactive-book footer. Empty = books carry only the author's name
+  (from the form's "Author name" field), which is also the publisher in
+  ONIX/KDP metadata.
 
 Books are labelled in their own language (EN/PL/DE/ES/FR: "Rozdział",
 "Spis treści", …, `backend/core/book_labels.py`), including the html/EPUB

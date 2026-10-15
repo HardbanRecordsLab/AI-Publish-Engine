@@ -75,9 +75,10 @@ class TestTopicsEndpoint:
 
 
 class TestGenerateEndpoint:
-    def test_rejects_no_file(self):
+    def test_rejects_no_topic_and_no_file(self):
         resp = client.post("/api/generate", headers=ADMIN_AUTH)
-        assert resp.status_code == 422
+        assert resp.status_code == 400
+        assert "topic" in resp.json()["error"]
 
     def test_rejects_bad_provider(self):
         resp = client.post("/api/generate", headers=ADMIN_AUTH, data={"provider": "nonexistent", "style": "minimal"},

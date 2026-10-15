@@ -49,6 +49,7 @@ async def process_job(ctx):
     bg_color = ctx.get("bg_color", "")
     heading_font = ctx.get("heading_font", "")
     body_font = ctx.get("body_font", "")
+    author = ctx.get("author", "")
 
     try:
         update_progress(job_id, "queued", 0)
@@ -64,7 +65,7 @@ async def process_job(ctx):
             content_type=content_type, audience=audience, tone=tone,
             chapters=chapters, keywords=keywords, language=language,
             accent_color=accent_color, bg_color=bg_color,
-            heading_font=heading_font, body_font=body_font,
+            heading_font=heading_font, body_font=body_font, author=author,
         )
 
         pre_build = Orchestrator([

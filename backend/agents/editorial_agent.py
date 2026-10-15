@@ -122,7 +122,7 @@ def _rebuild_document(ebook_dict: dict) -> ContentBlock:
     doc = ContentBlock(type="document", data={
         "title": ebook_dict.get("title", ""),
         "subtitle": ebook_dict.get("subtitle", ""),
-        "author": ebook_dict.get("author", "AI Design Engine"),
+        "author": ebook_dict.get("author", ""),
         "topic": ebook_dict.get("topic", "general"),
         "tone": ebook_dict.get("tone", "professional"),
         "audience": ebook_dict.get("audience", ""),

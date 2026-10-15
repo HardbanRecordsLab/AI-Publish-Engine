@@ -409,7 +409,6 @@ Return EXACTLY this JSON structure, nothing else:
 {{
   "title": "...",
   "subtitle": "...",
-  "author": "AI Ebook Builder",
   "topic": "technology",
   "tone": "professional",
   "audience": "...",
@@ -431,6 +430,7 @@ RULES:
 - {chapter_rule}, 3-4 sections each
 - Each chapter must cover a distinct part of the subject; no two chapters may overlap
 - Section "content" is a working draft (one solid paragraph); it is expanded later
+- If SOURCE is only a short brief or topic, plan the whole book from your own expertise on it
 - Topic must be one: technology|finance|health|education|marketing|psychology|survival|business|general
 {_language_rule(language)}
 - Your ENTIRE response must be ONLY valid JSON, starting with {{ and ending with }}
@@ -854,7 +854,7 @@ def generate_ebook_sections(ebook_dict: dict, style: str,
 TITLE: {ebook_dict.get('title', '')}
 SUMMARY: {ebook_dict.get('summary', '')[:300]}
 TOPIC: {ebook_dict.get('topic', '')}
-AUTHOR: {ebook_dict.get('author', 'AI Design Engine')}
+AUTHOR: {ebook_dict.get('author') or '(not given — do not invent a name)'}
 CHAPTERS:
 {ch_titles}
 STYLE: {style}

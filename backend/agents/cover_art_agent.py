@@ -17,7 +17,7 @@ class CoverArtAgent(BaseAgent):
         topic = ebook.get("topic", "general")
         title = ebook.get("title", "Ebook")
         subtitle = ebook.get("subtitle", "")
-        author = ebook.get("author", "AI Design Engine")
+        author = ebook.get("author", "")
 
         # Get theme colors
         from backend.themes import get_theme

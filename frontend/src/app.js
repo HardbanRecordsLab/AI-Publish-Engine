@@ -194,6 +194,7 @@ async function generate() {
   const chapters = document.getElementById('chaptersInput').value;
   const keywords = document.getElementById('keywordsInput').value.trim();
   const lang = document.getElementById('languageInput').value;
+  const author = document.getElementById('authorInput').value.trim();
   const provider = document.getElementById('providerSelect').value;
 
   const formData = new FormData();
@@ -205,6 +206,7 @@ async function generate() {
   formData.append('chapters', chapters);
   formData.append('keywords', keywords);
   formData.append('language', lang);
+  formData.append('author', author);
   formData.append('provider', provider);
   formData.append('formats', selectedFormats.join(','));
   selectedFiles.forEach(f => formData.append('files', f));

@@ -23,6 +23,7 @@ class PipelineContext(BaseModel):
     chapters: str = ""
     keywords: str = ""
     language: str = ""
+    author: str = ""
     document: ContentBlock | None = None
     design: dict[str, Any] = Field(default_factory=dict)
     infographics: list[dict[str, Any]] = Field(default_factory=list)

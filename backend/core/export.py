@@ -121,7 +121,7 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
     book.set_identifier(f"ebook-{datetime.now().timestamp()}")
     book.set_title(structure.get("title", "Ebook"))
     book.set_language(lang)
-    book.add_author(structure.get("author", "AI Design Engine"))
+    book.add_author(structure.get("author", ""))
 
     spine = ['nav']
     toc = []
@@ -164,7 +164,7 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
     cover_data = _render("cover.html",
         title=structure.get("title", "Ebook"),
         subtitle=structure.get("subtitle", ""),
-        author=structure.get("author", "AI Design Engine"),
+        author=structure.get("author", ""),
         summary=structure.get("summary", ""),
         icon=ctx["cover_icon_svg"],
         cover_svg=ctx["cover_svg"],
@@ -253,7 +253,7 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
     if ctx["back_cover_blurb"]:
         bc_html = _render("back_cover.html",
             blurb=ctx["back_cover_blurb"],
-            author=structure.get("author", "AI Design Engine"),
+            author=structure.get("author", ""),
             tagline=ctx["back_cover_tagline"] or "AI-Powered Publishing",
             icon="📖",
         )
@@ -548,7 +548,7 @@ def export_mobi(epub_path: str, output_path: str) -> str:
 
 
 def generate_kdp_package(epub_path: str, html_content: str, output_dir: str, title: str = "Ebook",
-                          author: str = "AI Design Engine", trim_size: str = "6x9") -> dict:
+                          author: str = "", trim_size: str = "6x9") -> dict:
     """Generate KDP-ready package: print PDF (rendered fresh at the given trim
     size) + EPUB (copied from the already-built epub_path) + metadata."""
     import json

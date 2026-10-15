@@ -54,14 +54,18 @@ class TestLocalizedEbook:
         html = build_ebook_html({**BOOK, "language": ""}, "minimal", [])
         assert '<html lang="en"' in html and "Chapter 1" in html
 
-    def test_brand_is_printed_and_can_be_turned_off(self, monkeypatch):
-        from backend.core import builder
-        html = build_ebook_html(BOOK, "minimal", [], back_cover_blurb="Blurb")
-        assert "Stworzono w" in html and builder.BOOK_BRAND in html
-        monkeypatch.setitem(builder.env.globals, "book_brand", "")
+    def test_no_tool_brand_by_default_author_is_publisher(self):
         html = build_ebook_html(BOOK, "minimal", [], back_cover_blurb="Blurb")
         assert "Stworzono w" not in html
         assert "Wydawca Jan Kowalski" in html
+        for brand in ("AI Design Engine", "AI Publishing Engine", "AI Ebook Builder"):
+            assert brand not in html
+
+    def test_brand_can_be_turned_on(self, monkeypatch):
+        from backend.core import builder
+        monkeypatch.setitem(builder.env.globals, "book_brand", "Acme Press")
+        html = build_ebook_html(BOOK, "minimal", [], back_cover_blurb="Blurb")
+        assert "Stworzono w" in html and "Wydawca Acme Press" in html
 
 
 class TestLocalizedExports:
@@ -166,3 +170,60 @@ class TestTranslationEndpoint:
         finally:
             client.app.dependency_overrides.pop(require_admin, None)
         assert r.status_code == 400
+
+
+class TestGenerateEndpoint:
+    def _client(self, monkeypatch):
+        from fastapi.testclient import TestClient
+
+        from backend.main import app
+        from backend.routers import jobs
+        from backend.routers.auth import require_admin
+        queued = []
+        monkeypatch.setattr(jobs, "_queue_job", lambda *a, **k: queued.append((a, k)))
+        app.dependency_overrides[require_admin] = lambda: None
+        return TestClient(app), queued, app, require_admin
+
+    def test_topic_only_generates(self, monkeypatch):
+        client, queued, app, dep = self._client(monkeypatch)
+        try:
+            r = client.post("/api/generate", data={"topic": "Budżet domowy", "author": "Jan Kowalski"})
+        finally:
+            app.dependency_overrides.pop(dep, None)
+        assert r.status_code == 200, r.text
+        args, kwargs = queued[0]
+        assert args[1].startswith("--- BOOK BRIEF ---\nBudżet domowy")
+        assert kwargs["author"] == "Jan Kowalski"
+
+    def test_nothing_given_is_rejected(self, monkeypatch):
+        client, queued, app, dep = self._client(monkeypatch)
+        try:
+            r = client.post("/api/generate", data={"topic": "  "})
+        finally:
+            app.dependency_overrides.pop(dep, None)
+        assert r.status_code == 400 and not queued
+
+
+class TestAuthorAndSavedBook:
+    def test_analysis_uses_only_the_given_author(self, monkeypatch):
+        from backend.agents import analysis_agent
+        from backend.orchestrator.agent import PipelineContext
+        monkeypatch.setattr(analysis_agent, "_analyze_text", lambda *a, **k: {
+            "title": "T", "author": "AI Ebook Builder", "chapters": [], "conclusion": {}})
+        ctx = analysis_agent.AnalysisAgent().run(
+            PipelineContext(job_id="t", text="x", style="m", author="Jan Kowalski", language="Polish"))
+        assert ctx.ebook_dict["author"] == "Jan Kowalski"
+        assert ctx.ebook_dict["language"] == "Polish"
+
+    def test_marketing_and_metadata_use_saved_book(self, monkeypatch):
+        from backend.routers import publishing
+        job = {"status": "done", "topic": "x", "book_data": json.dumps(BOOK)}
+        book = publishing._saved_book(job)
+        assert book["chapters"] and book["author"] == "Jan Kowalski"
+        meta = publishing._job_metadata(job)
+        assert meta["author"] == "Jan Kowalski" and meta["language"] == "pl"
+
+    def test_saved_book_fallback_has_no_tool_author(self):
+        from backend.routers import publishing
+        book = publishing._saved_book({"topic": "Budżet"})
+        assert book["title"] == "Budżet" and book["author"] == "" and book["chapters"] == []

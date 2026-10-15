@@ -106,6 +106,10 @@ jobs:
             cd /var/www/ai-publish-engine
             source venv/bin/activate
             pip install -r requirements.txt -q
+            # Each Playwright release needs its own Chromium build; a pip
+            # upgrade without this leaves PDF export failing with "Executable
+            # doesn't exist". No-op when the matching build is already there.
+            python -m playwright install chromium
             # alembic upgrade head runs automatically inside the app on
             # startup (backend/core/database.py) — no separate migration
             # step needed here. It is a no-op against the existing

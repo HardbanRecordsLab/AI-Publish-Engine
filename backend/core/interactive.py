@@ -83,7 +83,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
 
     title = structure.get("title", "Interactive Book")
     subtitle = structure.get("subtitle", "")
-    author = structure.get("author", "AI Design Engine")
+    author = structure.get("author", "")
     summary = structure.get("summary", "")
     chapters = structure.get("chapters", [])
     conclusion = structure.get("conclusion", {})

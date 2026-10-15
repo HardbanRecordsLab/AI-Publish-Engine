@@ -34,7 +34,7 @@ class ContentBlock(BaseModel):
             return {
                 "title": self.data.get("title", ""),
                 "subtitle": self.data.get("subtitle", ""),
-                "author": self.data.get("author", "AI Design Engine"),
+                "author": self.data.get("author", ""),
                 "topic": self.data.get("topic", "general"),
                 "tone": self.data.get("tone", "professional"),
                 "audience": self.data.get("audience", ""),

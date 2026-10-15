@@ -9,6 +9,7 @@ from loguru import logger
 
 from backend.config import settings
 from backend.core.beta_reader import beta_read
+from backend.core.book_labels import language_code
 from backend.core.coach import process_answer, start_interview
 from backend.core.format_checker import check_kdp_requirements
 from backend.core.jobs import get_job
@@ -44,12 +45,7 @@ def api_generate_marketing(request: Request, job_id: str):
         return JSONResponse({"error": "Job not found"}, status_code=404)
     if job["status"] != "done":
         return JSONResponse({"error": "Job not ready"}, status_code=400)
-    ebook_dict = {
-        "title": job.get("topic", "Book"),
-        "author": "AI Design Engine",
-        "summary": job.get("topic", ""),
-        "chapters": [],
-    }
+    ebook_dict = _saved_book(job)
     try:
         return generate_all_marketing(ebook_dict)
     except Exception as e:
@@ -229,11 +225,7 @@ def api_generate_metadata(request: Request, job_id: str):
         return JSONResponse({"error": "Job not found"}, status_code=404)
     if job["status"] != "done":
         return JSONResponse({"error": "Job not ready"}, status_code=400)
-    ebook_dict = {
-        "title": job.get("topic", "Book"),
-        "author": "AI Design Engine",
-        "summary": job.get("topic", ""),
-    }
+    ebook_dict = _saved_book(job)
     return {
         "onix": generate_onix_metadata(ebook_dict),
         "kdp": generate_kdp_metadata(ebook_dict),
@@ -242,8 +234,10 @@ def api_generate_metadata(request: Request, job_id: str):
     }
 
 
-def _job_metadata(job: dict) -> dict:
-    """Build a platform-metadata dict from a finished job's book_data."""
+def _saved_book(job: dict) -> dict:
+    """The finished job's full book (book_data), so marketing copy and
+    metadata are written from the actual chapters — these endpoints used to
+    build a stand-in from the job's topic alone, with no chapters at all."""
     book_data = job.get("book_data")
     if isinstance(book_data, str):
         try:
@@ -251,11 +245,22 @@ def _job_metadata(job: dict) -> dict:
         except (TypeError, ValueError):
             book_data = {}
     book_data = book_data or {}
+    if not book_data.get("title"):
+        book_data = {**book_data, "title": job.get("topic") or "Book",
+                     "summary": book_data.get("summary") or job.get("topic", "")}
+    book_data.setdefault("author", "")
+    book_data.setdefault("chapters", [])
+    return book_data
+
+
+def _job_metadata(job: dict) -> dict:
+    """Build a platform-metadata dict from a finished job's book_data."""
+    book_data = _saved_book(job)
     return {
-        "title": book_data.get("title") or job.get("topic", "Book"),
-        "author": book_data.get("author") or "AI Design Engine",
+        "title": book_data["title"],
+        "author": book_data.get("author", ""),
         "description": book_data.get("summary", ""),
-        "language": book_data.get("language", "pl"),
+        "language": language_code(book_data.get("language") or job.get("language")),
         "keywords": book_data.get("keywords", []),
         "category": book_data.get("category", ""),
         "isbn": book_data.get("isbn", ""),
@@ -423,11 +428,7 @@ def api_launch_page(request: Request, job_id: str, launch_date: str = None, acce
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
-    book_data = job.get("book_data")
-    if isinstance(book_data, str):
-        book_data = json.loads(book_data)
-    if not book_data:
-        book_data = {"title": job.get("topic", "Book"), "author": "AI Design Engine", "summary": ""}
+    book_data = _saved_book(job)
     try:
         html = generate_launch_page(book_data, launch_date, accent_color, job_id)
         return HTMLResponse(content=html)

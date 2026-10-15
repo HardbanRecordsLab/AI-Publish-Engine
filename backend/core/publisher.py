@@ -9,7 +9,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 # authors to disclose AI-generated/AI-assisted content. Other platforms'
 # policies vary and change — verify current requirements before publishing.
 AI_CONTENT_DISCLOSURE = (
-    "This book was generated with AI assistance by AI Publishing Engine. "
+    "This book was generated with AI assistance. "
     "Amazon KDP requires disclosing AI-generated or AI-assisted content in "
     "the 'Content Rights' section of the KDP dashboard — check the current "
     "AI-content policy of any other platform before publishing there too."
@@ -162,7 +162,7 @@ def generate_onix_metadata(ebook_dict: dict, language: str = "en", isbn: str = "
     header = SubElement(root, "Header")
     sender = SubElement(header, "Sender")
     sender_name = SubElement(sender, "SenderName")
-    sender_name.text = "AI Design Engine"
+    sender_name.text = author or "Independent author"
     sent_date = SubElement(header, "SentDateTime")
     sent_date.text = datetime.now().isoformat()
 
@@ -218,7 +218,7 @@ def generate_onix_metadata(ebook_dict: dict, language: str = "en", isbn: str = "
     publisher_role = SubElement(publisher, "PublishingRole")
     publisher_role.text = "01"
     publisher_name = SubElement(publisher, "PublisherName")
-    publisher_name.text = "AI Design Engine Publishing"
+    publisher_name.text = author or "Independent author"
 
     return minidom.parseString(tostring(root, encoding="unicode")).toprettyxml(indent="  ")
 

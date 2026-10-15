@@ -18,9 +18,10 @@ env = Environment(loader=FileSystemLoader([
 ]))
 # Defaults for templates rendered without a book language (e.g. previews).
 env.globals.update(labels=LABELS["en"], lang="en")
-# Tool brand printed in generated books (publisher line, copyright page, back
-# cover). Set BOOK_BRAND= (empty) to publish under the author's name only.
-BOOK_BRAND = os.getenv("BOOK_BRAND", "AI Publishing Engine")
+# Optional tool brand printed in generated books (publisher line, copyright
+# page, back cover). Off by default: books are published under the author's
+# name. Set BOOK_BRAND="..." to print one (e.g. a free-tier watermark).
+BOOK_BRAND = os.getenv("BOOK_BRAND", "")
 env.globals["book_brand"] = BOOK_BRAND
 
 
@@ -124,7 +125,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     cover_html = _render("cover.html",
         title=structure.get("title", "Ebook"),
         subtitle=structure.get("subtitle", ""),
-        author=structure.get("author", "AI Design Engine"),
+        author=structure.get("author", ""),
         summary=structure.get("summary", ""),
         icon=cover_icon_svg,
         cover_svg=cover_svg,
@@ -229,7 +230,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     if back_cover_blurb:
         back_html = _render("back_cover.html",
             blurb=back_cover_blurb,
-            author=structure.get("author", "AI Design Engine"),
+            author=structure.get("author", ""),
             tagline=back_cover_tagline,
             icon="📖",
         )
@@ -253,7 +254,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         "theme": theme,
         "meta": {
             "title": structure.get("title", "Ebook"),
-            "author": structure.get("author", "AI Design Engine"),
+            "author": structure.get("author", ""),
             "date": datetime.now().strftime("%B %d, %Y"),
             "topic": topic,
         },

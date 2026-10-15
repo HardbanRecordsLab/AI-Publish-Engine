@@ -7,7 +7,7 @@ import json
 import pytest
 
 from backend.core import ai
-from backend.core.builder import paragraph_breaks
+from backend.core.builder import paragraphs_html
 from backend.orchestrator.agent import PipelineContext
 
 
@@ -130,14 +130,14 @@ class TestEditorialAgent:
         assert ctx.progress == 53
 
 
-class TestParagraphBreaks:
-    def test_blank_lines_become_breaks(self):
-        assert paragraph_breaks("One.\n\nTwo.\n \n\nThree.") == "One.<br><br>Two.<br><br>Three."
+class TestParagraphsHtml:
+    def test_one_p_per_paragraph(self):
+        assert paragraphs_html("One.\n\nTwo.\n \n\nThree.") == "<p>One.</p><p>Two.</p><p>Three.</p>"
 
-    def test_single_newlines_and_empty_are_untouched(self):
-        assert paragraph_breaks("One.\nTwo.") == "One.\nTwo."
-        assert paragraph_breaks("") == ""
-        assert paragraph_breaks(None) == ""
+    def test_single_newlines_and_empty(self):
+        assert paragraphs_html("One.\nTwo.") == "<p>One.\nTwo.</p>"
+        assert paragraphs_html("") == ""
+        assert paragraphs_html(None) == ""
 
 
 class TestWriterModel:

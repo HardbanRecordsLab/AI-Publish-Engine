@@ -1,9 +1,11 @@
 """Endpoints for AI Marketing Suite, Multi-language, Book Coach, Direct Publishing."""
 import json
 import os
+import threading
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from loguru import logger
 
 from backend.config import settings
 from backend.core.beta_reader import beta_read
@@ -23,7 +25,7 @@ from backend.core.publisher import (
     generate_polish_metadata,
     get_platforms,
 )
-from backend.core.translator import SUPPORTED_LANGUAGES, translate_book
+from backend.core.translator import SUPPORTED_LANGUAGES, translate_full_book
 from backend.limiter import limiter
 from backend.routers.auth import require_admin
 
@@ -61,45 +63,120 @@ def api_languages(request: Request):
     return [{"code": k, "name": v} for k, v in SUPPORTED_LANGUAGES.items()]
 
 
+_TRANSLATION_FORMATS = {"html": "text/html", "epub": "application/epub+zip",
+                        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+_translation_lock = threading.Lock()
+
+
+def _translation_status_path(job_id: str) -> str:
+    return os.path.join(OUTPUT_DIR, f"{job_id}_translations.json")
+
+
+def _read_translation_status(job_id: str) -> dict:
+    try:
+        with open(_translation_status_path(job_id), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _set_translation_status(job_id: str, lang: str, **fields) -> None:
+    with _translation_lock:
+        status = _read_translation_status(job_id)
+        status.setdefault(lang, {"language": lang, "name": SUPPORTED_LANGUAGES.get(lang, lang)}).update(fields)
+        with open(_translation_status_path(job_id), "w", encoding="utf-8") as f:
+            json.dump(status, f, ensure_ascii=False, indent=2)
+
+
+def _start_background(fn, *args) -> None:
+    threading.Thread(target=fn, args=args, daemon=True).start()
+
+
+def _run_translations(job_id: str, book: dict, params: dict, langs: list[str]) -> None:
+    from backend.core.builder import build_ebook_html
+    from backend.core.export import build_docx, build_epub
+
+    style = params.get("style", "minimal")
+    for lang in langs:
+        _set_translation_status(job_id, lang, status="processing", error=None)
+        try:
+            t_book, t_params = translate_full_book(book, params, lang)
+            build_kwargs = {k: t_params.get(k) for k in (
+                "introduction", "author_bio", "references", "glossary_terms", "back_cover_blurb",
+                "back_cover_tagline", "cover_svg", "cover_image", "chapter_illustrations") if t_params.get(k)}
+            base = os.path.join(OUTPUT_DIR, f"{job_id}_{lang}")
+            html = build_ebook_html(t_book, style, t_params.get("infographics", []), **build_kwargs)
+            with open(base + ".html", "w", encoding="utf-8") as f:
+                f.write(html)
+            build_epub(t_book, style, t_params.get("infographics", []), base + ".epub", **build_kwargs)
+            build_docx(t_book, style, t_params.get("infographics", []), base + ".docx", **build_kwargs)
+            _set_translation_status(job_id, lang, status="done", title=t_book.get("title", ""),
+                                    downloads={fmt: f"/api/translate/{job_id}/{lang}/{fmt}"
+                                               for fmt in _TRANSLATION_FORMATS})
+        except Exception as e:
+            logger.error(f"translation {job_id} -> {lang} failed: {e}")
+            _set_translation_status(job_id, lang, status="failed", error=str(e))
+
+
 @router.post("/api/translate/{job_id}", dependencies=[Depends(require_admin)])
 @limiter.limit("5/minute")
-async def api_translate(request: Request, job_id: str, languages: str = "pl,de,fr,es"):
+async def api_translate(request: Request, job_id: str, languages: str = ""):
+    """Start translating a finished book in the background; poll
+    GET /api/translate/{job_id} for progress and download links."""
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
     if job["status"] != "done":
         return JSONResponse({"error": "Job not ready"}, status_code=400)
 
-    target_codes = [lang.strip() for lang in languages.split(",") if lang.strip()]
+    # The UI sends {"languages": [...]} in the body; a ?languages=pl,de query works too.
+    target_codes = [c.strip() for c in languages.split(",") if c.strip()]
+    if not target_codes:
+        try:
+            body = await request.json()
+            target_codes = [str(c).strip() for c in body.get("languages", []) if str(c).strip()]
+        except Exception:
+            target_codes = []
+    if not target_codes:
+        return JSONResponse({"error": "No target languages given"}, status_code=400)
     invalid = [c for c in target_codes if c not in SUPPORTED_LANGUAGES]
     if invalid:
         return JSONResponse({"error": f"Invalid language codes: {', '.join(invalid)}"}, status_code=400)
+    target_codes = list(dict.fromkeys(target_codes))[:5]  # max 5 per request
 
-    results = []
-    for lang in target_codes[:5]:  # max 5 per request
-        try:
-            from backend.core.builder import build_ebook_html
+    book, params = job.get("book_data"), job.get("build_params")
+    book = json.loads(book) if isinstance(book, str) else book
+    params = json.loads(params) if isinstance(params, str) else (params or {})
+    if not book or not book.get("chapters"):
+        return JSONResponse({"error": "This job has no saved book content to translate"}, status_code=400)
 
-            ebook_dict = {
-                "title": job.get("topic", "Book"),
-                "author": "AI Design Engine",
-                "summary": job.get("topic", ""),
-                "chapters": [],
-            }
-            translated = translate_book(ebook_dict, lang)
-            translated_path = os.path.join(OUTPUT_DIR, f"{job_id}_{lang}.html")
-            html = build_ebook_html(translated, job.get("style", "minimal"), [])
-            with open(translated_path, "w", encoding="utf-8") as f:
-                f.write(html)
-            results.append({
-                "language": lang,
-                "name": SUPPORTED_LANGUAGES[lang],
-                "path": translated_path,
-                "size": os.path.getsize(translated_path),
-            })
-        except Exception as e:
-            results.append({"language": lang, "name": SUPPORTED_LANGUAGES.get(lang, lang), "error": str(e)})
-    return {"job_id": job_id, "translations": results}
+    for lang in target_codes:
+        _set_translation_status(job_id, lang, status="queued", error=None)
+    _start_background(_run_translations, job_id, book, params, target_codes)
+    return {"job_id": job_id, "translations": list(_read_translation_status(job_id).values())}
+
+
+@router.get("/api/translate/{job_id}")
+@limiter.limit("60/minute")
+def api_translate_status(request: Request, job_id: str):
+    if not get_job(job_id):  # also keeps job_id from being an arbitrary path
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+    return {"job_id": job_id, "translations": list(_read_translation_status(job_id).values())}
+
+
+@router.get("/api/translate/{job_id}/{lang}/{fmt}")
+@limiter.limit("30/minute")
+def api_translate_download(request: Request, job_id: str, lang: str, fmt: str):
+    if not get_job(job_id):  # also keeps job_id from being an arbitrary path
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+    if lang not in SUPPORTED_LANGUAGES or fmt not in _TRANSLATION_FORMATS:
+        return JSONResponse({"error": "Unknown language or format"}, status_code=404)
+    if _read_translation_status(job_id).get(lang, {}).get("status") != "done":
+        return JSONResponse({"error": "Translation not ready"}, status_code=404)
+    path = os.path.join(OUTPUT_DIR, f"{job_id}_{lang}.{fmt}")
+    if not os.path.exists(path):
+        return JSONResponse({"error": "File not found"}, status_code=404)
+    return FileResponse(path, media_type=_TRANSLATION_FORMATS[fmt], filename=f"{job_id}_{lang}.{fmt}")
 
 
 # ─── Book Coach ─────────────────────────────────────────────────────

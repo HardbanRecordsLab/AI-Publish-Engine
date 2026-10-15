@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
 <meta charset="UTF-8">
 <style>
@@ -83,6 +83,10 @@
 
   p { text-align: justify; hyphens: auto; }
   p, li { widows: 3; orphans: 3; }
+  /* Book paragraphs: first-line indent, no blank gap; the first paragraph
+     after a heading starts flush, as in professionally typeset books. */
+  .section-body p { margin: 0; text-indent: 1.5em; }
+  .section-body p:first-child { text-indent: 0; }
   table { page-break-inside: avoid; }
   pre, blockquote { page-break-inside: avoid; }
 

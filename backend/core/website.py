@@ -4,7 +4,8 @@ from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
 
-from backend.core.builder import paragraph_breaks
+from backend.core.book_labels import LABELS, book_labels, language_code
+from backend.core.builder import paragraphs_html
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.core.tokens import DAISYUI_MAP
@@ -12,6 +13,7 @@ from backend.themes import get_theme
 
 TEMPLATE_DIR = "templates"
 env = Environment(loader=FileSystemLoader([TEMPLATE_DIR]))
+env.globals.update(labels=LABELS["en"], lang="en")
 
 
 def _seo_meta(title, description, author, url="", image="") -> str:
@@ -80,12 +82,12 @@ def _build_website_generic(title, subtitle, author, summary, chapters,
         <section class="section">
             <h2>{ch.get('title', '')}</h2>
             {ch.get('introduction', '') and f'<p class="lead">{ch["introduction"]}</p>' or ''}
-            {''.join(f'<div class="content-block"><h3>{s.get("heading", "")}</h3><p>{paragraph_breaks(s.get("content", ""))}</p></div>'
+            {''.join(f'<div class="content-block"><h3>{s.get("heading", "")}</h3>{paragraphs_html(s.get("content", ""))}</div>'
                      for s in ch.get('sections', []))}
         </section>"""
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{language_code(structure.get('language'))}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -119,7 +121,7 @@ footer{{text-align:center;padding:30px;color:{colors['muted']};font-size:.85em;b
 <main class="container">
     {sections_html}
 </main>
-<footer><p>© {datetime.now().year} {author}. All rights reserved.</p></footer>
+<footer><p>© {datetime.now().year} {author}</p></footer>
 </body>
 </html>"""
 
@@ -135,11 +137,12 @@ def _build_landing_page(title, subtitle, author, summary, chapters,
             <p>{ch.get('introduction', ch.get('sections', [{}])[0].get('content', ''))[:120]}</p>
         </div>"""
 
-    cta_section = structure.get("conclusion", {})
-    cta_text = cta_section.get("content", "Get started today!") if cta_section else "Get started today!"
+    labels = book_labels(structure.get("language"))
+    # The conclusion is a paragraph — it used to be stuffed into the button.
+    cta_body = (structure.get("conclusion") or {}).get("content", "")[:300]
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{language_code(structure.get('language'))}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -176,18 +179,18 @@ footer{{text-align:center;padding:30px;color:{colors['muted']};font-size:.85em;b
     <h1>{title}</h1>
     {subtitle and f'<div class="subtitle">{subtitle}</div>' or ''}
     {summary and f'<p style="opacity:.85;margin-bottom:30px;max-width:600px;margin-left:auto;margin-right:auto;position:relative">{summary}</p>' or ''}
-    <a href="#features" class="cta-btn">{cta_text}</a>
+    <a href="#features" class="cta-btn">{labels["cta_button"]}</a>
 </section>
 <section class="features" id="features">
-    <h2>Key Features</h2>
+    <h2>{labels["key_features"]}</h2>
     <div class="feature-grid">{features_html}</div>
 </section>
 <section class="cta">
-    <h2>Ready to Get Started?</h2>
-    <p>Join thousands of users who are already transforming their workflow.</p>
-    <a href="#" class="cta-btn">Get Started Free</a>
+    <h2>{labels["cta_heading"]}</h2>
+    {cta_body and f'<p>{cta_body}</p>' or ''}
+    <a href="#" class="cta-btn">{labels["cta_button"]}</a>
 </section>
-<footer><p>© {datetime.now().year} {author}. All rights reserved.</p></footer>
+<footer><p>© {datetime.now().year} {author}</p></footer>
 </body>
 </html>"""
 
@@ -201,10 +204,10 @@ def _build_blog_post(title, subtitle, author, summary, chapters,
         for s in ch.get("sections", []):
             content_html += f"""
             <h2>{s.get('heading', '')}</h2>
-            <p>{paragraph_breaks(s.get('content', ''))}</p>"""
+            {paragraphs_html(s.get('content', ''))}"""
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{language_code(structure.get('language'))}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -238,7 +241,7 @@ body{{font-family:{fonts['body']};color:{colors['text']};background:{colors['bac
     </header>
     {content_html}
     <div class="tags"><span>{structure.get("topic", "General")}</span></div>
-    <footer><p>© {datetime.now().year} {author}. All rights reserved.</p></footer>
+    <footer><p>© {datetime.now().year} {author}</p></footer>
 </article>
 </body>
 </html>"""

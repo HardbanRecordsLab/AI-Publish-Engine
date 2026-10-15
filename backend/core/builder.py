@@ -4,6 +4,7 @@ from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
 
+from backend.core.book_labels import LABELS, book_labels, language_code
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.core.infographic_engine import render_infographic
@@ -15,11 +16,20 @@ env = Environment(loader=FileSystemLoader([
     os.path.join(TEMPLATE_DIR, "blocks"),
     os.path.join(TEMPLATE_DIR, "themes"),
 ]))
+# Defaults for templates rendered without a book language (e.g. previews).
+env.globals.update(labels=LABELS["en"], lang="en")
+# Tool brand printed in generated books (publisher line, copyright page, back
+# cover). Set BOOK_BRAND= (empty) to publish under the author's name only.
+BOOK_BRAND = os.getenv("BOOK_BRAND", "AI Publishing Engine")
+env.globals["book_brand"] = BOOK_BRAND
 
-def paragraph_breaks(text: str) -> str:
-    """Render the blank-line paragraph breaks of AI-written prose inside the
-    single <p> each template wraps section content in."""
-    return re.sub(r"\n\s*\n+", "<br><br>", (text or "").strip())
+
+def paragraphs_html(text: str) -> str:
+    """AI-written prose (paragraphs separated by blank lines) as one <p> per
+    paragraph. Templates wrap it in a <div>, never a <p>: block content
+    inside <p> is invalid HTML and fails EPUB validation."""
+    paras = [p.strip() for p in re.split(r"\n\s*\n", text or "") if p.strip()]
+    return "".join(f"<p>{p}</p>" for p in paras)
 
 
 # Style → theme mapping for display names that differ from theme IDs
@@ -45,6 +55,12 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
                      chapter_illustrations: list = None,
                      accent_color: str = "", bg_color: str = "",
                      heading_font: str = "", body_font: str = "") -> str:
+    labels = book_labels(structure.get("language"))
+    lang = language_code(structure.get("language"))
+
+    def _render(template: str, **kwargs) -> str:
+        return env.get_template(template).render(labels=labels, lang=lang, **kwargs)
+
     # 1. Detect topic → color palette
     topic = detect_topic(structure)
     topic_palette = get_color_palette(topic)
@@ -105,7 +121,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         ch_ills[ill.get("chapter_index")] = ill.get("image_uri") or ill.get("svg", "")
     introduction_text = introduction
     references_list = references
-    cover_html = env.get_template("cover.html").render(
+    cover_html = _render("cover.html",
         title=structure.get("title", "Ebook"),
         subtitle=structure.get("subtitle", ""),
         author=structure.get("author", "AI Design Engine"),
@@ -118,24 +134,25 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     pages.append(cover_html)
 
     # Copyright
-    copyright_html = env.get_template("copyright.html").render(
+    copyright_html = _render("copyright.html",
         title=structure.get("title", "Ebook"),
         subtitle=structure.get("subtitle", ""),
-        date=datetime.now().strftime("%B %d, %Y"),
+        author=structure.get("author", ""),
+        year=datetime.now().year,
     )
     pages.append(copyright_html)
 
     # Introduction
     if introduction_text:
-        intro_html = env.get_template("introduction.html").render(
-            title="Introduction",
-            content=introduction_text,
+        intro_html = _render("introduction.html",
+            title=labels["introduction"],
+            content=paragraphs_html(introduction_text),
         )
         pages.append(intro_html)
 
     # TOC
     if toc_items:
-        toc_html = env.get_template("toc.html").render(items=toc_items)
+        toc_html = _render("toc.html", items=toc_items)
         pages.append(toc_html)
 
     # Chapters
@@ -144,34 +161,34 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         for si, sec in enumerate(ch.get("sections", [])):
             sections.append({
                 "heading": sec.get("heading", ""),
-                "content": paragraph_breaks(sec.get("content", "")),
+                "content": paragraphs_html(sec.get("content", "")),
             })
             # Insert infographic after this section if exists
             key = f"{ci}_{si}"
             if key in rendered:
                 for ig in rendered[key]:
-                    ig_html = env.get_template("infographic.html").render(**ig)
+                    ig_html = _render("infographic.html", **ig)
                     sections.append({"heading": "", "content": ig_html})
 
         # Structural elements (summary, faq, checklist)
         if ch.get("chapter_summary"):
             sections.append({
                 "heading": "",
-                "content": env.get_template("summary.html").render(**ch["chapter_summary"]),
+                "content": _render("summary.html", **ch["chapter_summary"]),
             })
         if ch.get("faq"):
             sections.append({
                 "heading": "",
-                "content": env.get_template("faq.html").render(items=ch["faq"]),
+                "content": _render("faq.html", items=ch["faq"]),
             })
         if ch.get("checklist"):
             sections.append({
                 "heading": "",
-                "content": env.get_template("checklist.html").render(**ch["checklist"]),
+                "content": _render("checklist.html", **ch["checklist"]),
             })
 
         ch_ill_svg = ch_ills.get(ci, "")
-        ch_html = env.get_template("chapter.html").render(
+        ch_html = _render("chapter.html",
             number=ci + 1,
             title=ch.get("title", f"Chapter {ci+1}"),
             introduction=ch.get("introduction", ""),
@@ -183,21 +200,21 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
 
     # Conclusion
     if conclusion:
-        conc_html = env.get_template("conclusion.html").render(
+        conc_html = _render("conclusion.html",
             title=conclusion.get("title", "Conclusion"),
-            content=paragraph_breaks(conclusion.get("content", "")),
+            content=paragraphs_html(conclusion.get("content", "")),
         )
         pages.append(conc_html)
 
     # Author Bio
     if author_bio:
-        author_html = env.get_template("author.html").render(bio=author_bio)
+        author_html = _render("author.html", bio=author_bio)
         pages.append(author_html)
 
     # References
     if references_list:
-        ref_html = env.get_template("references.html").render(
-            title="References & Further Reading",
+        ref_html = _render("references.html",
+            title=labels["references"],
             items=references_list,
             content="",
         )
@@ -205,15 +222,15 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
 
     # Glossary
     if glossary_terms:
-        gloss_html = env.get_template("glossary.html").render(terms=glossary_terms)
+        gloss_html = _render("glossary.html", terms=glossary_terms)
         pages.append(gloss_html)
 
     # Back Cover
     if back_cover_blurb:
-        back_html = env.get_template("back_cover.html").render(
+        back_html = _render("back_cover.html",
             blurb=back_cover_blurb,
             author=structure.get("author", "AI Design Engine"),
-            tagline=back_cover_tagline or "AI-Powered Publishing",
+            tagline=back_cover_tagline,
             icon="📖",
         )
         pages.append(back_html)
@@ -244,4 +261,4 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     }
 
     base = env.get_template("base.html")
-    return base.render(**context)
+    return base.render(lang=lang, labels=labels, **context)

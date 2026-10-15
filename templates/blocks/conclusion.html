@@ -1,6 +1,6 @@
 <section class="conclusion page">
-  <h2 style="font-family: var(--font-heading); font-size: var(--font-size-h2); color: var(--color-heading); margin-bottom: 0.5cm;">{{ title | default('Conclusion') }}</h2>
-  <p style="font-size: 11pt; line-height: 1.8; text-align: justify; margin-bottom: 0.5cm;">{{ content }}</p>
+  <h2 style="font-family: var(--font-heading); font-size: var(--font-size-h2); color: var(--color-heading); margin-bottom: 0.5cm;">{{ title | default(labels.conclusion) }}</h2>
+  <div class="section-body" style="font-size: 11pt; line-height: 1.8; margin-bottom: 0.5cm;">{{ content }}</div>
   {% if cta %}
   <div style="text-align: center; margin: 1cm 0;">
     <div style="display: inline-block; padding: 0.4cm 1cm; background: var(--accent-gradient); color: #fff; border-radius: var(--radius-md); font-weight: 600; font-size: 11pt;">{{ cta }}</div>

@@ -81,6 +81,10 @@ document.querySelectorAll('.sidebar-link[data-panel]').forEach(link => {
 });
 
 // ==================== API HELPERS ====================
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {}), ...opts.headers };
   if (opts.noJson) delete headers['Content-Type'];
@@ -620,9 +624,39 @@ async function runTranslation() {
   document.getElementById('transBtn').disabled = true;
   try {
     const data = await api('/api/translate/' + jobId, { method: 'POST', body: JSON.stringify({ languages: selectedLangs }) });
-    result.innerHTML = '<pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">' + JSON.stringify(data, null, 2) + '</pre>';
-  } catch(e) { result.innerHTML = '<div style="color:var(--error);font-size:12px">' + e.message + '</div>'; }
-  document.getElementById('transBtn').disabled = false;
+    renderTranslations(data.translations || []);
+    pollTranslations(jobId);
+  } catch(e) {
+    result.innerHTML = '<div style="color:var(--error);font-size:12px">' + escapeHtml(e.message) + '</div>';
+    document.getElementById('transBtn').disabled = false;
+  }
+}
+
+// Translation runs in the background (a whole book takes minutes); poll until
+// every language is done or failed.
+function pollTranslations(jobId) {
+  const timer = setInterval(async () => {
+    try {
+      const data = await api('/api/translate/' + jobId);
+      const items = data.translations || [];
+      renderTranslations(items);
+      if (items.length && items.every(t => t.status === 'done' || t.status === 'failed')) {
+        clearInterval(timer);
+        document.getElementById('transBtn').disabled = false;
+      }
+    } catch(e) { /* transient — keep polling */ }
+  }, 5000);
+}
+
+function renderTranslations(items) {
+  const labels = { queued: 'Queued', processing: 'Translating…', done: 'Done', failed: 'Failed' };
+  document.getElementById('transResult').innerHTML = items.map(t => {
+    const links = t.status === 'done' && t.downloads
+      ? Object.entries(t.downloads).map(([fmt, url]) => `<a href="${API}${url}" target="_blank">${fmt.toUpperCase()}</a>`).join(' · ')
+      : '';
+    const err = t.status === 'failed' && t.error ? `<div style="color:var(--error)">${escapeHtml(t.error)}</div>` : '';
+    return `<div style="padding:6px 0;border-bottom:1px solid var(--border)"><strong>${escapeHtml(t.name || t.language)}</strong> — ${labels[t.status] || t.status} ${links}${err}</div>`;
+  }).join('');
 }
 
 // ==================== PUBLISHING ====================

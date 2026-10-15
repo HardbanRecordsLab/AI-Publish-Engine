@@ -4,13 +4,15 @@ from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
 
-from backend.core.builder import paragraph_breaks
+from backend.core.book_labels import LABELS, book_labels, language_code
+from backend.core.builder import BOOK_BRAND, paragraphs_html
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.themes import get_theme
 
 TEMPLATE_DIR = "templates"
 env = Environment(loader=FileSystemLoader([TEMPLATE_DIR]))
+env.globals.update(labels=LABELS["en"], lang="en")
 
 STYLE_THEME_MAP = {
     "professional": "business", "minimal": "minimal", "creative": "creative",
@@ -44,7 +46,7 @@ def _build_toc(chapters: list) -> str:
     items = "".join(
         f'<li><a href="#ch-{i+1}" class="iq-toc-link" data-index="{i+1}">'
         f'<span class="iq-toc-num">{i+1}</span>{ch.get("title", f"Chapter {i+1}")}'
-        f'<span class="iq-toc-read">{_est_reading_time(ch.get("introduction","") or "")} min</span></a></li>'
+        f'<span class="iq-toc-read">{_est_reading_time(" ".join(s.get("content", "") for s in ch.get("sections", [])))} min</span></a></li>'
         for i, ch in enumerate(chapters)
     )
     return f"<ul>{items}</ul>"
@@ -85,6 +87,8 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
     summary = structure.get("summary", "")
     chapters = structure.get("chapters", [])
     conclusion = structure.get("conclusion", {})
+    labels = book_labels(structure.get("language"))
+    lang = language_code(structure.get("language"))
 
     if references is None:
         references = []
@@ -116,7 +120,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
             sections_html += f"""
             <div class="iq-section">
               <h3 class="iq-sec-heading">{sec.get("heading", "")}</h3>
-              <div class="iq-sec-content"><p>{paragraph_breaks(sec.get("content", ""))}</p></div>
+              <div class="iq-sec-content">{paragraphs_html(sec.get("content", ""))}</div>
             </div>"""
 
         # Infographics
@@ -133,7 +137,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
         if ch.get("chapter_summary"):
             s = ch["chapter_summary"]
             pts = "".join(f"<li>{p}</li>" for p in s.get("points", []))
-            sections_html += f'<div class="iq-summary"><strong>{s.get("title","Summary")}</strong><ul>{pts}</ul></div>'
+            sections_html += f'<div class="iq-summary"><strong>{s.get("title", labels["summary"])}</strong><ul>{pts}</ul></div>'
 
         if ch.get("faq"):
             faq_html = ""
@@ -146,7 +150,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
                   </button>
                   <div class="iq-faq-a">{faq_item.get("answer","")}</div>
                 </div>"""
-            sections_html += f'<div class="iq-faq"><h3>Frequently Asked Questions</h3>{faq_html}</div>'
+            sections_html += f'<div class="iq-faq"><h3>{labels["faq"]}</h3>{faq_html}</div>'
 
         if ch.get("checklist"):
             c = ch["checklist"]
@@ -154,7 +158,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
                 f'<label class="iq-check-item"><input type="checkbox" onchange="saveChecklist({ci},this)"> {it.get("text","")}</label>'
                 for it in c.get("items", [])
             )
-            sections_html += f'<div class="iq-checklist"><h3>{c.get("title","Checklist")}</h3>{items}</div>'
+            sections_html += f'<div class="iq-checklist"><h3>{c.get("title", labels["checklist"])}</h3>{items}</div>'
 
         # Quiz
         sections_html += _build_quiz_html(ch.get("title", f"Chapter {ci+1}"), ci)
@@ -165,10 +169,10 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
         chapters_html += f"""
         <section id="ch-{ci+1}" class="iq-chapter" data-chapter="{ci+1}">
           <div class="iq-chapter-header">
-            <span class="iq-chapter-num">Chapter {ci+1}</span>
+            <span class="iq-chapter-num">{labels["chapter"]} {ci+1}</span>
             <h2 class="iq-chapter-title">{ch.get("title", f"Chapter {ci+1}")}</h2>
             {f'<p class="iq-chapter-intro">{ch["introduction"]}</p>' if ch.get("introduction") else ""}
-            {f'<div class="iq-takeaway">Key Takeaway: {ch["key_takeaway"]}</div>' if ch.get("key_takeaway") else ""}
+            {f'<div class="iq-takeaway">{labels["key_takeaway"]}: {ch["key_takeaway"]}</div>' if ch.get("key_takeaway") else ""}
           </div>
           {ill_html}
           {sections_html}
@@ -180,7 +184,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
         conclusion_html = f"""
         <section id="conclusion" class="iq-chapter">
           <div class="iq-chapter-header">
-            <h2 class="iq-chapter-title">{conclusion.get("title","Conclusion")}</h2>
+            <h2 class="iq-chapter-title">{conclusion.get("title", labels["conclusion"])}</h2>
           </div>
           <p>{conclusion.get("content","")}</p>
         </section>"""
@@ -192,7 +196,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
             f'<li>{"<a href=\"" + r["url"] + "\" target=\"_blank\">" if r.get("url") else ""}{r.get("text") or r.get("title","")}{"</a>" if r.get("url") else ""}</li>'
             for r in references
         )
-        refs_html = f'<section id="references" class="iq-chapter"><h2>References</h2><ul>{items}</ul></section>'
+        refs_html = f'<section id="references" class="iq-chapter"><h2>{labels["references"]}</h2><ul>{items}</ul></section>'
 
     # Glossary
     gloss_html = ""
@@ -201,11 +205,11 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
             f'<div class="iq-glossary-term"><strong>{t.get("term","")}</strong>: {t.get("definition","")}</div>'
             for t in glossary_terms
         )
-        gloss_html = f'<section id="glossary" class="iq-chapter"><h2>Glossary</h2>{items}</section>'
+        gloss_html = f'<section id="glossary" class="iq-chapter"><h2>{labels["glossary"]}</h2>{items}</section>'
 
     author_html = ""
     if author_bio:
-        author_html = f'<section id="author" class="iq-chapter"><h2>About the Author</h2><p>{author_bio}</p></section>'
+        author_html = f'<section id="author" class="iq-chapter"><h2>{labels["about_author"]}</h2><p>{author_bio}</p></section>'
 
     back_html = ""
     if back_cover_blurb:
@@ -220,7 +224,7 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
     color_vars = "".join(f"  --color-{k}: {v};\n" for k, v in colors.items() if not k.startswith("_"))
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{lang}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -316,7 +320,7 @@ body.iq-dark{{--color-background:#0B0F1A;--color-surface:#111827;--color-text:#E
 </head>
 <body>
 <div class="iq-topbar">
-  <button class="iq-topbar-btn" onclick="document.querySelector('.iq-sidebar').classList.toggle('open')" title="Table of Contents">☰</button>
+  <button class="iq-topbar-btn" onclick="document.querySelector('.iq-sidebar').classList.toggle('open')" title="{labels["contents"]}">☰</button>
   <span class="iq-topbar-title">{title}</span>
   <button class="iq-topbar-btn" onclick="toggleTheme()" id="themeToggle">🌙</button>
   <button class="iq-topbar-btn" onclick="changeFontSize(-1)">A−</button>
@@ -326,12 +330,12 @@ body.iq-dark{{--color-background:#0B0F1A;--color-surface:#111827;--color-text:#E
 <div class="iq-progress"><div class="iq-progress-fill" id="progressFill"></div></div>
 <div class="iq-layout">
 <aside class="iq-sidebar" id="tocSidebar">
-  <h3>Table of Contents</h3>
+  <h3>{labels["contents"]}</h3>
   {toc_html}
   <div style="margin-top:12px;border-top:1px solid var(--color-border);padding-top:12px">
-    <a href="#conclusion" class="iq-toc-link" onclick="closeToc()"><span class="iq-toc-num">✓</span>Conclusion</a>
-    {'<a href="#references" class="iq-toc-link" onclick="closeToc()"><span class="iq-toc-num">R</span>References</a>' if references else ''}
-    {'<a href="#glossary" class="iq-toc-link" onclick="closeToc()"><span class="iq-toc-num">G</span>Glossary</a>' if glossary_terms else ''}
+    <a href="#conclusion" class="iq-toc-link" onclick="closeToc()"><span class="iq-toc-num">✓</span>{labels["conclusion"]}</a>
+    {'<a href="#references" class="iq-toc-link" onclick="closeToc()"><span class="iq-toc-num">R</span>{labels["references"]}</a>' if references else ''}
+    {'<a href="#glossary" class="iq-toc-link" onclick="closeToc()"><span class="iq-toc-num">G</span>{labels["glossary"]}</a>' if glossary_terms else ''}
     {'<a href="#author" class="iq-toc-link" onclick="closeToc()"><span class="iq-toc-num">A</span>About</a>' if author_bio else ''}
   </div>
 </aside>
@@ -344,7 +348,7 @@ body.iq-dark{{--color-background:#0B0F1A;--color-surface:#111827;--color-text:#E
     <div class="read-time">~ {total_read_time} min read</div>
   </div>
 
-  {f'<section class="iq-chapter"><h2>Introduction</h2><p>{introduction}</p></section>' if introduction else ''}
+  {f'<section class="iq-chapter"><h2>{labels["introduction"]}</h2>{paragraphs_html(introduction)}</section>' if introduction else ''}
 
   {chapters_html}
 
@@ -355,7 +359,7 @@ body.iq-dark{{--color-background:#0B0F1A;--color-surface:#111827;--color-text:#E
   {back_html}
 
   <div class="iq-footer">
-    <p>Generated by AI Design Engine • {datetime.now().strftime("%Y")}</p>
+    <p>{f'{labels["created_with"]} {BOOK_BRAND} • ' if BOOK_BRAND else ''}© {datetime.now().strftime("%Y")} {structure.get("author", "")}</p>
   </div>
 </main>
 </div>

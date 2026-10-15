@@ -9,7 +9,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt, RGBColor
 from ebooklib import epub
 
-from backend.core.builder import env
+from backend.core.book_labels import book_labels, language_code
+from backend.core.builder import env, paragraphs_html
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.core.infographic_engine import render_infographic
@@ -110,11 +111,16 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
                         cover_svg, cover_image, chapter_illustrations)
     colors = ctx["colors"]
     fonts = ctx["fonts"]
+    labels = book_labels(structure.get("language"))
+    lang = language_code(structure.get("language"))
+
+    def _render(template: str, **kwargs) -> str:
+        return env.get_template(template).render(labels=labels, lang=lang, **kwargs)
 
     book = epub.EpubBook()
     book.set_identifier(f"ebook-{datetime.now().timestamp()}")
     book.set_title(structure.get("title", "Ebook"))
-    book.set_language("en")
+    book.set_language(lang)
     book.add_author(structure.get("author", "AI Design Engine"))
 
     spine = ['nav']
@@ -136,6 +142,8 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
     .cover-page .meta {{ font-size: 0.8em; opacity: 0.7; margin-top: 2em; }}
     .toc-item {{ padding: 0.3em 0; }}
     .section {{ margin-bottom: 1em; }}
+    .section-body p {{ margin: 0; text-indent: 1.5em; }}
+    .section-body p:first-child {{ text-indent: 0; }}
     img.chapter-ill {{ max-width: 100%; height: auto; border-radius: 4px; margin: 0.5em 0; }}
     """
 
@@ -147,13 +155,13 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
             html_full = f'<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style/style.css"/></head><body class="cover-page">{html_content}</body></html>'
         else:
             html_full = f'<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style/style.css"/></head><body>{html_content}</body></html>'
-        page = epub.EpubHtml(title=title, file_name=filename, lang="en")
+        page = epub.EpubHtml(title=title, file_name=filename, lang=lang)
         page.content = html_full.encode('utf-8')
         book.add_item(page)
         return page
 
     # Cover
-    cover_data = env.get_template("cover.html").render(
+    cover_data = _render("cover.html",
         title=structure.get("title", "Ebook"),
         subtitle=structure.get("subtitle", ""),
         author=structure.get("author", "AI Design Engine"),
@@ -163,39 +171,39 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
         cover_image=ctx["cover_image"],
         date=datetime.now().strftime("%B %d, %Y"),
     )
-    cover_page = add_page(cover_data, "Cover", "cover.xhtml", is_cover=True)
+    cover_page = add_page(cover_data, labels["cover"], "cover.xhtml", is_cover=True)
     spine.insert(0, cover_page)
-    toc.append(epub.Link("cover.xhtml", "Cover", "cover"))
+    toc.append(epub.Link("cover.xhtml", labels["cover"], "cover"))
 
     # Introduction
     if ctx["introduction"]:
-        intro_html = env.get_template("introduction.html").render(title="Introduction", content=ctx["introduction"])
-        page = add_page(intro_html, "Introduction", "intro.xhtml")
+        intro_html = _render("introduction.html", title=labels["introduction"], content=paragraphs_html(ctx["introduction"]))
+        page = add_page(intro_html, labels["introduction"], "intro.xhtml")
         spine.append(page)
-        toc.append(epub.Link("intro.xhtml", "Introduction", "intro"))
+        toc.append(epub.Link("intro.xhtml", labels["introduction"], "intro"))
 
     # Chapters
     chapters = structure.get("chapters", [])
     for ci, ch in enumerate(chapters):
         sections = []
         for si, sec in enumerate(ch.get("sections", [])):
-            sec_html = f"<h2>{sec.get('heading', '')}</h2>\n{sec.get('content', '')}"
+            sec_html = paragraphs_html(sec.get("content", ""))
             key = f"{ci}_{si}"
             if key in ctx["rendered"]:
                 for ig in ctx["rendered"][key]:
                     sec_html += f'\n<h3>{ig["title"]}</h3>\n{ig["svg"]}'
-            sections.append({"heading": "", "content": sec_html})
+            sections.append({"heading": sec.get("heading", ""), "content": sec_html})
 
         if ch.get("chapter_summary"):
-            sections.append({"heading": "", "content": env.get_template("summary.html").render(**ch["chapter_summary"])})
+            sections.append({"heading": "", "content": _render("summary.html", **ch["chapter_summary"])})
         if ch.get("faq"):
-            sections.append({"heading": "", "content": env.get_template("faq.html").render(items=ch["faq"])})
+            sections.append({"heading": "", "content": _render("faq.html", items=ch["faq"])})
         if ch.get("checklist"):
-            sections.append({"heading": "", "content": env.get_template("checklist.html").render(**ch["checklist"])})
+            sections.append({"heading": "", "content": _render("checklist.html", **ch["checklist"])})
 
-        ch_html = env.get_template("chapter.html").render(
+        ch_html = _render("chapter.html",
             number=ci + 1,
-            title=ch.get("title", f"Chapter {ci+1}"),
+            title=ch.get("title", f"{labels['chapter']} {ci+1}"),
             introduction=ch.get("introduction", ""),
             key_takeaway=ch.get("key_takeaway", ""),
             sections=sections,
@@ -203,55 +211,55 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
         )
 
         ch_file = f"ch{ci+1}.xhtml"
-        page = add_page(ch_html, ch.get("title", f"Chapter {ci+1}"), ch_file)
+        page = add_page(ch_html, ch.get("title", f"{labels['chapter']} {ci+1}"), ch_file)
         spine.append(page)
-        toc.append(epub.Link(ch_file, ch.get("title", f"Chapter {ci+1}"), f"ch{ci+1}"))
+        toc.append(epub.Link(ch_file, ch.get("title", f"{labels['chapter']} {ci+1}"), f"ch{ci+1}"))
 
     # Conclusion
     conclusion = structure.get("conclusion", {})
     if conclusion:
-        conc_html = env.get_template("conclusion.html").render(
-            title=conclusion.get("title", "Conclusion"),
-            content=conclusion.get("content", ""),
+        conc_html = _render("conclusion.html",
+            title=conclusion.get("title", labels["conclusion"]),
+            content=paragraphs_html(conclusion.get("content", "")),
         )
-        page = add_page(conc_html, "Conclusion", "conclusion.xhtml")
+        page = add_page(conc_html, labels["conclusion"], "conclusion.xhtml")
         spine.append(page)
-        toc.append(epub.Link("conclusion.xhtml", "Conclusion", "conclusion"))
+        toc.append(epub.Link("conclusion.xhtml", labels["conclusion"], "conclusion"))
 
     # Author Bio
     if ctx["author_bio"]:
-        bio_html = env.get_template("author.html").render(bio=ctx["author_bio"])
-        page = add_page(bio_html, "About the Author", "author.xhtml")
+        bio_html = _render("author.html", bio=ctx["author_bio"])
+        page = add_page(bio_html, labels["about_author"], "author.xhtml")
         spine.append(page)
-        toc.append(epub.Link("author.xhtml", "About the Author", "author"))
+        toc.append(epub.Link("author.xhtml", labels["about_author"], "author"))
 
     # References
     if ctx["references"]:
-        ref_html = env.get_template("references.html").render(
-            title="References & Further Reading", items=ctx["references"], content="",
+        ref_html = _render("references.html",
+            title=labels["references"], items=ctx["references"], content="",
         )
-        page = add_page(ref_html, "References", "references.xhtml")
+        page = add_page(ref_html, labels["references"], "references.xhtml")
         spine.append(page)
-        toc.append(epub.Link("references.xhtml", "References", "references"))
+        toc.append(epub.Link("references.xhtml", labels["references"], "references"))
 
     # Glossary
     if ctx["glossary_terms"]:
-        gl_html = env.get_template("glossary.html").render(terms=ctx["glossary_terms"])
-        page = add_page(gl_html, "Glossary", "glossary.xhtml")
+        gl_html = _render("glossary.html", terms=ctx["glossary_terms"])
+        page = add_page(gl_html, labels["glossary"], "glossary.xhtml")
         spine.append(page)
-        toc.append(epub.Link("glossary.xhtml", "Glossary", "glossary"))
+        toc.append(epub.Link("glossary.xhtml", labels["glossary"], "glossary"))
 
     # Back Cover
     if ctx["back_cover_blurb"]:
-        bc_html = env.get_template("back_cover.html").render(
+        bc_html = _render("back_cover.html",
             blurb=ctx["back_cover_blurb"],
             author=structure.get("author", "AI Design Engine"),
             tagline=ctx["back_cover_tagline"] or "AI-Powered Publishing",
             icon="📖",
         )
-        page = add_page(bc_html, "Back Cover", "backcover.xhtml")
+        page = add_page(bc_html, labels["back_cover"], "backcover.xhtml")
         spine.append(page)
-        toc.append(epub.Link("backcover.xhtml", "Back Cover", "backcover"))
+        toc.append(epub.Link("backcover.xhtml", labels["back_cover"], "backcover"))
 
     book.toc = toc
     book.spine = spine
@@ -274,6 +282,7 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
                         cover_svg, cover_image, chapter_illustrations)
     colors = ctx["colors"]
     fonts = ctx["fonts"]
+    labels = book_labels(structure.get("language"))
 
     doc = Document()
 
@@ -343,7 +352,7 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
 
     # Introduction
     if ctx["introduction"]:
-        doc.add_heading("Introduction", level=1)
+        doc.add_heading(labels["introduction"], level=1)
         for para in ctx["introduction"].split('\n\n'):
             if para.strip():
                 doc.add_paragraph(para.strip())
@@ -351,9 +360,9 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
 
     # TOC
     chapters = structure.get("chapters", [])
-    doc.add_heading("Table of Contents", level=1)
+    doc.add_heading(labels["contents"], level=1)
     for ci, ch in enumerate(chapters):
-        p = doc.add_paragraph(f"Chapter {ci+1}: {ch.get('title', f'Chapter {ci+1}')}")
+        p = doc.add_paragraph(f"{labels['chapter']} {ci+1}: {ch.get('title', '')}")
         for r in p.runs:
             r.font.color.rgb = RGBColor(*accent_color)
 
@@ -361,7 +370,7 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
 
     # Chapters
     for ci, ch in enumerate(chapters):
-        doc.add_heading(ch.get("title", f"Chapter {ci+1}"), level=1)
+        doc.add_heading(ch.get("title", f"{labels['chapter']} {ci+1}"), level=1)
 
         # Chapter illustration
         ch_ill = ctx["ch_ills"].get(ci, "")
@@ -406,7 +415,7 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
 
         if ch.get("key_takeaway"):
             p = doc.add_paragraph()
-            r = p.add_run("KEY TAKEAWAY: ")
+            r = p.add_run(f"{labels['key_takeaway'].upper()}: ")
             r.bold = True
             r.font.color.rgb = RGBColor(*accent_color)
             r2 = p.add_run(ch["key_takeaway"])
@@ -414,12 +423,12 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
 
         if ch.get("chapter_summary"):
             s = ch["chapter_summary"]
-            doc.add_heading(s.get("title", "Chapter Summary"), level=2)
+            doc.add_heading(s.get("title", labels["chapter_summary"]), level=2)
             for point in s.get("points", []):
                 doc.add_paragraph(point, style='List Bullet')
 
         if ch.get("faq"):
-            doc.add_heading("Frequently Asked Questions", level=2)
+            doc.add_heading(labels["faq"], level=2)
             for faq_item in ch["faq"]:
                 p = doc.add_paragraph()
                 r = p.add_run(f"Q: {faq_item.get('question', '')}")
@@ -429,7 +438,7 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
 
         if ch.get("checklist"):
             c = ch["checklist"]
-            doc.add_heading(c.get("title", "Action Checklist"), level=2)
+            doc.add_heading(c.get("title", labels["checklist"]), level=2)
             for item in c.get("items", []):
                 doc.add_paragraph(item.get("text", ""), style='List Bullet')
 
@@ -438,19 +447,21 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
     # Conclusion
     conclusion = structure.get("conclusion", {})
     if conclusion:
-        doc.add_heading(conclusion.get("title", "Conclusion"), level=1)
-        doc.add_paragraph(conclusion.get("content", ""))
+        doc.add_heading(conclusion.get("title", labels["conclusion"]), level=1)
+        for para in conclusion.get("content", "").split('\n\n'):
+            if para.strip():
+                doc.add_paragraph(para.strip())
         doc.add_page_break()
 
     # Author Bio
     if ctx["author_bio"]:
-        doc.add_heading("About the Author", level=1)
+        doc.add_heading(labels["about_author"], level=1)
         doc.add_paragraph(ctx["author_bio"])
         doc.add_page_break()
 
     # References
     if ctx["references"]:
-        doc.add_heading("References & Further Reading", level=1)
+        doc.add_heading(labels["references"], level=1)
         for ref in ctx["references"]:
             if isinstance(ref, dict):
                 text = ref.get("text") or ref.get("title", "")
@@ -464,7 +475,7 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
 
     # Glossary
     if ctx["glossary_terms"]:
-        doc.add_heading("Glossary", level=1)
+        doc.add_heading(labels["glossary"], level=1)
         for term in ctx["glossary_terms"]:
             if isinstance(term, dict):
                 p = doc.add_paragraph()

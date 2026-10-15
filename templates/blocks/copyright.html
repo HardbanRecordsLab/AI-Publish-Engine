@@ -5,15 +5,16 @@
       {{ subtitle }}
     </p>
     <p style="font-size: 8pt; color: var(--color-muted); line-height: 1.6;">
-      Published by AI Design Engine<br>
-      {{ date }}
+      {% if book_brand %}{{ labels.published_by }} {{ book_brand }}<br>{% elif author %}{{ labels.published_by }} {{ author }}<br>{% endif %}
+      © {{ year }}
     </p>
     <div style="width: 40px; height: 1px; background: var(--color-border); margin: 0.5cm auto;"></div>
     <p style="font-size: 8pt; color: var(--color-muted); line-height: 1.6;">
-      All rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means without prior written permission.
+      {{ labels.rights }}
     </p>
     <p style="font-size: 8pt; color: var(--color-muted); margin-top: 0.5cm; line-height: 1.6;">
-      This book was created with the assistance of artificial intelligence, using <strong>AI Publishing Engine</strong>.
+      {{ labels.ai_notice }}
     </p>
+    {% if book_brand %}<p style="font-size: 8pt; color: var(--color-muted); margin-top: 0.3cm;">{{ labels.created_with }} <strong>{{ book_brand }}</strong></p>{% endif %}
   </div>
 </section>

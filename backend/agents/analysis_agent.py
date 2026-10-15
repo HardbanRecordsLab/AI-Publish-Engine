@@ -59,6 +59,9 @@ class AnalysisAgent(BaseAgent):
 
         ctx.document = doc
         ctx.ebook_dict = doc.to_ebook_dict()
+        # Carried with the book so every renderer/exporter can label it in
+        # its own language (headings, html/EPUB lang, hyphenation).
+        ctx.ebook_dict["language"] = ctx.language
         ctx.set_progress(35)
         logger.success(
             f"AnalysisAgent: {len(raw.get('chapters', []))} chapters, "

@@ -183,6 +183,22 @@ Configuration is in `/var/www/ai-publish-engine/.env`.
 Per-provider model override (optional):
 - `GROQ_MODEL`, `GEMINI_MODEL`, `OPENROUTER_MODEL`, `MISTRAL_MODEL`, `OPENAI_MODEL`
 
+Book output (optional):
+- `BOOK_BRAND` (default `AI Publishing Engine`): tool brand printed in
+  generated books — publisher line and "Created with …" on the copyright
+  page, back cover, interactive-book footer. Empty = publish under the
+  author's name only.
+
+Books are labelled in their own language (EN/PL/DE/ES/FR: "Rozdział",
+"Spis treści", …, `backend/core/book_labels.py`), including the html/EPUB
+`lang` attribute that drives hyphenation. Other languages get English labels
+with the correct `lang` code.
+
+Translation (`POST /api/translate/{job_id}`, body `{"languages": [...]}`)
+runs in the background: the saved book is translated chapter by chapter with
+the writer model and rebuilt as HTML/EPUB/DOCX. Poll
+`GET /api/translate/{job_id}` for status and download links.
+
 Chapter writing (optional):
 - `AI_WRITING_TEMPERATURE` (default `0.75`) and `AI_WRITING_TIMEOUT_SECONDS`
   (default `180`) apply only to the per-chapter writing calls.

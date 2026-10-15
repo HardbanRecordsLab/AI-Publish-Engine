@@ -45,8 +45,17 @@ jobs:
         # introduction, so any new finding here is a real regression to
         # triage, not noise to silence with `|| true`.
         run: pip-audit -r requirements.txt
+      # Official W3C EPUBCheck (needs Java, present on ubuntu-latest) so the
+      # generated-EPUB test validates against the same rules retailers use.
+      - name: Fetch EPUBCheck
+        run: |
+          mkdir -p "$RUNNER_TEMP/epubcheck" && cd "$RUNNER_TEMP/epubcheck"
+          mvn -q dependency:copy -Dartifact=org.w3c:epubcheck:5.4.0 -DoutputDirectory=.
+          mvn -q dependency:copy -Dartifact=org.w3c:epubcheck:5.4.0:pom -DoutputDirectory=.
+          mvn -q -f epubcheck-5.4.0.pom dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=lib
+          echo "EPUBCHECK_JAR=$RUNNER_TEMP/epubcheck/epubcheck-5.4.0.jar" >> "$GITHUB_ENV"
       - name: Test
-        run: python -m pytest tests/ -x -q --timeout=30
+        run: python -m pytest tests/ -x -q --timeout=120
         env:
           GROQ_API_KEY: test-key
           AI_PROVIDER: mistral

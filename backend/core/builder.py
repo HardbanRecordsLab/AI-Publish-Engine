@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
+from markupsafe import Markup, escape
 
 from backend.core.book_labels import LABELS, book_labels, language_code
 from backend.core.color_engine import detect_topic, get_color_palette
@@ -12,11 +13,20 @@ from backend.core.pdf import PRINT_MARGINS
 from backend.themes import get_theme
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "templates")
-env = Environment(loader=FileSystemLoader([
-    TEMPLATE_DIR,
-    os.path.join(TEMPLATE_DIR, "blocks"),
-    os.path.join(TEMPLATE_DIR, "themes"),
-]))
+_BLOCK_TEMPLATES = frozenset(os.listdir(os.path.join(TEMPLATE_DIR, "blocks")))
+env = Environment(
+    loader=FileSystemLoader([
+        TEMPLATE_DIR,
+        os.path.join(TEMPLATE_DIR, "blocks"),
+        os.path.join(TEMPLATE_DIR, "themes"),
+    ]),
+    # Block templates print AI-written text: escape it, or a stray "<" or
+    # "&" in the prose breaks the page (and fails EPUB validation). Values
+    # that are deliberately HTML are passed as Markup. base.html and the
+    # theme templates stay unescaped: they interpolate CSS (font stacks with
+    # quotes) that escaping would corrupt.
+    autoescape=lambda name: name in _BLOCK_TEMPLATES,
+)
 # Defaults for templates rendered without a book language (e.g. previews).
 env.globals.update(labels=LABELS["en"], lang="en")
 # Optional tool brand printed in generated books (publisher line, copyright
@@ -56,7 +66,7 @@ def paragraphs_html(text: str) -> str:
     paragraph. Templates wrap it in a <div>, never a <p>: block content
     inside <p> is invalid HTML and fails EPUB validation."""
     paras = [p.strip() for p in re.split(r"\n\s*\n", text or "") if p.strip()]
-    return "".join(f"<p>{p}</p>" for p in paras)
+    return Markup("".join(f"<p>{escape(p)}</p>" for p in paras))
 
 
 # Style → theme mapping for display names that differ from theme IDs
@@ -92,8 +102,8 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     labels = book_labels(structure.get("language"))
     lang = language_code(structure.get("language"))
 
-    def _render(template: str, **kwargs) -> str:
-        return env.get_template(template).render(labels=labels, lang=lang, **kwargs)
+    def _render(template: str, **kwargs) -> Markup:
+        return Markup(env.get_template(template).render(labels=labels, lang=lang, **kwargs))
 
     def _prose(text: str) -> str:
         return paragraphs_html(hyphenate(text, lang) if print_trim else text)
@@ -123,7 +133,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         if key not in rendered:
             rendered[key] = []
         try:
-            svg = render_infographic(ig, colors)
+            svg = Markup(render_infographic(ig, colors))
             rendered[key].append({
                 "svg": svg,
                 "title": ig.get("title", "Diagram"),
@@ -133,7 +143,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
             pass
 
     # 4. Cover icon
-    cover_icon_svg = get_cover_icon(topic, colors["accent"], 80)
+    cover_icon_svg = Markup(get_cover_icon(topic, colors["accent"], 80))
 
     # 5. Build page blocks
     chapters = structure.get("chapters", [])
@@ -164,7 +174,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         author=structure.get("author", ""),
         summary=structure.get("summary", ""),
         icon=cover_icon_svg,
-        cover_svg=cover_svg,
+        cover_svg=Markup(cover_svg or ""),
         cover_image=cover_image,
         date=datetime.now().strftime("%B %d, %Y"),
     )
@@ -231,7 +241,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
                 "content": _render("checklist.html", **ch["checklist"]),
             })
 
-        ch_ill_svg = ch_ills.get(ci, "")
+        ch_ill_svg = Markup(ch_ills.get(ci, ""))
         if recto_blanks and ci in recto_blanks:
             # Keeps this chapter opening on a right-hand page.
             pages.append('<div class="blank-page page" style="page: front; height: 1px;"></div>')

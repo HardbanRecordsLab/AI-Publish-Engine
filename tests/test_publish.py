@@ -6,6 +6,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -18,6 +19,13 @@ from backend.routers.auth import _make_token
 # /api/publish/prepare/* requires admin login as of 2026-09-22 (see test_api.py::TestGenerateRequiresAuth).
 ADMIN_AUTH = {"Authorization": f"Bearer {_make_token('test-admin@example.com')}"}
 
+
+
+@pytest.fixture(autouse=True)
+def _builtin_epub_checks_only(monkeypatch):
+    # The fake EPUBs here are minimal by design; they exercise the built-in
+    # rules, not the official EPUBCheck (tests/test_epub_validation.py does).
+    monkeypatch.delenv("EPUBCHECK_JAR", raising=False)
 
 def _make_fake_epub(path: str, valid: bool = True) -> None:
     with zipfile.ZipFile(path, "w") as zf:
@@ -36,6 +44,7 @@ def _make_fake_epub(path: str, valid: bool = True) -> None:
                 "<dc:language>pl</dc:language><dc:identifier>id1</dc:identifier>"
                 '</metadata><manifest><item properties="nav" href="nav.xhtml"/></manifest></package>',
             )
+            zf.writestr("OEBPS/nav.xhtml", '<html xmlns="http://www.w3.org/1999/xhtml"><body><nav/></body></html>')
 
 
 class TestValidateMetadata:

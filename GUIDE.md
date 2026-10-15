@@ -195,6 +195,14 @@ Books are labelled in their own language (EN/PL/DE/ES/FR: "Rozdział",
 `lang` attribute that drives hyphenation. Other languages get English labels
 with the correct `lang` code.
 
+EPUB validation: every generated EPUB is checked right after the build
+(built-in rules for packaging, manifest, XHTML well-formedness, SVG
+declaration, block-in-`<p>`) and, when `EPUBCHECK_JAR` points at the W3C
+EPUBCheck jar (with its `lib/` folder beside it; Java required), by
+EPUBCheck itself. The verdict is stored with the job and returned by
+`GET /api/status/{job_id}` under `quality` (QA score, chapter scores,
+`epub_valid`). AI-written text is HTML-escaped in all book templates.
+
 Print interior (`POST /api/download/{job_id}/print?trim_size=6x9&isbn=…`)
 is typeset from the saved book (`backend/core/print_book.py`): KDP trim
 sizes, mirrored margins (wider at the spine), running heads (author on

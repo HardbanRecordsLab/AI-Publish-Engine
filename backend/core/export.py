@@ -8,6 +8,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt, RGBColor
 from ebooklib import epub
+from markupsafe import Markup
 
 from backend.core.book_labels import book_labels, language_code
 from backend.core.builder import env, paragraphs_html
@@ -74,7 +75,7 @@ def _build_common(structure, style, infographics,
         if key not in rendered:
             rendered[key] = []
         try:
-            svg = render_infographic(ig, colors)
+            svg = Markup(render_infographic(ig, colors))
             rendered[key].append({
                 "svg": svg,
                 "title": ig.get("title", "Diagram"),
@@ -87,7 +88,7 @@ def _build_common(structure, style, infographics,
     for ill in chapter_illustrations:
         ch_ills[ill.get("chapter_index")] = ill.get("image_uri") or ill.get("svg", "")
 
-    cover_icon_svg = get_cover_icon(topic, colors["accent"], 80)
+    cover_icon_svg = Markup(get_cover_icon(topic, colors["accent"], 80))
 
     return {
         "topic": topic, "theme": theme, "colors": colors, "fonts": fonts,
@@ -95,7 +96,7 @@ def _build_common(structure, style, infographics,
         "introduction": introduction, "author_bio": author_bio,
         "references": references, "glossary_terms": glossary_terms,
         "back_cover_blurb": back_cover_blurb, "back_cover_tagline": back_cover_tagline,
-        "cover_svg": cover_svg, "cover_image": cover_image,
+        "cover_svg": Markup(cover_svg or ""), "cover_image": cover_image,
     }
 
 
@@ -114,8 +115,8 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
     labels = book_labels(structure.get("language"))
     lang = language_code(structure.get("language"))
 
-    def _render(template: str, **kwargs) -> str:
-        return env.get_template(template).render(labels=labels, lang=lang, **kwargs)
+    def _render(template: str, **kwargs) -> Markup:
+        return Markup(env.get_template(template).render(labels=labels, lang=lang, **kwargs))
 
     book = epub.EpubBook()
     book.set_identifier(f"ebook-{datetime.now().timestamp()}")
@@ -156,6 +157,8 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
         else:
             html_full = f'<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style/style.css"/></head><body>{html_content}</body></html>'
         page = epub.EpubHtml(title=title, file_name=filename, lang=lang)
+        if "<svg" in html_full:
+            page.properties.append("svg")  # required in the OPF manifest (epubcheck OPF-014)
         page.content = html_full.encode('utf-8')
         book.add_item(page)
         return page
@@ -191,7 +194,7 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
             key = f"{ci}_{si}"
             if key in ctx["rendered"]:
                 for ig in ctx["rendered"][key]:
-                    sec_html += f'\n<h3>{ig["title"]}</h3>\n{ig["svg"]}'
+                    sec_html += Markup("\n<h3>{}</h3>\n{}").format(ig["title"], ig["svg"])
             sections.append({"heading": sec.get("heading", ""), "content": sec_html})
 
         if ch.get("chapter_summary"):
@@ -207,7 +210,7 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
             introduction=ch.get("introduction", ""),
             key_takeaway=ch.get("key_takeaway", ""),
             sections=sections,
-            illustration=ctx["ch_ills"].get(ci, ""),
+            illustration=Markup(ctx["ch_ills"].get(ci, "")),
         )
 
         ch_file = f"ch{ci+1}.xhtml"

@@ -25,6 +25,7 @@ from backend.core.export import build_docx, build_epub
 from backend.core.interactive import build_interactive_book
 from backend.core.jobs import update_job
 from backend.core.pdf import html_to_pdf_async
+from backend.core.publish_validators import validate_epub
 from backend.core.website import build_website
 from backend.orchestrator import Orchestrator, PipelineContext
 from backend.ws_manager import clear_cancel, is_cancelled, update_progress
@@ -148,7 +149,7 @@ async def process_job(ctx):
         # Save book data for WYSIWYG editor
         import json
         book_data_json = json.dumps(pipeline_ctx.ebook_dict)
-        build_params_json = json.dumps({
+        build_params = {
             "style": style, "infographics": pipeline_ctx.infographics,
             "introduction": pipeline_ctx.introduction, "author_bio": pipeline_ctx.author_bio,
             "references": pipeline_ctx.references, "glossary_terms": pipeline_ctx.glossary_terms,
@@ -157,7 +158,11 @@ async def process_job(ctx):
             "chapter_illustrations": pipeline_ctx.chapter_illustrations,
             "accent_color": accent_color, "bg_color": bg_color,
             "heading_font": heading_font, "body_font": body_font,
-        })
+            # Persisted so the QA verdict and chapter review scores survive the
+            # job (they used to be computed and thrown away).
+            "quality": {"qa": pipeline_ctx.qa_report},
+        }
+        build_params_json = json.dumps(build_params)
 
         if is_interactive:
             website_path = os.path.join(OUTPUT_DIR, f"{job_id}.html")
@@ -186,6 +191,12 @@ async def process_job(ctx):
                        back_cover_blurb=pipeline_ctx.back_cover_blurb, back_cover_tagline=pipeline_ctx.back_cover_tagline,
                        cover_svg=pipeline_ctx.cover_svg, cover_image=pipeline_ctx.cover_image,
                        chapter_illustrations=pipeline_ctx.chapter_illustrations)
+            epub_check = validate_epub(epub_path)
+            build_params["quality"]["epub"] = epub_check
+            build_params_json = json.dumps(build_params)
+            if not epub_check["isValid"]:
+                logger.warning(f"Job {job_id}: EPUB validation found {len(epub_check['errors'])} error(s): "
+                               f"{[e['code'] for e in epub_check['errors']][:10]}")
 
             docx_path = os.path.join(OUTPUT_DIR, f"{job_id}.docx")
             build_docx(pipeline_ctx.ebook_dict, style, pipeline_ctx.infographics, docx_path,

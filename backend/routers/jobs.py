@@ -163,6 +163,32 @@ def get_status(request: Request, job_id: str):
         "content_type": job.get("content_type"),
         "style": job.get("style"),
         "error": job.get("error"),
+        "quality": _quality_summary(job),
+    }
+
+
+def _quality_summary(job: dict) -> dict | None:
+    """Compact QA / EPUB-validation verdict for a finished job (full detail
+    stays in build_params["quality"])."""
+    params = job.get("build_params")
+    if isinstance(params, str):
+        try:
+            params = json.loads(params)
+        except ValueError:
+            return None
+    quality = (params or {}).get("quality")
+    if not quality:
+        return None
+    qa, epub = quality.get("qa") or {}, quality.get("epub")
+    reviews = qa.get("chapter_reviews") or []
+    scores = [r["score"] for r in reviews if r.get("score")]
+    return {
+        "qa_score": qa.get("score"),
+        "qa_passed": qa.get("passed"),
+        "chapter_scores": scores,
+        "chapters_revised": sum(1 for r in reviews if r.get("revised")),
+        "epub_valid": epub.get("isValid") if epub else None,
+        "epub_errors": [e["code"] for e in epub["errors"]][:20] if epub else [],
     }
 
 

@@ -242,8 +242,17 @@ function showError(title, msg) {
 function showResult(job) {
   document.getElementById('progressSection').classList.remove('visible');
   document.getElementById('resultTitle').textContent = job.topic || 'Your Book';
-  document.getElementById('resultMeta').textContent = `Style: ${job.style || 'minimal'} · Type: ${job.content_type || 'ebook'}`;
-  const id = job.id;
+  const q = job.quality;
+  const qualityText = q ? [
+    q.qa_score != null ? `Quality: ${q.qa_score}/100` : '',
+    q.chapter_scores && q.chapter_scores.length ? `Chapters: ${q.chapter_scores.join(', ')}/10${q.chapters_revised ? ` (${q.chapters_revised} revised)` : ''}` : '',
+    q.epub_valid === true ? 'EPUB: valid ✓' : q.epub_valid === false ? `EPUB: ${q.epub_errors.length} issue(s) ⚠` : '',
+  ].filter(Boolean).join(' · ') : '';
+  document.getElementById('resultMeta').textContent =
+    `Style: ${job.style || 'minimal'} · Type: ${job.content_type || 'ebook'}` + (qualityText ? ` · ${qualityText}` : '');
+  // /api/status returns job_id (not id) — every download link on this card
+  // used to point at /api/download/undefined.
+  const id = job.id || job.job_id;
   const isInteractive = job.content_type === 'interactive-book';
   document.getElementById('resultFormats').innerHTML = selectedFormats.map(f =>
     `<a class="result-format-btn" href="${API}/api/download/${id}?format=${f}" target="_blank"><span style="font-size:16px">${['📕','📖','📄','🌐','📱','🌍']['pdf epub docx html mobi website'.split(' ').indexOf(f)] || '📁'}</span> ${f.toUpperCase()}</a>`

@@ -287,10 +287,108 @@ def validate_epub(epub_path: str, strict: bool = False) -> dict:
                     warnings.append({"code": "W102", "message": 'OPF powinien wskazywać EPUB version="3.0"'})
                 if 'properties="nav"' not in opf_content:
                     errors.append({"code": "E106", "message": 'Brak pliku nawigacji (nav) z properties="nav" w manifest'})
+            _deep_epub_checks(zf, names, opf_name, errors, warnings)
     except zipfile.BadZipFile:
         errors.append({"code": "E001", "message": f"Plik nie jest poprawnym archiwum ZIP/EPUB: {epub_path}"})
+        return _epub_result(False, errors, warnings)
 
-    return _epub_result(len(errors) == 0, errors, warnings)
+    epubcheck = run_epubcheck(epub_path)
+    if epubcheck is not None:
+        errors.extend(epubcheck["errors"])
+        warnings.extend(epubcheck["warnings"])
+    result = _epub_result(len(errors) == 0, errors, warnings)
+    result["epubcheck"] = "ran" if epubcheck is not None else "unavailable"
+    return result
+
+
+# Block-level elements that may not appear inside <p> in XHTML.
+_BLOCK_TAGS = {"div", "section", "article", "aside", "header", "footer", "nav", "p", "ul", "ol", "dl",
+               "table", "blockquote", "pre", "figure", "form", "hr", "h1", "h2", "h3", "h4", "h5", "h6"}
+
+
+def _local(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _deep_epub_checks(zf: zipfile.ZipFile, names: list, opf_name: str | None,
+                      errors: list, warnings: list) -> None:
+    """Checks the original structural pass missed — each is a real reason
+    retailers reject an EPUB: packaging, broken manifest references,
+    malformed XHTML, undeclared SVG, block content inside <p>."""
+    from xml.etree import ElementTree as ET
+
+    infos = zf.infolist()
+    if infos and infos[0].filename == "mimetype" and infos[0].compress_type != zipfile.ZIP_STORED:
+        errors.append({"code": "E107", "message": "Plik mimetype musi być zapisany bez kompresji"})
+    elif infos and infos[0].filename != "mimetype":
+        errors.append({"code": "E107", "message": "Plik mimetype musi być pierwszym plikiem w archiwum"})
+
+    if not opf_name:
+        return
+    opf = zf.read(opf_name).decode("utf-8", errors="replace")
+    base = opf_name.rsplit("/", 1)[0] + "/" if "/" in opf_name else ""
+    creator = re.search(r"<dc:creator[^>]*>(.*?)</dc:creator>", opf, re.S)
+    if creator is not None and not creator.group(1).strip():
+        warnings.append({"code": "W103", "message": "Brak autora (dc:creator jest pusty) — KDP i inne platformy go wymagają"})
+
+    for item in re.findall(r"<item\b[^>]*>", opf):
+        href_m = re.search(r'href="([^"]+)"', item)
+        if not href_m:
+            continue
+        href = base + href_m.group(1).split("#")[0]
+        if href not in names:
+            errors.append({"code": "E108", "message": f"Plik z manifestu nie istnieje w archiwum: {href}", "file": href})
+            continue
+        if not href.endswith((".xhtml", ".html")):
+            continue
+        raw = zf.read(href)
+        try:
+            root = ET.fromstring(raw)
+        except ET.ParseError as e:
+            errors.append({"code": "E109", "message": f"Niepoprawny XHTML ({e})", "file": href})
+            continue
+        has_svg = any(_local(el.tag) == "svg" for el in root.iter())
+        if has_svg and "svg" not in (re.search(r'properties="([^"]*)"', item) or [None, ""])[1].split():
+            errors.append({"code": "E110", "message": 'Strona z grafiką SVG bez properties="svg" w manifeście', "file": href})
+        for p in (el for el in root.iter() if _local(el.tag) == "p"):
+            if any(_local(child.tag) in _BLOCK_TAGS for child in p.iter() if child is not p):
+                errors.append({"code": "E111", "message": "Element blokowy wewnątrz <p> (niepoprawny XHTML)", "file": href})
+                break
+
+
+def run_epubcheck(epub_path: str) -> dict | None:
+    """Run the official W3C EPUBCheck when available (java on PATH and
+    EPUBCHECK_JAR pointing at epubcheck.jar with its lib/ folder beside it).
+    Returns None when it isn't installed, so callers fall back to the
+    built-in checks."""
+    import json
+    import shutil
+    import subprocess
+    import tempfile
+
+    jar = os.getenv("EPUBCHECK_JAR", "")
+    if not jar or not os.path.exists(jar) or not shutil.which("java"):
+        return None
+    classpath = os.pathsep.join([jar, os.path.join(os.path.dirname(jar), "lib", "*")])
+    with tempfile.TemporaryDirectory() as tmp:
+        report_path = os.path.join(tmp, "report.json")
+        try:
+            subprocess.run(["java", "-cp", classpath, "com.adobe.epubcheck.tool.Checker", epub_path,
+                            "--json", report_path], capture_output=True, timeout=180, check=False)
+            with open(report_path, encoding="utf-8") as f:
+                report = json.load(f)
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            return None
+    errors, warnings = [], []
+    for msg in report.get("messages", []):
+        loc = (msg.get("locations") or [{}])[0]
+        entry = {"code": f"EPUBCHECK-{msg.get('ID', '')}", "message": msg.get("message", ""),
+                 "file": loc.get("path", "")}
+        if msg.get("severity") in ("FATAL", "ERROR"):
+            errors.append(entry)
+        elif msg.get("severity") == "WARNING":
+            warnings.append(entry)
+    return {"errors": errors, "warnings": warnings}
 
 
 def _epub_result(is_valid: bool, errors: list, warnings: list) -> dict:

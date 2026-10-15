@@ -14,15 +14,16 @@ import pypdf
 from backend.core.builder import build_ebook_html
 from backend.core.pdf import TRIM_SIZES, html_to_book_pdf
 
-# Whitespace-tolerant: text extraction can split the tiny glyphs apart.
-_MARKER = re.compile(r"§\s*C\s*H\s*(\d+)\s*§")
+# Matched against the page text with all whitespace removed: how extraction
+# spaces out tiny glyphs differs between Chromium versions.
+_MARKER = re.compile(r"§CH(\d+)§")
 
 
 def chapter_start_pages(pdf_bytes: bytes) -> dict[int, int]:
     """{chapter index: 1-based page number} from the pass-one markers."""
     starts: dict[int, int] = {}
     for number, page in enumerate(pypdf.PdfReader(io.BytesIO(pdf_bytes)).pages, start=1):
-        for m in _MARKER.finditer(page.extract_text() or ""):
+        for m in _MARKER.finditer(re.sub(r"\s+", "", page.extract_text() or "")):
             starts.setdefault(int(m.group(1)), number)
     return starts
 

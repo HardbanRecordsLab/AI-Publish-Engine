@@ -6,7 +6,7 @@ import pypdf
 import pytest
 
 from backend.core.builder import build_ebook_html, hyphenate
-from backend.core.pdf import TRIM_SIZES, normalize_isbn
+from backend.core.pdf import TRIM_SIZES, html_to_book_pdf, normalize_isbn
 from backend.core.print_book import build_print_pdf, chapter_start_pages, recto_blanks
 
 PARA = ("Budżet domowy zaczyna się od świadomości, dokąd naprawdę płyną pieniądze. "
@@ -70,9 +70,17 @@ class TestPrintPdf:
         build_print_pdf(BOOK, "minimal", [], "6x9", path, isbn="978-83-01-00000-4", introduction=PARA)
         reader = pypdf.PdfReader(path)
         assert float(reader.pages[0].mediabox.width) == 432 and float(reader.pages[0].mediabox.height) == 648
-        openings = [n for n, p in enumerate(reader.pages, 1) if re.search(r"ROZDZIAŁ \d", p.extract_text())]
-        assert len(openings) == 4
-        assert all(n % 2 == 1 for n in openings), openings
+        # Whitespace-free match: letter-spaced headings extract differently per Chromium version.
+        openings = [n for n, p in enumerate(reader.pages, 1)
+                    if re.search(r"ROZDZIAŁ\d", re.sub(r"\s+", "", p.extract_text()))]
+        first_pass = str(tmp_path / "pass1.pdf")
+        html_to_book_pdf(build_ebook_html(BOOK, "minimal", [], print_trim=TRIM_SIZES["6x9"], page_markers=True,
+                                          introduction=PARA), first_pass)
+        with open(first_pass, "rb") as f:
+            starts = chapter_start_pages(f.read())
+        assert len(openings) == 4, (openings, starts)
+        assert len(starts) == 4, starts
+        assert all(n % 2 == 1 for n in openings), (openings, starts)
         text = "".join(p.extract_text() for p in reader.pages)
         assert "§" not in text  # pass-one markers never reach the final file
         with open(path, "rb") as f:

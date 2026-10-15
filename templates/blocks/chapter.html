@@ -1,4 +1,5 @@
 <section class="chapter page">
+  {% if page_marker %}<div style="font-size: 2px; line-height: 0; height: 0; overflow: visible; color: #fff; letter-spacing: 0; text-transform: none;">{{ page_marker }}</div>{% endif %}
   {% if illustration and not illustration.startswith('<') %}
   <div style="margin-bottom:0.5cm;border-radius:8px;overflow:hidden;">
     <img src="{{ illustration }}" alt="{{ title }}" style="width:100%;height:auto;display:block;">
@@ -7,7 +8,7 @@
   <div style="margin-bottom:0.5cm;">{{ illustration }}</div>
   {% endif %}
   <div class="chapter-header" style="margin-bottom: 0.7cm; padding-bottom: 0.3cm; border-bottom: 1px solid var(--color-border);">
-    <div class="chapter-number" style="font-size: 8pt; color: var(--color-accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.15cm; font-weight: 600;">{{ labels.chapter }} {{ number }}{% if page_marker %}<span style="font-size: 1px; color: #fff; letter-spacing: 0;">{{ page_marker }}</span>{% endif %}</div>
+    <div class="chapter-number" style="font-size: 8pt; color: var(--color-accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.15cm; font-weight: 600;">{{ labels.chapter }} {{ number }}</div>
     <h2 style="font-family: var(--font-heading); font-size: var(--font-size-h2); color: var(--color-heading); font-weight: 700; letter-spacing: -0.5px; line-height: 1.2;">{{ title }}</h2>
   </div>
   {% if introduction %}

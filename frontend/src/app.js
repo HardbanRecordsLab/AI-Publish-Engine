@@ -81,6 +81,19 @@ document.querySelectorAll('.sidebar-link[data-panel]').forEach(link => {
 });
 
 // ==================== API HELPERS ====================
+// Book types come from the backend so the form can't drift from what it supports.
+async function loadBookKinds() {
+  const select = document.getElementById('kindInput');
+  const hint = document.getElementById('kindHint');
+  try {
+    const kinds = await api('/api/book-kinds');
+    select.innerHTML = kinds.map(k => `<option value="${escapeHtml(k.id)}">${escapeHtml(k.label)}</option>`).join('');
+    const show = () => { const k = kinds.find(x => x.id === select.value); hint.textContent = k ? k.description : ''; };
+    select.addEventListener('change', show);
+    show();
+  } catch (e) { /* keep the static default option */ }
+}
+
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -195,6 +208,7 @@ async function generate() {
   const keywords = document.getElementById('keywordsInput').value.trim();
   const lang = document.getElementById('languageInput').value;
   const author = document.getElementById('authorInput').value.trim();
+  const kind = document.getElementById('kindInput').value;
   const provider = document.getElementById('providerSelect').value;
 
   const formData = new FormData();
@@ -207,6 +221,7 @@ async function generate() {
   formData.append('keywords', keywords);
   formData.append('language', lang);
   formData.append('author', author);
+  formData.append('kind', kind);
   formData.append('provider', provider);
   formData.append('formats', selectedFormats.join(','));
   selectedFiles.forEach(f => formData.append('files', f));
@@ -821,6 +836,7 @@ async function initApp() {
   refreshSeries();
   refreshRevenue();
   loadLanguages();
+  loadBookKinds();
   // Load batch providers
   try {
     const providers = await api('/api/providers');

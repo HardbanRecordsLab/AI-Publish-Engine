@@ -1,6 +1,7 @@
 from loguru import logger
 
 from backend.core.ai import analyze_text as _analyze_text
+from backend.core.book_kinds import get_kind
 from backend.models.content_block import ContentBlock
 from backend.orchestrator.agent import BaseAgent, PipelineContext
 
@@ -15,7 +16,7 @@ class AnalysisAgent(BaseAgent):
         logger.info(f"AnalysisAgent: analyzing {len(ctx.text)} chars")
         raw = _analyze_text(
             ctx.text, ctx.provider, audience=ctx.audience, tone=ctx.tone,
-            chapters=ctx.chapters, keywords=ctx.keywords, language=ctx.language,
+            chapters=ctx.chapters, keywords=ctx.keywords, language=ctx.language, kind=ctx.kind,
         )
 
         doc = ContentBlock(type="document", data={
@@ -63,6 +64,13 @@ class AnalysisAgent(BaseAgent):
         # Carried with the book so every renderer/exporter can label it in
         # its own language (headings, html/EPUB lang, hyphenation).
         ctx.ebook_dict["language"] = ctx.language
+        ctx.ebook_dict["kind"] = get_kind(ctx.kind).id
+        if isinstance(raw.get("story"), dict):
+            ctx.ebook_dict["story"] = raw["story"]  # fiction: characters, setting, point of view
+        # Keep the outline's per-chapter beat notes etc. that the generic tree drops.
+        for ci, ch in enumerate(raw.get("chapters", [])):
+            if ci < len(ctx.ebook_dict["chapters"]) and isinstance(ch, dict):
+                ctx.ebook_dict["chapters"][ci].setdefault("beats", ch.get("introduction", ""))
         ctx.set_progress(35)
         logger.success(
             f"AnalysisAgent: {len(raw.get('chapters', []))} chapters, "

@@ -10,6 +10,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 from backend.config import settings
 from backend.core import cost_tracker
+from backend.core.book_kinds import BLOCK_SCHEMA, get_kind, normalize_blocks
 from backend.core.prompt_safety import INJECTION_GUARD, fence, sanitize_text
 from backend.core.tokens import generate_design_system as _token_design_system
 
@@ -349,8 +350,13 @@ def writer_json(system: str, user: str, provider: str | None = None, *,
                         max_tokens=max_tokens, fallback_max_tokens=max_tokens)
 
 
-def words_per_section(content_type: str) -> int:
-    return _WORDS_PER_SECTION.get(content_type or "ebook", _WORDS_PER_SECTION["ebook"])
+def words_per_section(content_type: str, kind: str | None = None) -> int:
+    """Target words per section: the short web formats set their own length;
+    for book formats it depends on the kind of book (a novel scene is not a
+    cookbook headnote)."""
+    if content_type in _WORDS_PER_SECTION and content_type not in ("ebook", "interactive-book"):
+        return _WORDS_PER_SECTION[content_type]
+    return get_kind(kind).words_per_section
 
 
 def _parse_chapter_count(chapters: str | int | None) -> int | None:
@@ -396,13 +402,16 @@ def _book_sample(book: dict, chars: int = 400) -> str:
 
 def analyze_text(text: str, provider: str | None = None, *, audience: str = "",
                  tone: str = "", chapters: str | int | None = None, keywords: str = "",
-                 language: str = "") -> dict:
+                 language: str = "", kind: str | None = None) -> dict:
     trunc = text[:30000]
+    spec = get_kind(kind)
     n_chapters = _parse_chapter_count(chapters)
-    chapter_rule = f"exactly {n_chapters} chapters" if n_chapters else "4-6 chapters"
+    chapter_rule = f"exactly {n_chapters} chapters" if n_chapters else spec.default_chapters
     brief = build_brief(audience, tone, keywords, language)
-    system = "You are an ebook author. Return only valid JSON. Your response must start with { and end with }."
-    user = f"""Transform this raw text into a structured ebook JSON.
+    persona = f"{spec.writer_persona}" if spec.writer_persona else "an ebook author"
+    system = f"You are {persona}. Return only valid JSON. Your response must start with {{ and end with }}."
+    kind_rules = f"\n{spec.outline_rules}" if spec.outline_rules else ""
+    user = f"""Transform this raw text into a structured {spec.label.lower()} JSON.
 {brief}
 Return EXACTLY this JSON structure, nothing else:
 
@@ -413,6 +422,7 @@ Return EXACTLY this JSON structure, nothing else:
   "tone": "professional",
   "audience": "...",
   "summary": "...",
+  {spec.outline_extra_json}
   "chapters": [
     {{
       "title": "...",
@@ -427,7 +437,7 @@ Return EXACTLY this JSON structure, nothing else:
 }}
 
 RULES:
-- {chapter_rule}, 3-4 sections each
+- {chapter_rule}, {spec.sections_hint} each{kind_rules}
 - Each chapter must cover a distinct part of the subject; no two chapters may overlap
 - Section "content" is a working draft (one solid paragraph); it is expanded later
 - If SOURCE is only a short brief or topic, plan the whole book from your own expertise on it
@@ -571,10 +581,30 @@ def _research_block(research_suggestions: dict | None) -> str:
     return "\nRESEARCH NOTES FOR THIS CHAPTER:\n" + "\n".join(parts) + "\n"
 
 
+def _story_bible(book: dict) -> str:
+    """The outline's story bible (premise, setting, point of view, characters)
+    as a prompt block, so every fiction chapter is written against the same facts."""
+    story = book.get("story")
+    if not isinstance(story, dict) or not story:
+        return ""
+    lines = []
+    for key in ("premise", "setting", "point_of_view"):
+        if story.get(key):
+            lines.append(f"{key.replace('_', ' ').capitalize()}: {sanitize_text(str(story[key]), 800)}")
+    if isinstance(story.get("themes"), list) and story["themes"]:
+        lines.append("Themes: " + ", ".join(sanitize_text(str(t), 80) for t in story["themes"][:8]))
+    for c in (story.get("characters") or [])[:12]:
+        if isinstance(c, dict) and c.get("name"):
+            lines.append(f"Character - {sanitize_text(str(c['name']), 80)} ({sanitize_text(str(c.get('role', '')), 60)}): "
+                         f"{sanitize_text(str(c.get('description', '')), 300)}; arc: {sanitize_text(str(c.get('arc', '')), 200)}")
+    return "\nSTORY BIBLE (facts that must stay consistent):\n" + fence("\n".join(lines), 6000) + "\n" if lines else ""
+
+
 def write_chapter(chapter: dict, *, book: dict, chapter_index: int,
                   research_suggestions: dict | None = None, previous_summaries: list[str] | None = None,
                   words_per_section: int = 550, brief: str = "", language: str = "",
-                  revision_notes: list[str] | None = None, provider: str | None = None) -> dict:
+                  revision_notes: list[str] | None = None, provider: str | None = None,
+                  kind: str | None = None) -> dict:
     """Editorial Agent: write one chapter out in full from its outline/draft.
 
     The outline pass only produces a paragraph-sized draft per section; this is
@@ -608,8 +638,21 @@ def write_chapter(chapter: dict, *, book: dict, chapter_index: int,
         notes = ""
         label = "CHAPTER DRAFT"
 
-    system = ("You are an experienced non-fiction author and editor. You write concrete, "
-              "specific, engaging prose for paying readers. Return only valid JSON.")
+    spec = get_kind(kind)
+    if spec.writer_persona:
+        system = f"You are {spec.writer_persona}. Return only valid JSON."
+    else:
+        system = ("You are an experienced non-fiction author and editor. You write concrete, "
+                  "specific, engaging prose for paying readers. Return only valid JSON.")
+    story = _story_bible(book)
+    block_info = f"\n{BLOCK_SCHEMA}\n{spec.block_guidance}\n" if spec.block_guidance else ""
+    body_rules = spec.writer_rules or (
+        '- "introduction": 2-3 sentences that hook the reader into this chapter\n'
+        "- Teach, don't summarize: explain the why and the how, with concrete examples,\n"
+        "  step-by-step instructions where useful, and common mistakes to avoid")
+    recap_field = ',\n  "recap": "..."' if spec.id == "novel" else ""
+    blocks_field = ',\n  "blocks": []' if spec.block_guidance else ""
+    section_blocks = ', "blocks": []' if spec.block_guidance else ""
     user = f"""{task}
 
 BOOK: {book.get('title', '')}
@@ -618,7 +661,7 @@ AUDIENCE: {book.get('audience', '')}
 TONE: {book.get('tone', '')}
 FULL OUTLINE:
 {outline}
-{brief}{previous}{_research_block(research_suggestions)}{notes}
+{story}{brief}{previous}{_research_block(research_suggestions)}{notes}
 {label}:
 {fence(draft, 60000)}
 
@@ -627,15 +670,13 @@ Return JSON with this exact structure:
   "title": "...",
   "introduction": "...",
   "key_takeaway": "...",
-  "sections": [{{"heading": "...", "content": "..."}}]
+  "sections": [{{"heading": "...", "content": "..."{section_blocks}}}]{blocks_field}{recap_field}
 }}
-
+{block_info}
 RULES:
 - Keep the same sections in the same order (headings may be sharpened)
 - Each section "content": about {words_per_section} words, several paragraphs separated by \\n\\n
-- "introduction": 2-3 sentences that hook the reader into this chapter
-- Teach, don't summarize: explain the why and the how, with concrete examples,
-  step-by-step instructions where useful, and common mistakes to avoid
+{body_rules}
 - Vary sentence length; no filler, no generic motivational phrases, no repeating
   the chapter title or the previous section
 - Do not invent statistics, quotes, studies, or named sources
@@ -654,26 +695,68 @@ RULES:
         if written.get(key):
             result[key] = written[key]
     old_sections = chapter.get("sections", [])
-    result["sections"] = [
-        {**(old_sections[i] if i < len(old_sections) else {}),
-         "heading": sec.get("heading", ""), "content": sec.get("content", "")}
-        for i, sec in enumerate(sections) if isinstance(sec, dict)
-    ]
+    result["sections"] = []
+    for i, sec in enumerate(sections):
+        if not isinstance(sec, dict):
+            continue
+        merged = {**(old_sections[i] if i < len(old_sections) else {}),
+                  "heading": sec.get("heading", ""), "content": sec.get("content", "")}
+        if spec.block_guidance:
+            merged["blocks"] = normalize_blocks(sec.get("blocks"))
+        result["sections"].append(merged)
+    if spec.block_guidance:
+        result["blocks"] = normalize_blocks(written.get("blocks"))
+    if spec.id == "novel" and isinstance(written.get("recap"), str):
+        result["recap"] = written["recap"].strip()
     return result
 
 
+def _blocks_text(blocks) -> str:
+    """Structured blocks as plain text for the editor's review."""
+    out = []
+    for b in blocks or []:
+        title = b.get("title") or b.get("kind") or b["type"]
+        if b["type"] == "facts":
+            out.append(f"[{', '.join(i['label'] + ': ' + i['value'] for i in b['items'])}]")
+        elif b["type"] in ("list", "steps"):
+            items = [i["text"] if isinstance(i, dict) else i for i in b["items"]]
+            out.append(f"[{title}] " + " | ".join(f"{n}. {t}" for n, t in enumerate(items, 1)))
+        elif b["type"] == "callout":
+            out.append(f"[{title}] {b['text']}")
+        elif b["type"] == "exercise":
+            out.append(f"[{title}] {b['prompt']}")
+        elif b["type"] == "quiz":
+            out.append(f"[{title}] " + " | ".join(q["q"] for q in b["questions"]))
+    return "\n".join(out)
+
+
 def review_chapter(chapter: dict, *, book: dict, chapter_index: int, words_per_section: int = 550,
-                   language: str = "", provider: str | None = None) -> dict:
+                   language: str = "", provider: str | None = None, kind: str | None = None) -> dict:
     """Editor's review of a written chapter: {"score": 1-10, "issues": [...]}.
 
     Issues are phrased as concrete fixes so they can be fed straight back into
     write_chapter(revision_notes=...).
     """
     text = "\n\n".join(
-        f"## {s.get('heading', '')}\n{s.get('content', '')}" for s in chapter.get("sections", [])
+        f"## {s.get('heading', '')}\n{s.get('content', '')}\n{_blocks_text(s.get('blocks'))}"
+        for s in chapter.get("sections", [])
     )
+    chapter_blocks = _blocks_text(chapter.get("blocks"))
+    if chapter_blocks:
+        text += "\n\n" + chapter_blocks
+    spec = get_kind(kind)
     expected_language = sanitize_text(language, 50) if language else "the book's language"
-    system = "You are a demanding senior editor at a non-fiction publisher. Return only valid JSON."
+    if spec.review_criteria:
+        criteria = (spec.review_criteria + "\n"
+                    '- no filler, repetition, or stock AI phrasing ("in today\'s fast-paced world", "delve", "unlock")')
+        publisher = f"a demanding senior editor at a {spec.label.lower()} publisher"
+    else:
+        criteria = ("- concreteness: real examples, specific steps, not generic advice\n"
+                    "- depth: explains why and how, not just what\n"
+                    '- no filler, repetition, or stock AI phrasing ("in today\'s fast-paced world", "delve", "unlock")\n'
+                    "- each section delivers what its heading promises")
+        publisher = "a demanding senior editor at a non-fiction publisher"
+    system = f"You are {publisher}. Return only valid JSON."
     user = f"""Review chapter {chapter_index + 1} of "{book.get('title', '')}" for {book.get('audience', 'general readers')}.
 
 CHAPTER: {chapter.get('title', '')}
@@ -682,10 +765,7 @@ TEXT:
 {fence(text, 60000)}
 
 Score it 1-10 as something a reader paid for. Judge:
-- concreteness: real examples, specific steps, not generic advice
-- depth: explains why and how, not just what
-- no filler, repetition, or stock AI phrasing ("in today's fast-paced world", "delve", "unlock")
-- each section delivers what its heading promises
+{criteria}
 - correct, natural {expected_language}
 
 Return JSON:

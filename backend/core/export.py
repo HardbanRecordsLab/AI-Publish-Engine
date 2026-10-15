@@ -10,8 +10,9 @@ from docx.shared import Inches, Pt, RGBColor
 from ebooklib import epub
 from markupsafe import Markup
 
+from backend.core.book_kinds import get_kind, normalize_blocks
 from backend.core.book_labels import book_labels, language_code
-from backend.core.builder import env, paragraphs_html
+from backend.core.builder import chapter_blocks, env, paragraphs_html
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.core.infographic_engine import render_infographic
@@ -187,16 +188,26 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
 
     # Chapters
     chapters = structure.get("chapters", [])
+    spec = get_kind(structure.get("kind"))
+
+    def _rich(blocks: list) -> Markup:
+        return _render("rich.html", blocks=blocks) if blocks else Markup("")
+
     for ci, ch in enumerate(chapters):
         sections = []
+        start_blocks, end_blocks = chapter_blocks(ch)
+        if start_blocks:
+            sections.append({"heading": "", "content": _rich(start_blocks)})
         for si, sec in enumerate(ch.get("sections", [])):
-            sec_html = paragraphs_html(sec.get("content", ""))
+            sec_html = paragraphs_html(sec.get("content", "")) + _rich(normalize_blocks(sec.get("blocks")))
             key = f"{ci}_{si}"
             if key in ctx["rendered"]:
                 for ig in ctx["rendered"][key]:
                     sec_html += Markup("\n<h3>{}</h3>\n{}").format(ig["title"], ig["svg"])
             sections.append({"heading": sec.get("heading", ""), "content": sec_html})
 
+        if end_blocks:
+            sections.append({"heading": "", "content": _rich(end_blocks)})
         if ch.get("chapter_summary"):
             sections.append({"heading": "", "content": _render("summary.html", **ch["chapter_summary"])})
         if ch.get("faq"):
@@ -207,9 +218,10 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
         ch_html = _render("chapter.html",
             number=ci + 1,
             title=ch.get("title", f"{labels['chapter']} {ci+1}"),
-            introduction=ch.get("introduction", ""),
-            key_takeaway=ch.get("key_takeaway", ""),
+            introduction=ch.get("introduction", "") if spec.show_intro else "",
+            key_takeaway=ch.get("key_takeaway", "") if spec.show_takeaway else "",
             sections=sections,
+            scene_breaks=spec.scene_breaks,
             illustration=Markup(ctx["ch_ills"].get(ci, "")),
         )
 
@@ -273,6 +285,42 @@ def build_epub(structure: dict, style: str, infographics: list, output_path: str
     return output_path
 
 
+def _docx_blocks(doc, blocks: list, labels: dict) -> None:
+    """Structured blocks as plain Word content (no layout engine to lean on)."""
+    for b in blocks:
+        kind = b["type"]
+        if kind == "facts":
+            doc.add_paragraph("  ·  ".join(f"{i['label']}: {i['value']}" for i in b["items"]))
+        elif kind in ("list", "steps"):
+            if b.get("title") or kind == "steps":
+                doc.add_heading(b.get("title") or labels["steps"], level=3)
+            for item in b["items"]:
+                text = item["text"] if isinstance(item, dict) else item
+                tip = item.get("tip") if isinstance(item, dict) else ""
+                style = "List Number" if kind == "steps" else "List Bullet"
+                prefix = "\u2610 " if kind == "list" and b.get("style") == "checklist" else ""
+                doc.add_paragraph(prefix + text + (f"  ({labels['callout_tip']}: {tip})" if tip else ""), style=style)
+        elif kind == "callout":
+            p = doc.add_paragraph()
+            p.add_run(f"{(b.get('title') or labels['callout_' + b['kind']]).upper()}: ").bold = True
+            p.add_run(b["text"])
+        elif kind == "exercise":
+            if b.get("title"):
+                doc.add_heading(b["title"], level=3)
+            doc.add_paragraph(b["prompt"])
+            for _ in range(b["lines"]):
+                doc.add_paragraph("_" * 70)
+        elif kind == "quiz":
+            if b.get("title"):
+                doc.add_heading(b["title"], level=3)
+            for n, q in enumerate(b["questions"], 1):
+                doc.add_paragraph(f"{n}. {q['q']}")
+                for opt in q["options"]:
+                    doc.add_paragraph(opt, style="List Bullet")
+                if q["answer"]:
+                    doc.add_paragraph(f"{labels['answer']}: {q['answer']}")
+
+
 def build_docx(structure: dict, style: str, infographics: list, output_path: str,
                introduction="", author_bio="",
                references=None, glossary_terms=None,
@@ -286,6 +334,7 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
     colors = ctx["colors"]
     fonts = ctx["fonts"]
     labels = book_labels(structure.get("language"))
+    spec = get_kind(structure.get("kind"))
 
     doc = Document()
 
@@ -388,11 +437,13 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
             except Exception:
                 pass
 
-        if ch.get("introduction"):
+        start_blocks, end_blocks = chapter_blocks(ch)
+        if spec.show_intro and ch.get("introduction"):
             p = doc.add_paragraph(ch["introduction"])
             for r in p.runs:
                 r.font.italic = True
                 r.font.color.rgb = RGBColor(*muted_color)
+        _docx_blocks(doc, start_blocks, labels)
 
         for si, sec in enumerate(ch.get("sections", [])):
             if sec.get("heading"):
@@ -401,6 +452,7 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
             for para in content.split('\n\n'):
                 if para.strip():
                     doc.add_paragraph(para.strip())
+            _docx_blocks(doc, normalize_blocks(sec.get("blocks")), labels)
 
             key = f"{ci}_{si}"
             if key in ctx["rendered"]:
@@ -416,7 +468,8 @@ def build_docx(structure: dict, style: str, infographics: list, output_path: str
                     except Exception:
                         doc.add_paragraph("[Infographic - see PDF version]")
 
-        if ch.get("key_takeaway"):
+        _docx_blocks(doc, end_blocks, labels)
+        if spec.show_takeaway and ch.get("key_takeaway"):
             p = doc.add_paragraph()
             r = p.add_run(f"{labels['key_takeaway'].upper()}: ")
             r.bold = True

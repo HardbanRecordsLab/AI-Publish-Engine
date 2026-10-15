@@ -15,6 +15,7 @@
   <div class="chapter-intro" style="font-size: 11pt; color: var(--color-muted); font-style: italic; margin: 0.4cm 0 0.6cm; line-height: 1.6; padding-left: 0.3cm; border-left: 2px solid var(--color-accent);">{{ introduction }}</div>
   {% endif %}
   {% for section in sections %}
+  {% if scene_breaks and not loop.first %}<div class="scene-break" style="text-align: center; margin: 0.5cm 0; letter-spacing: 0.5em;">* * *</div>{% endif %}
   <div class="section" style="margin-bottom: 0.6cm;">
     {% if section.heading %}<h3 style="font-family: var(--font-heading); font-size: var(--font-size-h3); color: var(--color-heading); margin-bottom: 0.2cm; font-weight: 600;">{{ section.heading }}</h3>{% endif %}
     {% if section.content %}<div class="section-body" style="margin-bottom: 0.3cm;">{{ section.content }}</div>{% endif %}

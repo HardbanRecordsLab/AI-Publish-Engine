@@ -1,6 +1,7 @@
 from loguru import logger
 
 from backend.core.ai import qa_check as _qa_check
+from backend.core.book_kinds import get_kind
 from backend.orchestrator.agent import BaseAgent, PipelineContext
 
 
@@ -70,9 +71,10 @@ def _local_checks(ctx: PipelineContext) -> list:
                     "location": f"chapter {ci+1}, section {si+1}",
                 })
 
+    spec = get_kind(ctx.kind)
     # Missing introduction check
     for ci, ch in enumerate(chapters):
-        if not ch.get("introduction", "").strip():
+        if spec.show_intro and not ch.get("introduction", "").strip():
             issues.append({
                 "type": "structure",
                 "severity": "low",
@@ -82,7 +84,7 @@ def _local_checks(ctx: PipelineContext) -> list:
 
     # Missing key takeaway check
     for ci, ch in enumerate(chapters):
-        if not ch.get("key_takeaway", "").strip():
+        if spec.show_takeaway and not ch.get("key_takeaway", "").strip():
             issues.append({
                 "type": "structure",
                 "severity": "low",

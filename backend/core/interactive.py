@@ -3,9 +3,12 @@ import math
 from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
+from markupsafe import escape
 
+from backend.core.book_kinds import get_kind, normalize_blocks
 from backend.core.book_labels import LABELS, book_labels, language_code
-from backend.core.builder import BOOK_BRAND, paragraphs_html
+from backend.core.builder import BOOK_BRAND, chapter_blocks, paragraphs_html
+from backend.core.builder import env as block_env
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.themes import get_theme
@@ -114,14 +117,24 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
 
     # Chapter HTML
     chapters_html = ""
+    kind_spec = get_kind(structure.get("kind"))
+
+    def _rich(blocks: list) -> str:
+        if not blocks:
+            return ""
+        return block_env.get_template("rich.html").render(blocks=blocks, labels=labels)
+
     for ci, ch in enumerate(chapters):
-        sections_html = ""
+        start_blocks, end_blocks = chapter_blocks(ch)
+        sections_html = _rich(start_blocks)
         for si, sec in enumerate(ch.get("sections", [])):
+            heading = f'<h3 class="iq-sec-heading">{escape(sec["heading"])}</h3>' if sec.get("heading") else ""
             sections_html += f"""
             <div class="iq-section">
-              <h3 class="iq-sec-heading">{sec.get("heading", "")}</h3>
-              <div class="iq-sec-content">{paragraphs_html(sec.get("content", ""))}</div>
+              {heading}
+              <div class="iq-sec-content">{paragraphs_html(sec.get("content", ""))}{_rich(normalize_blocks(sec.get("blocks")))}</div>
             </div>"""
+        sections_html += _rich(end_blocks)
 
         # Infographics
         for ig in infographics:
@@ -171,8 +184,8 @@ def build_interactive_book(structure: dict, style: str, infographics: list,
           <div class="iq-chapter-header">
             <span class="iq-chapter-num">{labels["chapter"]} {ci+1}</span>
             <h2 class="iq-chapter-title">{ch.get("title", f"Chapter {ci+1}")}</h2>
-            {f'<p class="iq-chapter-intro">{ch["introduction"]}</p>' if ch.get("introduction") else ""}
-            {f'<div class="iq-takeaway">{labels["key_takeaway"]}: {ch["key_takeaway"]}</div>' if ch.get("key_takeaway") else ""}
+            {f'<p class="iq-chapter-intro">{ch["introduction"]}</p>' if kind_spec.show_intro and ch.get("introduction") else ""}
+            {f'<div class="iq-takeaway">{labels["key_takeaway"]}: {ch["key_takeaway"]}</div>' if kind_spec.show_takeaway and ch.get("key_takeaway") else ""}
           </div>
           {ill_html}
           {sections_html}

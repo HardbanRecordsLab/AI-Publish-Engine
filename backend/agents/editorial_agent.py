@@ -31,7 +31,7 @@ class EditorialAgent(BaseAgent):
         chapters = ctx.ebook_dict.get("chapters", [])
         logger.info(f"EditorialAgent: writing {len(chapters)} chapters")
         brief = build_brief(ctx.audience, ctx.tone, ctx.keywords, ctx.language)
-        target_words = words_per_section(ctx.content_type)
+        target_words = words_per_section(ctx.content_type, ctx.kind)
 
         research_chapters = {}
         if ctx.research:
@@ -51,7 +51,7 @@ class EditorialAgent(BaseAgent):
                     research_suggestions=research_chapters.get(i),
                     previous_summaries=previous_summaries,
                     words_per_section=target_words, brief=brief,
-                    language=ctx.language, provider=ctx.provider,
+                    language=ctx.language, provider=ctx.provider, kind=ctx.kind,
                 )
                 logger.info(f"  Ch{i+1}: written ({_word_count(written)} words)")
                 written = self._review_and_revise(ctx, written, i, research_chapters.get(i),
@@ -61,9 +61,10 @@ class EditorialAgent(BaseAgent):
                 logger.warning(f"  Ch{i+1}: kept outline draft ({e})")
                 written = ch
                 improved.append(ch)
-            previous_summaries.append(
-                f"Ch{i+1} {written.get('title', '')}: {written.get('key_takeaway', '')}"
-            )
+            # What later chapters are told has already happened: a fiction recap
+            # carries events and character state; otherwise the takeaway / intro.
+            gist = written.get("recap") or written.get("key_takeaway") or written.get("introduction", "")[:200]
+            previous_summaries.append(f"Ch{i+1} {written.get('title', '')}: {gist}")
             # Intermediate progress: 37 → 53 over chapters (the longest step)
             pct = 37 + int(16 * (i + 1) / max(len(chapters), 1))
             ctx.set_progress(pct)
@@ -95,7 +96,7 @@ class EditorialAgent(BaseAgent):
         try:
             review = _review_chapter(chapter, book=ctx.ebook_dict, chapter_index=i,
                                      words_per_section=target_words, language=ctx.language,
-                                     provider=ctx.provider)
+                                     provider=ctx.provider, kind=ctx.kind)
             record["score"] = review["score"]
             if review["score"] < REVIEW_MIN_SCORE:
                 notes.extend(review["issues"])
@@ -108,6 +109,7 @@ class EditorialAgent(BaseAgent):
                     chapter, book=ctx.ebook_dict, chapter_index=i, research_suggestions=research,
                     previous_summaries=previous_summaries, words_per_section=target_words,
                     brief=brief, language=ctx.language, revision_notes=notes, provider=ctx.provider,
+                    kind=ctx.kind,
                 )
                 record.update(revised=True, words=_word_count(chapter), notes=notes)
                 logger.info(f"  Ch{i+1}: revised after review ({record['words']} words)")

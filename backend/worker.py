@@ -20,6 +20,7 @@ from backend.agents import (
     ResearchAgent,
     StructureAgent,
 )
+from backend.core.book_kinds import get_kind
 from backend.core.builder import build_ebook_html
 from backend.core.export import build_docx, build_epub
 from backend.core.interactive import build_interactive_book
@@ -32,6 +33,26 @@ from backend.ws_manager import clear_cancel, is_cancelled, update_progress
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", os.environ.get("OUTPUT_DIR", "outputs"))
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
+def pipeline_agents(kind: str | None) -> list:
+    """The pre-build agents for a kind of book. Steps that make no sense for
+    it are left out (fact-checking a novel, "sources" for a picture book,
+    FAQs for a cookbook)."""
+    spec = get_kind(kind)
+    return [
+        AnalysisAgent(),
+        *([ResearchAgent()] if spec.research else []),
+        EditorialAgent(),
+        # After EditorialAgent so summaries/FAQ/checklists are built from
+        # the full chapter text rather than the outline drafts.
+        *([StructureAgent()] if spec.structure else []),
+        *([FactCheckAgent()] if spec.fact_check else []),
+        DesignSystemAgent(),
+        InfographicArchitectAgent(),
+        CoverArtAgent(),
+        FinalizationAgent(),
+    ]
 
 
 async def process_job(ctx):
@@ -51,6 +72,7 @@ async def process_job(ctx):
     heading_font = ctx.get("heading_font", "")
     body_font = ctx.get("body_font", "")
     author = ctx.get("author", "")
+    kind = get_kind(ctx.get("kind")).id
 
     try:
         update_progress(job_id, "queued", 0)
@@ -66,22 +88,10 @@ async def process_job(ctx):
             content_type=content_type, audience=audience, tone=tone,
             chapters=chapters, keywords=keywords, language=language,
             accent_color=accent_color, bg_color=bg_color,
-            heading_font=heading_font, body_font=body_font, author=author,
+            heading_font=heading_font, body_font=body_font, author=author, kind=kind,
         )
 
-        pre_build = Orchestrator([
-            AnalysisAgent(),
-            ResearchAgent(),
-            EditorialAgent(),
-            # After EditorialAgent so summaries/FAQ/checklists are built from
-            # the full chapter text rather than the outline drafts.
-            StructureAgent(),
-            FactCheckAgent(),
-            DesignSystemAgent(),
-            InfographicArchitectAgent(),
-            CoverArtAgent(),
-            FinalizationAgent(),
-        ])
+        pre_build = Orchestrator(pipeline_agents(kind))
         pipeline_ctx = pre_build.run(pipeline_ctx)
 
         if pipeline_ctx.error:

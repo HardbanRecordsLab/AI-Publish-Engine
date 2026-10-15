@@ -231,6 +231,31 @@ Chapter writing (optional):
   JSON, writing falls back to the normal provider chain. Empty
   `AI_WRITER_PROVIDER` disables it.
 
+### Kinds of book
+
+The form's "Book type" (`kind`, listed by `GET /api/book-kinds`; defined in
+`backend/core/book_kinds.py`) is separate from the output format
+(`content_type`: ebook, website, …). A kind sets how the outline is planned,
+how chapters are written and reviewed, which pipeline steps run, and which
+structured elements a chapter may carry.
+
+| Kind | What it is | Specifics |
+|------|-----------|-----------|
+| `guide` | non-fiction how-to / expert book (default) | research, FAQ/checklists, fact-check |
+| `diy` | project manual | per chapter: difficulty/time/cost, materials and tools checklists, safety warnings, numbered steps; fact-checked |
+| `cookbook` | recipes | chapters = categories, sections = recipes with servings/time, ingredients, method |
+| `workbook` | write-in book | short explanations + exercises with answer lines, checklists |
+| `course` | textbook / course | learning objectives, worked examples, quizzes with answers |
+| `novel` | fiction | story bible (premise, setting, point of view, characters) from the outline; scenes written as prose, a per-chapter recap keeps later chapters consistent; no research/fact-check/FAQ |
+| `children` | picture book | one large-type page per section, very short text |
+
+Structured elements are "blocks" (`facts`, `list`, `steps`, `callout`,
+`exercise`, `quiz`). The model returns them as JSON, `normalize_blocks()`
+validates them (known types only, bounded sizes), and
+`templates/blocks/rich.html` renders them in the print book, HTML, EPUB, DOCX
+and the interactive book. Website/landing/blog formats ignore the kind.
+Adding a kind means adding one `BookKind` entry.
+
 ### How content is generated
 
 1. **AnalysisAgent** turns the source text into an outline (chapters,

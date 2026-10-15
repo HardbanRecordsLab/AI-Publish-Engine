@@ -1,6 +1,7 @@
 """AI Marketing Suite — generates Amazon listing, social media, press materials from book content."""
 from backend.config import settings
 from backend.core.ai import writer_json
+from backend.core.book_kinds import get_kind
 from backend.core.prompt_safety import fence
 
 # Reader-facing sales copy: matches the book's language, and never invents
@@ -22,7 +23,8 @@ def _book_summary(ebook_dict: dict) -> str:
         f"- {ch.get('title', '')}: {ch.get('introduction', '')[:200]} {ch.get('key_takeaway', '')[:200]}"
         for ch in chapters[:15]
     )
-    return fence(f"Title: {title}\nAuthor: {author}\nSummary: {summary}\nChapters:\n{ch_info}", 6000)
+    kind = get_kind(ebook_dict.get("kind"))
+    return fence(f"Title: {title}\nAuthor: {author}\nBook type: {kind.label}\nSummary: {summary}\nChapters:\n{ch_info}", 6000)
 
 
 def generate_amazon_listing(ebook_dict: dict) -> dict:

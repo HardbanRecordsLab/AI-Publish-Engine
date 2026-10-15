@@ -24,6 +24,7 @@ class PipelineContext(BaseModel):
     keywords: str = ""
     language: str = ""
     author: str = ""
+    kind: str = "guide"
     document: ContentBlock | None = None
     design: dict[str, Any] = Field(default_factory=dict)
     infographics: list[dict[str, Any]] = Field(default_factory=list)

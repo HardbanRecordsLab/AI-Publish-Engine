@@ -76,3 +76,13 @@ def sample_design():
         "accent_gradient": "linear-gradient(135deg, #4A4A4A 0%, #6A6A6A 100%)",
         "vibe": "clean minimal professional",
     }
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Per-endpoint limits (e.g. 10/min on /api/generate) are process-wide;
+    without a reset, the number of tests that hit an endpoint decides whether
+    a later one gets 429."""
+    from backend.limiter import limiter
+    limiter.reset()
+    yield

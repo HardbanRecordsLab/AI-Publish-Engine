@@ -9,6 +9,7 @@ from loguru import logger
 
 from backend.config import settings
 from backend.core.ai import PROVIDERS
+from backend.core.book_kinds import get_kind, list_kinds
 from backend.core.jobs import create_job, get_job
 from backend.core.moderation import check_content
 from backend.core.parser import extract_text
@@ -31,7 +32,7 @@ def _queue_job(job_id: str, text: str, style: str, provider: str = None,
                content_type: str = "ebook", audience: str = "", tone: str = "",
                chapters: str = "", keywords: str = "", language: str = "",
                accent_color: str = "", bg_color: str = "",
-               heading_font: str = "", body_font: str = "", author: str = ""):
+               heading_font: str = "", body_font: str = "", author: str = "", kind: str = ""):
     """Run a generation job in a background thread.
 
     Note: this used to try enqueueing to a Redis/arq queue first, but that
@@ -49,6 +50,7 @@ def _queue_job(job_id: str, text: str, style: str, provider: str = None,
         "accent_color": accent_color, "bg_color": bg_color,
         "heading_font": heading_font, "body_font": body_font,
         "author": sanitize_text(author, 200).strip(),
+        "kind": get_kind(kind).id,
     }
     from backend.worker import process_job
 
@@ -79,6 +81,7 @@ async def generate(
     heading_font: str = Form(""),
     body_font: str = Form(""),
     author: str = Form(""),
+    kind: str = Form(""),
 ):
     files = [f for f in (files or []) if f.filename]
     topic = sanitize_text(topic, 5000).strip()
@@ -111,7 +114,7 @@ async def generate(
         return JSONResponse({"error": rejection}, status_code=400)
     job_id = create_job(style, content_type, audience, tone, chapters, keywords, language)
     _queue_job(job_id, merged, style, provider, content_type, audience, tone, chapters, keywords, language,
-               accent_color, bg_color, heading_font, body_font, author=author)
+               accent_color, bg_color, heading_font, body_font, author=author, kind=kind)
     return {"job_id": job_id, "status": "queued", "provider": provider, "content_type": content_type}
 
 
@@ -129,6 +132,7 @@ async def generate_batch(
     keywords: str = Form(""),
     language: str = Form(""),
     author: str = Form(""),
+    kind: str = Form(""),
 ):
     if not files:
         return JSONResponse({"error": "At least one file is required"}, status_code=400)
@@ -144,7 +148,7 @@ async def generate_batch(
             continue
         job_id = create_job(style, content_type, audience, tone, chapters, keywords, language)
         _queue_job(job_id, text, style, provider, content_type, audience, tone, chapters, keywords, language,
-                   author=author)
+                   author=author, kind=kind)
         job_ids.append({"job_id": job_id, "filename": f.filename})
     return {"jobs": job_ids, "count": len(job_ids), "status": "queued", "provider": provider}
 
@@ -228,6 +232,12 @@ def download(request: Request, job_id: str, format: str = Query("pdf", pattern="
         media_type=media_types[format],
         filename=f"{job_id}.{ext[format]}",
     )
+
+
+@router.get("/api/book-kinds")
+@limiter.limit("60/minute")
+def get_book_kinds(request: Request):
+    return list_kinds()
 
 
 @router.get("/api/print-sizes")

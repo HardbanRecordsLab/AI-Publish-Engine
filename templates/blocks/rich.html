@@ -1,0 +1,44 @@
+{# Structured blocks (facts, lists, steps, callouts, exercises, quizzes). Self-contained inline styles with CSS-variable fallbacks so it renders in the print book, EPUB and interactive book alike. Use b['items'], never b.items (that is dict.items). #}
+{% for b in blocks %}
+{% if b.type == 'facts' %}
+<div class="rb rb-facts" style="display: flex; flex-wrap: wrap; margin: 0.4cm 0; padding: 0.25cm 0.4cm; border: 1px solid var(--color-border, #cccccc); border-radius: 6px; font-size: 9.5pt;">
+  {% for i in b['items'] %}<div style="margin-right: 0.8cm;"><strong style="text-transform: uppercase; font-size: 7.5pt; letter-spacing: 1px; color: var(--color-accent, #555555);">{{ i.label }}</strong><br/>{{ i.value }}</div>{% endfor %}
+</div>
+{% elif b.type == 'list' %}
+<div class="rb rb-list" style="margin: 0.4cm 0;">
+  {% if b.title %}<h4 style="font-family: var(--font-heading, inherit); font-size: 11pt; margin: 0 0 0.15cm 0;">{{ b.title }}</h4>{% endif %}
+  <ul style="margin: 0; padding-left: {{ '0' if b.style == 'checklist' else '1.1em' }}; list-style: {{ 'none' if b.style == 'checklist' else 'disc' }};">
+    {% for t in b['items'] %}<li style="margin: 0.08cm 0;">{% if b.style == 'checklist' %}&#9744; {% endif %}{{ t }}</li>{% endfor %}
+  </ul>
+</div>
+{% elif b.type == 'steps' %}
+<div class="rb rb-steps" style="margin: 0.4cm 0;">
+  <h4 style="font-family: var(--font-heading, inherit); font-size: 11pt; margin: 0 0 0.15cm 0;">{{ b.title or labels.steps }}</h4>
+  <ol style="margin: 0; padding-left: 1.4em;">
+    {% for st in b['items'] %}<li style="margin: 0.15cm 0;">{{ st.text }}{% if st.tip %}<div style="margin-top: 0.05cm; font-size: 9pt; font-style: italic; color: var(--color-muted, #666666);">{{ labels.callout_tip }}: {{ st.tip }}</div>{% endif %}</li>{% endfor %}
+  </ol>
+</div>
+{% elif b.type == 'callout' %}
+{% set accent = {'warning': '#c0392b', 'tip': '#2e7d32', 'note': '#1565c0'}[b.kind] %}
+<div class="rb rb-callout rb-{{ b.kind }}" style="margin: 0.4cm 0; padding: 0.25cm 0.4cm; border-left: 3px solid {{ accent }}; background: var(--color-highlight, #f5f5f5); border-radius: 0 6px 6px 0; font-size: 10pt;">
+  <strong style="font-size: 8.5pt; text-transform: uppercase; letter-spacing: 1px; color: {{ accent }};">{{ b.title or labels['callout_' ~ b.kind] }}</strong>
+  <div style="margin-top: 0.08cm;">{{ b.text }}</div>
+</div>
+{% elif b.type == 'exercise' %}
+<div class="rb rb-exercise" style="margin: 0.5cm 0; padding: 0.3cm 0.4cm; border: 1px solid var(--color-border, #cccccc); border-radius: 6px;">
+  {% if b.title %}<h4 style="font-family: var(--font-heading, inherit); font-size: 11pt; margin: 0 0 0.1cm 0;">{{ b.title }}</h4>{% endif %}
+  <div style="font-size: 10pt;">{{ b.prompt }}</div>
+  {% for _ in range(b.lines) %}<div style="border-bottom: 1px solid #999999; height: 0.8cm;"></div>{% endfor %}
+</div>
+{% elif b.type == 'quiz' %}
+<div class="rb rb-quiz" style="margin: 0.5cm 0;">
+  {% if b.title %}<h4 style="font-family: var(--font-heading, inherit); font-size: 11pt; margin: 0 0 0.15cm 0;">{{ b.title }}</h4>{% endif %}
+  <ol style="margin: 0; padding-left: 1.4em;">
+    {% for q in b.questions %}<li style="margin: 0.15cm 0;">{{ q.q }}
+      {% if q.options %}<ul style="margin: 0.05cm 0 0 0; padding-left: 1.1em; list-style: circle;">{% for o in q.options %}<li>{{ o }}</li>{% endfor %}</ul>{% endif %}
+      {% if q.answer %}<div style="font-size: 9pt; color: var(--color-muted, #666666);"><em>{{ labels.answer }}: {{ q.answer }}</em></div>{% endif %}
+    </li>{% endfor %}
+  </ol>
+</div>
+{% endif %}
+{% endfor %}

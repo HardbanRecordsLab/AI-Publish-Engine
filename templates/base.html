@@ -87,6 +87,10 @@
      after a heading starts flush, as in professionally typeset books. */
   .section-body p { margin: 0; text-indent: 1.5em; }
   .section-body p:first-child { text-indent: 0; }
+  /* Children's picture book: one large-type page per section. */
+  .kind-children .section { break-before: page; text-align: center; padding-top: 25%; }
+  .kind-children .section-body p { text-indent: 0; text-align: center; font-size: 20pt; line-height: 1.5; hyphens: none; }
+  .kind-children .chapter-header { text-align: center; }
   table { page-break-inside: avoid; }
   pre, blockquote { page-break-inside: avoid; }
 
@@ -131,7 +135,7 @@
 {% endif %}
 </style>
 </head>
-<body>
+<body class="kind-{{ kind | default('guide') }}">
 {{ content }}
 </body>
 </html>

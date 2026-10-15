@@ -54,7 +54,7 @@ class TestPrintHtml:
         assert "size: 6in 9in" in html
         assert "@page :left" in html and "@page :right" in html
         assert 'class="title-page page"' in html
-        assert 'class="cover' not in html and "back-cover" not in html.split("<body>")[1]
+        assert 'class="cover' not in html and "back-cover" not in html.split("<body", 1)[1]
         assert "ISBN 978-83-01-00000-4" in html
         assert "--color-bg: #ffffff" in html
         assert "­" in html  # hyphenated

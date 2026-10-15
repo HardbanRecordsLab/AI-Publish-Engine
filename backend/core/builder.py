@@ -5,6 +5,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup, escape
 
+from backend.core.book_kinds import get_kind, normalize_blocks
 from backend.core.book_labels import LABELS, book_labels, language_code
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
@@ -34,6 +35,14 @@ env.globals.update(labels=LABELS["en"], lang="en")
 # name. Set BOOK_BRAND="..." to print one (e.g. a free-tier watermark).
 BOOK_BRAND = os.getenv("BOOK_BRAND", "")
 env.globals["book_brand"] = BOOK_BRAND
+
+
+def chapter_blocks(ch: dict) -> tuple[list, list]:
+    """A chapter's own blocks split into (before the sections, after them):
+    quizzes and exercises close a chapter; facts, materials, warnings open it."""
+    blocks = normalize_blocks(ch.get("blocks"))
+    return ([b for b in blocks if b["type"] not in ("quiz", "exercise")],
+            [b for b in blocks if b["type"] in ("quiz", "exercise")])
 
 
 def _css_string(text: str) -> str:
@@ -210,12 +219,20 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         pages.append(toc_html)
 
     # Chapters
+    spec = get_kind(structure.get("kind"))
+
+    def _rich(blocks: list) -> Markup:
+        return _render("rich.html", blocks=blocks) if blocks else Markup("")
+
     for ci, ch in enumerate(chapters):
         sections = []
+        start_blocks, end_blocks = chapter_blocks(ch)
+        if start_blocks:
+            sections.append({"heading": "", "content": _rich(start_blocks)})
         for si, sec in enumerate(ch.get("sections", [])):
             sections.append({
                 "heading": sec.get("heading", ""),
-                "content": _prose(sec.get("content", "")),
+                "content": _prose(sec.get("content", "")) + _rich(normalize_blocks(sec.get("blocks"))),
             })
             # Insert infographic after this section if exists
             key = f"{ci}_{si}"
@@ -223,6 +240,9 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
                 for ig in rendered[key]:
                     ig_html = _render("infographic.html", **ig)
                     sections.append({"heading": "", "content": ig_html})
+
+        if end_blocks:
+            sections.append({"heading": "", "content": _rich(end_blocks)})
 
         # Structural elements (summary, faq, checklist)
         if ch.get("chapter_summary"):
@@ -248,9 +268,10 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         ch_html = _render("chapter.html",
             number=ci + 1,
             title=ch.get("title", f"Chapter {ci+1}"),
-            introduction=ch.get("introduction", ""),
-            key_takeaway=ch.get("key_takeaway", ""),
+            introduction=ch.get("introduction", "") if spec.show_intro else "",
+            key_takeaway=ch.get("key_takeaway", "") if spec.show_takeaway else "",
             sections=sections,
+            scene_breaks=spec.scene_breaks,
             illustration=ch_ill_svg,
             page_marker=f"§CH{ci}§" if page_markers else "",
         )
@@ -323,4 +344,4 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     }
 
     base = env.get_template("base.html")
-    return base.render(lang=lang, labels=labels, **context)
+    return base.render(lang=lang, labels=labels, kind=spec.id, **context)

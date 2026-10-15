@@ -1,6 +1,7 @@
 from loguru import logger
 
 from backend.core.ai import generate_ebook_sections as _generate_sections
+from backend.core.book_kinds import get_kind
 from backend.core.jobs import update_job
 from backend.orchestrator.agent import BaseAgent, PipelineContext
 
@@ -18,7 +19,7 @@ class FinalizationAgent(BaseAgent):
             ctx.introduction = sections.get("introduction", "")
             ctx.author_bio = sections.get("author_bio", "")
             ctx.references = []  # never AI-generated: they came back fabricated
-            ctx.glossary_terms = sections.get("glossary_terms", [])
+            ctx.glossary_terms = sections.get("glossary_terms", []) if get_kind(ctx.kind).glossary else []
             ctx.back_cover_blurb = sections.get("back_cover_blurb", "")
             ctx.back_cover_tagline = sections.get("back_cover_tagline", "")
             logger.success("FinalizationAgent: all sections generated")

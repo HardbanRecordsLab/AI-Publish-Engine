@@ -8,6 +8,7 @@ native names ("polski"). Anything unknown falls back to English.
 
 LABELS: dict[str, dict[str, str]] = {
     "en": {
+        "callout_warning": "Warning", "callout_tip": "Tip", "callout_note": "Note", "steps": "Steps", "answer": "Answer",
         "created_with": "Created with",
         "key_features": "Key Features", "cta_heading": "Ready to get started?", "cta_button": "Get started",
         "chapter": "Chapter", "contents": "Contents", "introduction": "Introduction",
@@ -21,6 +22,7 @@ LABELS: dict[str, dict[str, str]] = {
         "ai_notice": "This book was created with the assistance of artificial intelligence.",
     },
     "pl": {
+        "callout_warning": "Uwaga", "callout_tip": "Wskazówka", "callout_note": "Notatka", "steps": "Kroki", "answer": "Odpowiedź",
         "created_with": "Stworzono w",
         "key_features": "Najważniejsze cechy", "cta_heading": "Gotowy, by zacząć?", "cta_button": "Zacznij teraz",
         "chapter": "Rozdział", "contents": "Spis treści", "introduction": "Wstęp",
@@ -35,6 +37,7 @@ LABELS: dict[str, dict[str, str]] = {
         "ai_notice": "Ta książka powstała przy wsparciu sztucznej inteligencji.",
     },
     "de": {
+        "callout_warning": "Achtung", "callout_tip": "Tipp", "callout_note": "Hinweis", "steps": "Schritte", "answer": "Antwort",
         "created_with": "Erstellt mit",
         "key_features": "Hauptmerkmale", "cta_heading": "Bereit loszulegen?", "cta_button": "Jetzt starten",
         "chapter": "Kapitel", "contents": "Inhalt", "introduction": "Einleitung",
@@ -49,6 +52,7 @@ LABELS: dict[str, dict[str, str]] = {
         "ai_notice": "Dieses Buch wurde mit Unterstützung künstlicher Intelligenz erstellt.",
     },
     "es": {
+        "callout_warning": "Advertencia", "callout_tip": "Consejo", "callout_note": "Nota", "steps": "Pasos", "answer": "Respuesta",
         "created_with": "Creado con",
         "key_features": "Características clave", "cta_heading": "¿Listo para empezar?", "cta_button": "Empezar",
         "chapter": "Capítulo", "contents": "Índice", "introduction": "Introducción",
@@ -63,6 +67,7 @@ LABELS: dict[str, dict[str, str]] = {
         "ai_notice": "Este libro se creó con la ayuda de inteligencia artificial.",
     },
     "fr": {
+        "callout_warning": "Attention", "callout_tip": "Astuce", "callout_note": "Remarque", "steps": "Étapes", "answer": "Réponse",
         "created_with": "Créé avec",
         "key_features": "Points clés", "cta_heading": "Prêt à commencer ?", "cta_button": "Commencer",
         "chapter": "Chapitre", "contents": "Table des matières", "introduction": "Introduction",

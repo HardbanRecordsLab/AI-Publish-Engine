@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import threading
 
@@ -211,24 +212,61 @@ def get_print_sizes(request: Request):
             for k, v in TRIM_SIZES.items()]
 
 
+def _saved_book_data(job: dict) -> tuple[dict | None, dict]:
+    book, params = job.get("book_data"), job.get("build_params")
+    book = json.loads(book) if isinstance(book, str) else book
+    params = json.loads(params) if isinstance(params, str) else (params or {})
+    return (book if book and book.get("chapters") else None), params
+
+
+def _render_print_pdf(job: dict, trim_size: str, isbn: str, path: str) -> None:
+    """Print interior PDF. Typeset from the saved book when there is one
+    (trim size, mirrored margins, running heads, no covers); jobs saved
+    before book data existed fall back to wrapping their stored HTML."""
+    from backend.core.pdf import html_to_print_pdf
+    from backend.core.print_book import build_print_pdf
+
+    book, params = _saved_book_data(job)
+    if not book:
+        html_to_print_pdf(job.get("html", ""), path, trim_size, isbn)
+        return
+    build_kwargs = {k: params.get(k) for k in (
+        "introduction", "author_bio", "references", "glossary_terms",
+        "chapter_illustrations", "accent_color", "heading_font", "body_font") if params.get(k)}
+    build_print_pdf(book, params.get("style", job.get("style", "minimal")), params.get("infographics", []),
+                    trim_size, path, isbn=isbn, **build_kwargs)
+
+
+def _check_print_request(job: dict | None, trim_size: str, isbn: str) -> tuple[tuple[str, int] | None, str]:
+    """(error message + status, or None) and the normalized ISBN."""
+    from backend.core.pdf import TRIM_SIZES, normalize_isbn
+    if not job:
+        return ("Job not found", 404), isbn
+    if job["status"] != "done":
+        return ("Job not ready yet", 400), isbn
+    if trim_size not in TRIM_SIZES:
+        return (f"Invalid trim size. Valid: {', '.join(TRIM_SIZES.keys())}", 400), isbn
+    if isbn.strip():
+        try:
+            isbn = normalize_isbn(isbn)
+        except ValueError as e:
+            return (f"Invalid ISBN: {e}", 400), isbn
+    if not (_saved_book_data(job)[0] or job.get("html")):
+        return ("No HTML content available", 400), isbn
+    return None, isbn
+
+
 @router.post("/api/download/{job_id}/print", dependencies=[Depends(require_admin)])
 @limiter.limit("10/minute")
 def download_print(request: Request, job_id: str, trim_size: str = Query("6x9"), isbn: str = Query("")):
     job = get_job(job_id)
-    if not job:
-        return JSONResponse({"error": "Job not found"}, status_code=404)
-    if job["status"] != "done":
-        return JSONResponse({"error": "Job not ready yet"}, status_code=400)
-    from backend.core.pdf import TRIM_SIZES, html_to_print_pdf
-    if trim_size not in TRIM_SIZES:
-        return JSONResponse({"error": f"Invalid trim size. Valid: {', '.join(TRIM_SIZES.keys())}"}, status_code=400)
-    html = job.get("html", "")
-    if not html:
-        return JSONResponse({"error": "No HTML content available"}, status_code=400)
+    error, isbn = _check_print_request(job, trim_size, isbn)
+    if error:
+        return JSONResponse({"error": error[0]}, status_code=error[1])
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     print_path = os.path.join(OUTPUT_DIR, f"{job_id}_print.pdf")
     try:
-        html_to_print_pdf(html, print_path, trim_size, isbn)
+        _render_print_pdf(job, trim_size, isbn, print_path)
     except Exception as e:
         return JSONResponse({"error": f"Print PDF generation failed: {e}"}, status_code=500)
     return FileResponse(print_path, media_type="application/pdf", filename=f"{job_id}_print_{trim_size}.pdf")

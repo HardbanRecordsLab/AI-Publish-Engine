@@ -79,3 +79,45 @@ class TestPrintEndpoint:
         finally:
             from backend.core.jobs import delete_job
             delete_job(job_id)
+
+
+class TestPrintFromSavedBook:
+    def _job(self, isbn_ok=True):
+        import json
+
+        from backend.core.jobs import create_job, update_job
+        job_id = create_job("minimal")
+        book = {"title": "T", "author": "A", "language": "Polish", "chapters": [
+            {"title": "C", "sections": [{"heading": "H", "content": "Tekst akapitu. " * 50}]}], "conclusion": {}}
+        update_job(job_id, "done", 100, html="<p>x</p>", topic="T",
+                   book_data=json.dumps(book), build_params=json.dumps({"style": "minimal"}))
+        return job_id
+
+    def test_invalid_isbn_rejected(self):
+        from backend.core.jobs import delete_job
+        job_id = self._job()
+        try:
+            resp = client.post(f"/api/download/{job_id}/print", headers=ADMIN_AUTH,
+                               params={"isbn": "978-83-01-00000-2"})
+            assert resp.status_code == 400 and "ISBN" in resp.json()["error"]
+        finally:
+            delete_job(job_id)
+
+    def test_typeset_interior_at_trim_size(self):
+        import io
+
+        import pypdf
+
+        from backend.core.jobs import delete_job
+        job_id = self._job()
+        try:
+            resp = client.post(f"/api/download/{job_id}/print", headers=ADMIN_AUTH,
+                               params={"trim_size": "5.5x8.5", "isbn": "978-83-01-00000-4"})
+            assert resp.status_code == 200, resp.text
+            reader = pypdf.PdfReader(io.BytesIO(resp.content))
+            assert float(reader.pages[0].mediabox.width) == 5.5 * 72
+            # Some fonts extract the hyphen as a private-use glyph; compare digits.
+            front = "".join(p.extract_text() for p in reader.pages[:3])
+            assert "9788301000004" in "".join(c for c in front if c.isdigit())
+        finally:
+            delete_job(job_id)

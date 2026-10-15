@@ -261,10 +261,16 @@ function showResult(job) {
 // long as it's existed, independent of the same-day auth-gate fix. POST +
 // blob download, same pattern as exportCSV() above.
 async function downloadPrintPdf(jobId, btn) {
+  // Trim size + optional ISBN for the print interior (KDP-style trim sizes).
+  const trim = prompt('Trim size: 6x9, 5.5x8.5, 5.25x8, 8x10, 8.5x11', '6x9');
+  if (trim === null) return;
+  const isbn = prompt('ISBN (optional — printed on the copyright page)', '');
+  if (isbn === null) return;
+  const query = new URLSearchParams({ trim_size: trim.trim() || '6x9', isbn: isbn.trim() });
   const label = btn ? btn.textContent : '';
   if (btn) { btn.textContent = '⏳ Rendering...'; btn.disabled = true; }
   try {
-    const res = await fetch(API + `/api/download/${jobId}/print`, {
+    const res = await fetch(API + `/api/download/${jobId}/print?${query}`, {
       method: 'POST',
       headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {},
     });
@@ -275,7 +281,7 @@ async function downloadPrintPdf(jobId, btn) {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `${jobId}_print.pdf`; a.click();
+    a.href = url; a.download = `${jobId}_print_${query.get('trim_size')}.pdf`; a.click();
     URL.revokeObjectURL(url);
   } catch (e) {
     alert('Print PDF failed: ' + e.message);

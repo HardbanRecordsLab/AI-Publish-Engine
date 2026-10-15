@@ -8,6 +8,7 @@ from backend.core.book_labels import LABELS, book_labels, language_code
 from backend.core.color_engine import detect_topic, get_color_palette
 from backend.core.icon_service import get_cover_icon
 from backend.core.infographic_engine import render_infographic
+from backend.core.pdf import PRINT_MARGINS
 from backend.themes import get_theme
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "templates")
@@ -23,6 +24,31 @@ env.globals.update(labels=LABELS["en"], lang="en")
 # name. Set BOOK_BRAND="..." to print one (e.g. a free-tier watermark).
 BOOK_BRAND = os.getenv("BOOK_BRAND", "")
 env.globals["book_brand"] = BOOK_BRAND
+
+
+def _css_string(text: str) -> str:
+    """Escape text for a CSS string literal (content: "…")."""
+    return (text or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+
+
+_HYPHEN_DICTS: dict = {}
+_LONG_WORD = re.compile(r"\w{7,}")
+
+
+def hyphenate(text: str, lang: str) -> str:
+    """Insert soft hyphens (U+00AD) so justified print text can break long
+    words instead of stretching word gaps. Text unchanged if pyphen has no
+    dictionary for the language."""
+    if lang not in _HYPHEN_DICTS:
+        try:
+            import pyphen
+            _HYPHEN_DICTS[lang] = pyphen.Pyphen(lang=lang) if pyphen.language_fallback(lang) else None
+        except ImportError:
+            _HYPHEN_DICTS[lang] = None
+    dic = _HYPHEN_DICTS[lang]
+    if not dic or not text:
+        return text
+    return _LONG_WORD.sub(lambda m: dic.inserted(m.group(0), hyphen="\u00ad"), text)
 
 
 def paragraphs_html(text: str) -> str:
@@ -55,12 +81,22 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
                      cover_svg: str = "", cover_image: str = "",
                      chapter_illustrations: list = None,
                      accent_color: str = "", bg_color: str = "",
-                     heading_font: str = "", body_font: str = "") -> str:
+                     heading_font: str = "", body_font: str = "",
+                     print_trim: dict | None = None, isbn: str = "",
+                     recto_blanks: set | None = None, page_markers: bool = False) -> str:
+    """Full book HTML. With print_trim ({"width": in, "height": in}) it is a
+    print interior instead: that trim size, mirrored margins, running heads,
+    a title page, white paper, hyphenated text, and no front/back cover (KDP
+    and printers take the cover as a separate file). recto_blanks /
+    page_markers serve backend.core.print_book's two-pass recto layout."""
     labels = book_labels(structure.get("language"))
     lang = language_code(structure.get("language"))
 
     def _render(template: str, **kwargs) -> str:
         return env.get_template(template).render(labels=labels, lang=lang, **kwargs)
+
+    def _prose(text: str) -> str:
+        return paragraphs_html(hyphenate(text, lang) if print_trim else text)
 
     # 1. Detect topic → color palette
     topic = detect_topic(structure)
@@ -132,7 +168,13 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         cover_image=cover_image,
         date=datetime.now().strftime("%B %d, %Y"),
     )
-    pages.append(cover_html)
+    if print_trim:
+        pages.append(_render("title_page.html",
+                             title=structure.get("title", ""),
+                             subtitle=structure.get("subtitle", ""),
+                             author=structure.get("author", "")))
+    else:
+        pages.append(cover_html)
 
     # Copyright
     copyright_html = _render("copyright.html",
@@ -140,6 +182,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         subtitle=structure.get("subtitle", ""),
         author=structure.get("author", ""),
         year=datetime.now().year,
+        isbn=isbn,
     )
     pages.append(copyright_html)
 
@@ -147,7 +190,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     if introduction_text:
         intro_html = _render("introduction.html",
             title=labels["introduction"],
-            content=paragraphs_html(introduction_text),
+            content=_prose(introduction_text),
         )
         pages.append(intro_html)
 
@@ -162,7 +205,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         for si, sec in enumerate(ch.get("sections", [])):
             sections.append({
                 "heading": sec.get("heading", ""),
-                "content": paragraphs_html(sec.get("content", "")),
+                "content": _prose(sec.get("content", "")),
             })
             # Insert infographic after this section if exists
             key = f"{ci}_{si}"
@@ -189,6 +232,9 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
             })
 
         ch_ill_svg = ch_ills.get(ci, "")
+        if recto_blanks and ci in recto_blanks:
+            # Keeps this chapter opening on a right-hand page.
+            pages.append('<div class="blank-page page" style="page: front; height: 1px;"></div>')
         ch_html = _render("chapter.html",
             number=ci + 1,
             title=ch.get("title", f"Chapter {ci+1}"),
@@ -196,6 +242,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
             key_takeaway=ch.get("key_takeaway", ""),
             sections=sections,
             illustration=ch_ill_svg,
+            page_marker=f"§CH{ci}§" if page_markers else "",
         )
         pages.append(ch_html)
 
@@ -203,7 +250,7 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
     if conclusion:
         conc_html = _render("conclusion.html",
             title=conclusion.get("title", "Conclusion"),
-            content=paragraphs_html(conclusion.get("content", "")),
+            content=_prose(conclusion.get("content", "")),
         )
         pages.append(conc_html)
 
@@ -226,8 +273,8 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
         gloss_html = _render("glossary.html", terms=glossary_terms)
         pages.append(gloss_html)
 
-    # Back Cover
-    if back_cover_blurb:
+    # Back Cover (screen/ebook only — a print interior never includes covers)
+    if back_cover_blurb and not print_trim:
         back_html = _render("back_cover.html",
             blurb=back_cover_blurb,
             author=structure.get("author", ""),
@@ -259,6 +306,10 @@ def build_ebook_html(structure: dict, style: str, infographics: list,
             "topic": topic,
         },
         "content": "\n".join(pages),
+        "print_trim": print_trim,
+        "print_margins": PRINT_MARGINS,
+        "running_left": _css_string(structure.get("author") or structure.get("title", "")),
+        "running_right": _css_string(structure.get("title", "")),
     }
 
     base = env.get_template("base.html")

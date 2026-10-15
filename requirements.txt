@@ -60,6 +60,9 @@ ebooklib>=0.18.0
 # PDF Generation (Output)
 # =========================
 playwright>=1.40.0
+# Hyphenation dictionaries (incl. Polish) for justified print interiors —
+# the bundled Chromium can't hyphenate most languages on its own.
+pyphen>=0.14.0
 
 # =========================
 # Image Processing

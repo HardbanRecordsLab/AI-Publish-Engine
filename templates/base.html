@@ -96,6 +96,39 @@
     a { color: inherit; text-decoration: none; }
     .no-print { display: none; }
   }
+{% if print_trim %}
+  /* ── Print interior ───────────────────────────────────────────── */
+  @page {
+    size: {{ print_trim.width }}in {{ print_trim.height }}in;
+    margin: {{ print_margins.top }}in {{ print_margins.outside }}in {{ print_margins.bottom }}in {{ print_margins.inside }}in;
+    @top-left { content: none; } @top-right { content: none; }
+    @bottom-left { content: none; } @bottom-right { content: none; }
+    @bottom-center { content: counter(page); font-family: var(--font-body); font-size: 9pt; color: #555; }
+  }
+  /* Mirrored margins: the wider margin always sits at the spine. */
+  @page :left {
+    margin-left: {{ print_margins.outside }}in; margin-right: {{ print_margins.inside }}in;
+    @top-left { content: "{{ running_left }}"; font-family: var(--font-body); font-size: 8pt; font-style: italic; color: #555; }
+  }
+  @page :right {
+    margin-left: {{ print_margins.inside }}in; margin-right: {{ print_margins.outside }}in;
+    @top-right { content: "{{ running_right }}"; font-family: var(--font-body); font-size: 8pt; font-style: italic; color: #555; }
+  }
+  /* Front matter: no running heads or folios. */
+  /* One rule per named page: Chromium drops an @page rule with a selector
+     list ("@page a, b") entirely. */
+  {% for name in ["front", "copyright", "toc", "author"] %}
+  @page {{ name }} { @top-left { content: none; } @top-right { content: none; } @bottom-center { content: none; } }
+  {% endfor %}
+  @page copyright { margin: {{ print_margins.top }}in {{ print_margins.outside }}in; }
+  /* White paper, dark ink, whatever the screen theme. */
+  :root { --color-bg: #ffffff; --color-text: #1a1a1a; --color-heading: #111111; --color-muted: #555555; }
+  html, body { background: #ffffff; }
+  .chapter { padding-top: 1in; }
+  .chapter-header { border-bottom: none !important; }
+  .copyright.page, .title-page.page { height: auto !important; min-height: 6in; }
+  .author-avatar { display: none !important; }
+{% endif %}
 </style>
 </head>
 <body>

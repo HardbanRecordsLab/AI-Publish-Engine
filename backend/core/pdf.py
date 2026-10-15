@@ -12,6 +12,30 @@ TRIM_SIZES = {
 }
 BLEED = 0.125  # inches
 
+# Print-interior margins (inches). KDP's minimum gutter is 0.375" up to 150
+# pages and 0.5"+ beyond, outside margins at least 0.25"; these sit
+# comfortably above both, in the range trade paperbacks actually use.
+PRINT_MARGINS = {"top": 0.75, "bottom": 0.8, "inside": 0.875, "outside": 0.6}
+
+
+def normalize_isbn(isbn: str) -> str:
+    """Return the ISBN as printed on a copyright page ("978-…" kept as given,
+    minus spaces), or raise ValueError if its check digit is wrong."""
+    raw = (isbn or "").strip()
+    digits = raw.replace("-", "").replace(" ", "").upper()
+    if len(digits) == 13 and digits.isdigit():
+        total = sum(int(d) * (1 if i % 2 == 0 else 3) for i, d in enumerate(digits[:12]))
+        if (10 - total % 10) % 10 != int(digits[12]):
+            raise ValueError("ISBN-13 check digit is wrong")
+    elif len(digits) == 10 and digits[:9].isdigit() and (digits[9].isdigit() or digits[9] == "X"):
+        total = sum((10 - i) * int(d) for i, d in enumerate(digits[:9]))
+        check = (11 - total % 11) % 11
+        if ("X" if check == 10 else str(check)) != digits[9]:
+            raise ValueError("ISBN-10 check digit is wrong")
+    else:
+        raise ValueError("ISBN must have 10 or 13 digits")
+    return raw.replace(" ", "")
+
 
 async def _generate(html: str, output_path: str):
     out_dir = os.path.dirname(output_path)
@@ -40,6 +64,25 @@ async def html_to_pdf_async(html: str, output_path: str):
     await _generate(html, output_path)
 
 
+async def _generate_book(html: str, output_path: str):
+    """PDF whose page size and margins come from the document's own @page
+    rules (trim size, mirrored margins, running heads)."""
+    out_dir = os.path.dirname(output_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.set_content(html, wait_until="networkidle")
+        await page.pdf(path=output_path, print_background=True, prefer_css_page_size=True)
+        await browser.close()
+
+
+def html_to_book_pdf(html: str, output_path: str):
+    """Sync entry point (see html_to_pdf() on event loops)."""
+    asyncio.run(_generate_book(html, output_path))
+
+
 def _in_to_pt(inches: float) -> float:
     return inches * 72
 
@@ -49,7 +92,7 @@ def _in_to_px(inches: float, dpi: int = 96) -> int:
 
 
 def wrap_print_html(html: str, trim_size: str = "6x9", isbn: str = "",
-                    include_marks: bool = True, include_bleed: bool = True) -> str:
+                    include_marks: bool = False, include_bleed: bool = True) -> str:
     """Wrap content HTML in a print-ready layout with bleeds and crop marks."""
     sz = TRIM_SIZES.get(trim_size, TRIM_SIZES["6x9"])
     tw, th = sz["width"], sz["height"]
@@ -67,19 +110,9 @@ def wrap_print_html(html: str, trim_size: str = "6x9", isbn: str = "",
         }}
         """
 
-    isbn_html = ""
-    if isbn:
-        isbn_html = f"""
-        <div style="page-break-before:always;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px">
-            <div style="border:2px solid #000;padding:20px 40px;margin-bottom:20px;text-align:center">
-                <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">ISBN</div>
-                <div style="font-size:18px;font-weight:bold;font-family:monospace;letter-spacing:1px">{isbn}</div>
-                <div style="margin-top:12px;display:flex;justify-content:center;gap:4px">
-                    {'<div style="width:2px;height:30px;background:#000"></div>' * 8}
-                </div>
-            </div>
-            <div style="font-size:9px;color:#666;text-align:center">9 780000 000000 ></div>
-        </div>"""
+    # Legacy path (jobs saved without book data). No fake barcode: KDP and
+    # printers place the real one on the cover; the interior only states it.
+    isbn_html = f'<p style="text-align:center;font-size:9pt">ISBN {isbn}</p>' if isbn else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -157,7 +190,7 @@ def wrap_print_html(html: str, trim_size: str = "6x9", isbn: str = "",
 
 
 async def _generate_print(html: str, output_path: str, trim_size: str = "6x9",
-                          isbn: str = "", include_marks: bool = True):
+                          isbn: str = "", include_marks: bool = False):
     out_dir = os.path.dirname(output_path)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
@@ -174,12 +207,12 @@ async def _generate_print(html: str, output_path: str, trim_size: str = "6x9",
 
 
 def html_to_print_pdf(html: str, output_path: str, trim_size: str = "6x9",
-                      isbn: str = "", include_marks: bool = True):
+                      isbn: str = "", include_marks: bool = False):
     """Sync entry point — see html_to_pdf()'s docstring: safe only outside
     a running event loop. From async code, await html_to_print_pdf_async()."""
     asyncio.run(_generate_print(html, output_path, trim_size, isbn, include_marks))
 
 
 async def html_to_print_pdf_async(html: str, output_path: str, trim_size: str = "6x9",
-                                   isbn: str = "", include_marks: bool = True):
+                                   isbn: str = "", include_marks: bool = False):
     await _generate_print(html, output_path, trim_size, isbn, include_marks)

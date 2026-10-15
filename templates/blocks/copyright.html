@@ -7,6 +7,7 @@
     <p style="font-size: 8pt; color: var(--color-muted); line-height: 1.6;">
       {% if book_brand %}{{ labels.published_by }} {{ book_brand }}<br>{% elif author %}{{ labels.published_by }} {{ author }}<br>{% endif %}
       © {{ year }}
+      {% if isbn %}<br>ISBN {{ isbn }}{% endif %}
     </p>
     <div style="width: 40px; height: 1px; background: var(--color-border); margin: 0.5cm auto;"></div>
     <p style="font-size: 8pt; color: var(--color-muted); line-height: 1.6;">

@@ -195,6 +195,18 @@ Books are labelled in their own language (EN/PL/DE/ES/FR: "Rozdział",
 `lang` attribute that drives hyphenation. Other languages get English labels
 with the correct `lang` code.
 
+Print interior (`POST /api/download/{job_id}/print?trim_size=6x9&isbn=…`)
+is typeset from the saved book (`backend/core/print_book.py`): KDP trim
+sizes, mirrored margins (wider at the spine), running heads (author on
+left pages, title on right), centred folios, clean front matter (title
+page, copyright page with the ISBN — check digit validated — and contents),
+white paper whatever the theme, Polish/German/… hyphenation via `pyphen`,
+no covers inside (KDP takes the cover as a separate file and prints the
+barcode itself), and every chapter opening on a right-hand page. That last
+part needs two render passes, since Chromium ignores `break-before: right`.
+Jobs saved before book data existed fall back to wrapping their stored
+HTML.
+
 Translation (`POST /api/translate/{job_id}`, body `{"languages": [...]}`)
 runs in the background: the saved book is translated chapter by chapter with
 the writer model and rebuilt as HTML/EPUB/DOCX. Poll

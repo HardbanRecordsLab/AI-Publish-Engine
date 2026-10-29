@@ -16,6 +16,7 @@ from backend.core.jobs import get_job
 from backend.core.launch_page import generate_launch_page
 from backend.core.marketing import generate_all_marketing
 from backend.core.moderation import check_content
+from backend.core.nova_publish import NovaPublishError, publish_course
 from backend.core.proofreader import full_proofread, grammar_check, originality_check
 from backend.core.publish_prep import PREPARERS
 from backend.core.publish_validators import validate_apple_books, validate_epub, validate_kdp, validate_metadata
@@ -434,3 +435,22 @@ def api_launch_page(request: Request, job_id: str, launch_date: str = None, acce
         return HTMLResponse(content=html)
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ─── Publish an interactive course to HRL Nova Campus ───────────────
+@router.post("/api/nova/publish/{job_id}", dependencies=[Depends(require_admin)])
+@limiter.limit("10/minute")
+def api_publish_to_nova(request: Request, job_id: str, status: str = Query("draft", pattern="^(draft|published)$")):
+    """Create (or update) the course in Nova Campus: hosted HTML, lesson list and graded final test. Draft unless status=published."""
+    job = get_job(job_id)
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+    if job["status"] != "done":
+        return JSONResponse({"error": "Job not ready"}, status_code=400)
+    if job.get("content_type") != "interactive-course":
+        return JSONResponse({"error": "Only interactive courses can be published to Nova Campus"}, status_code=400)
+    try:
+        return publish_course(job_id, _saved_book(job), job.get("html") or "", status)
+    except NovaPublishError as e:
+        logger.warning(f"Nova publish of {job_id} failed: {e}")
+        return JSONResponse({"error": str(e)}, status_code=502)

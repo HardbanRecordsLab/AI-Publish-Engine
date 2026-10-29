@@ -34,6 +34,9 @@ class PipelineContext(BaseModel):
     progress: int = 0
     error: str | None = None
     research: dict[str, Any] = Field(default_factory=dict)
+    # interactive-course pipeline: numbered web sources (Source dicts) and the course being built
+    web_sources: list[dict[str, Any]] = Field(default_factory=list)
+    course: dict[str, Any] = Field(default_factory=dict)
     fact_check: list[dict[str, Any]] = Field(default_factory=list)
     qa_report: dict[str, Any] = Field(default_factory=dict)
     chapter_reviews: list[dict[str, Any]] = Field(default_factory=list)

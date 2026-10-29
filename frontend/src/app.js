@@ -134,6 +134,7 @@ document.querySelectorAll('.content-tab').forEach(tab => {
     document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     selectedType = tab.dataset.type;
+    document.getElementById('courseHint').classList.toggle('hidden', selectedType !== 'interactive-course');
     loadTemplates(selectedType);
   });
 });
@@ -269,7 +270,8 @@ function showResult(job) {
   // used to point at /api/download/undefined.
   const id = job.id || job.job_id;
   const isInteractive = job.content_type === 'interactive-book';
-  document.getElementById('resultFormats').innerHTML = selectedFormats.map(f =>
+  const isCourse = job.content_type === 'interactive-course';
+  document.getElementById('resultFormats').innerHTML = isCourse ? courseResultButtons(id) : selectedFormats.map(f =>
     `<a class="result-format-btn" href="${API}/api/download/${id}?format=${f}" target="_blank"><span style="font-size:16px">${['📕','📖','📄','🌐','📱','🌍']['pdf epub docx html mobi website'.split(' ').indexOf(f)] || '📁'}</span> ${f.toUpperCase()}</a>`
   ).join('') +
   `<a class="result-format-btn" href="${API}/api/preview/${id}" target="_blank">👁️ Preview</a>` +
@@ -278,6 +280,34 @@ function showResult(job) {
   (isInteractive ? `<a class="result-format-btn" href="${API}/api/reader/${id}" target="_blank">📖 Read Online</a>` : '') +
   `<button class="result-format-btn" onclick="showEmbedCode('${id}')">🔗 Embed</button>`;
   document.getElementById('resultCard').classList.add('visible');
+}
+
+// Interactive course: open it, keep the single HTML file, or publish it to HRL Nova Campus (draft first: the author decides when learners see it).
+function courseResultButtons(id) {
+  return `<a class="result-format-btn" href="${API}/api/preview/${id}" target="_blank">▶️ Open the course</a>` +
+    `<a class="result-format-btn" href="${API}/api/download/${id}?format=website" target="_blank">🌐 Download HTML</a>` +
+    `<button class="result-format-btn" onclick="publishToNova('${id}', 'draft', this)">🎓 Send to Nova (draft)</button>` +
+    `<button class="result-format-btn" onclick="publishToNova('${id}', 'published', this)">🚀 Publish in Nova</button>`;
+}
+
+async function publishToNova(jobId, status, btn) {
+  if (status === 'published' && !confirm('Publish this course in Nova Campus now? Learners will see it in the catalogue.')) return;
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Sending...'; btn.disabled = true; }
+  try {
+    const res = await fetch(API + `/api/nova/publish/${jobId}?status=${status}`, { method: 'POST', headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {} });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    alert(`${data.created ? 'Created' : 'Updated'} in Nova Campus (${data.status}): ${data.lessons} lessons, ${data.test_questions} test questions.
+${data.url}
+
+` +
+      (data.status === 'PUBLISHED' ? '' : 'It is a draft: open it in the Nova admin panel and publish when you have reviewed it.'));
+  } catch (e) {
+    alert('Nova publish failed: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = label; btn.disabled = false; }
+  }
 }
 
 // 2026-09-22: was a plain <a href> straight to a POST-only endpoint — native

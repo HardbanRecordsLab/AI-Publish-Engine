@@ -8,6 +8,7 @@ from loguru import logger
 # Ensure the project root is on sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from backend.agents.course_agents import course_pipeline
 from backend.agents import (
     AnalysisAgent,
     CoverArtAgent,
@@ -23,6 +24,7 @@ from backend.agents import (
 from backend.core.book_kinds import get_kind
 from backend.core.builder import build_ebook_html
 from backend.core.export import build_docx, build_epub
+from backend.core.course_engine import build_course_html
 from backend.core.interactive import build_interactive_book
 from backend.core.jobs import update_job
 from backend.core.pdf import html_to_pdf_async
@@ -90,6 +92,25 @@ async def process_job(ctx):
             accent_color=accent_color, bg_color=bg_color,
             heading_font=heading_font, body_font=body_font, author=author, kind=kind,
         )
+
+        if content_type == "interactive-course":
+            pipeline_ctx = Orchestrator(course_pipeline()).run(pipeline_ctx)
+            if pipeline_ctx.error:
+                update_job(job_id, "failed", error=pipeline_ctx.error)
+                update_progress(job_id, "failed", 0, error=pipeline_ctx.error)
+                return
+            course = pipeline_ctx.course
+            html = build_course_html(course, accent_color=accent_color)
+            website_path = os.path.join(OUTPUT_DIR, f"{job_id}.html")
+            with open(website_path, "w", encoding="utf-8") as f:
+                f.write(html)
+            import json
+            update_job(job_id, "done", 100, website_path=website_path, html=html, book_data=json.dumps(course),
+                       build_params=json.dumps({"style": style, "accent_color": accent_color, "quality": {"research": pipeline_ctx.research}}),
+                       topic=course["title"])
+            update_progress(job_id, "done", 100, title=course["title"])
+            logger.success(f"Job {job_id}: {course['title']} (interactive course: {os.path.getsize(website_path)} bytes)")
+            return
 
         pre_build = Orchestrator(pipeline_agents(kind))
         pipeline_ctx = pre_build.run(pipeline_ctx)

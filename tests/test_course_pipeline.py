@@ -177,7 +177,10 @@ def test_outline_needs_enough_lessons_and_ignores_unknown_sources():
 def test_queries_fall_back_to_the_brief_when_the_model_fails():
     def broken(*a):
         raise RuntimeError("down")
-    assert course_gen.plan_queries(broken, "--- BOOK BRIEF ---\nWebhooks for shop owners", "en") == ["Webhooks for shop owners"]
+    assert course_gen.plan_queries(broken, "--- BOOK BRIEF ---\nWebhooks for shop owners", "en") == [{"q": "Webhooks for shop owners", "lang": "en"}]
+    mixed = lambda s, u, m: {"queries": ["plain string", {"q": "dwuskładnikowe uwierzytelnianie", "lang": "pl"}, {"q": "two-factor authentication", "lang": "English"}, {"q": "x"}]}
+    assert course_gen.plan_queries(mixed, "brief", "Polish") == [{"q": "plain string", "lang": "pl"}, {"q": "dwuskładnikowe uwierzytelnianie", "lang": "pl"},
+                                                                  {"q": "two-factor authentication", "lang": "en"}]
 
 
 def test_final_test_prefers_the_harder_pool_and_is_reproducible():
@@ -218,7 +221,7 @@ def test_pipeline_builds_a_complete_course(monkeypatch):
         return [src(1), src(2)]
     ctx = run_pipeline(monkeypatch, gather=gather)
     c = ctx.course
-    assert seen["queries"][0] == "webhooks explained" and seen["urls"] == ["https://author.org/notes"]
+    assert seen["queries"][0] == {"q": "webhooks explained", "lang": "en"} and seen["urls"] == ["https://author.org/notes"]
     assert sum(len(p["lessons"]) for p in c["phases"]) == 6 and len(c["final_test"]) >= 6 and c["language"] == "en"
     assert course_gen.validate_course(c) == [] and {s["id"] for s in c["sources"]} == {"S1"}
     assert ctx.ebook_dict["title"] == "Webhooks in practice" and ctx.progress == 88
@@ -322,3 +325,91 @@ def test_publish_explains_a_refusal_and_a_missing_configuration(monkeypatch):
     client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(400, json={"message": "Nieprawidłowe dane kursu: html: Too small"})))
     with pytest.raises(nova_publish.NovaPublishError, match=r"refused the course \(400\).*html"):
         nova_publish.publish_course("job1", ctx.course, "<html>", client=client)
+
+
+# ------------------------------------------------------------------ quality guards found by the first real run
+
+def test_search_hits_that_miss_the_subject_are_dropped(monkeypatch):
+    def prov(q, lang):
+        return [webresearch.Hit("Welding robots in laboratories", "https://a.org/1", "Technical aspects of laboratory welding robot stations. " * 20, "openalex"),
+                webresearch.Hit("Phishing", "https://pl.wikipedia.org/wiki/Phishing", "Phishing to metoda oszustwa, rozpoznawanie phishingu to podstawa. " * 15, "wikipedia")]
+    monkeypatch.setattr(webresearch, "PROVIDERS", [("wikipedia", prov)])
+    monkeypatch.setattr(webresearch, "active_providers", lambda: ["wikipedia"])
+    out = webresearch.gather_sources(["rozpoznawanie phishingu przykłady"], "pl")
+    assert [s.title for s in out] == ["Phishing"]
+    assert webresearch.relevance("menedżer haseł jak działa", "laboratory welding robots") == 0.0
+
+
+def test_a_lesson_is_only_offered_sources_that_talk_about_it():
+    prompts = []
+
+    def llm(system, user, max_tokens=6000):
+        prompts.append(user)
+        return good_lesson(1, extra_cite="S2")
+    sources = [src(1, text="Technical aspects of laboratory welding robot stations. " * 20), src(2, text="Menedżer haseł przechowuje hasła w szyfrowanym sejfie. " * 20)]
+    sources[0].title, sources[1].title = "Welding robots", "Menedżer haseł"
+    outline = {"title": "C", "level": "beginner", "phases": [{"lessons": [{"title": "Menedżer haseł"}]}], "_brief": "b"}
+    lesson = course_gen.write_lesson(llm, outline, {"title": "Menedżer haseł", "goal": "jak działa menedżer haseł", "source_hints": ["S1", "S2"]}, 0, 1, sources, language="Polish", tone="")
+    assert "use only these ids: S2." in prompts[0] and "welding" not in prompts[0] and lesson["sources"] == ["S2"]
+
+
+def test_json_with_raw_line_breaks_inside_strings_is_accepted():
+    from backend.core.ai import _clean_json
+    assert _clean_json('```json\n{"body": "first paragraph\n\nsecond paragraph", "n": 2}\n```') == {"body": "first paragraph\n\nsecond paragraph", "n": 2}
+
+
+def test_lessons_are_written_in_parallel_and_stay_in_order(monkeypatch):
+    import threading
+    import time
+    seen, lock = set(), threading.Lock()
+    inner = fake_llm()
+
+    def slow(system, user, max_tokens=6000):
+        if "writing one lesson" in system:
+            with lock:
+                seen.add(threading.current_thread().name)
+            time.sleep(0.05)
+        return inner(system, user, max_tokens)
+    ctx = run_pipeline(monkeypatch, llm=slow)
+    titles = [l["title"] for p in ctx.course["phases"] for l in p["lessons"]]
+    assert titles == [f"Lesson {i}" for i in range(1, 7)] and len(seen) > 1
+
+
+def test_each_query_is_searched_in_its_own_language(monkeypatch):
+    calls = []
+
+    def prov(q, lang):
+        calls.append((q, lang))
+        return [webresearch.Hit(q.title(), f"https://w.org/{len(calls)}", f"{q} " * 120, "wikipedia")]
+    monkeypatch.setattr(webresearch, "PROVIDERS", [("wikipedia", prov)])
+    monkeypatch.setattr(webresearch, "active_providers", lambda: ["wikipedia"])
+    out = webresearch.gather_sources([{"q": "uwierzytelnianie dwuskładnikowe", "lang": "pl"}, {"q": "two factor authentication", "lang": "en"}, "plain query"], "de")
+    assert calls == [("uwierzytelnianie dwuskładnikowe", "pl"), ("two factor authentication", "en"), ("plain query", "de")] and len(out) == 3
+
+
+def test_an_encyclopaedia_hit_must_be_about_the_subject(monkeypatch):
+    def prov(q, lang):
+        return [webresearch.Hit("Rafał Brzoska", "https://pl.wikipedia.org/wiki/RB", "Przedsiębiorca, założyciel firmy, bezpieczeństwo cyfrowe jego firmy. " * 20, "wikipedia"),
+                webresearch.Hit("Bezpieczeństwo cyfrowe", "https://pl.wikipedia.org/wiki/BC", "Bezpieczeństwo cyfrowe małej firmy. " * 20, "wikipedia")]
+    monkeypatch.setattr(webresearch, "PROVIDERS", [("wikipedia", prov)])
+    monkeypatch.setattr(webresearch, "active_providers", lambda: ["wikipedia"])
+    out = webresearch.gather_sources(["bezpieczeństwo cyfrowe mała firma"], "pl")
+    assert [s.title for s in out] == ["Bezpieczeństwo cyfrowe"]
+
+
+def test_the_course_lists_only_sources_a_lesson_uses(monkeypatch):
+    ctx = run_pipeline(monkeypatch, gather=lambda qs, lang, user_urls=None: [src(1), src(2), src(3)])
+    assert [s["id"] for s in ctx.course["sources"]] == ["S1"]          # the stub lessons cite S1 only
+    lessons = [l for p in ctx.course["phases"] for l in p["lessons"]]
+    for l in lessons:
+        l["sources"] = []
+    outline = {"title": "t", "subtitle": "", "summary": "", "level": "beginner", "sensitive": False, "outcomes": [],
+               "phases": [{"title": "P", "summary": "", "lessons": lessons[:3]}, {"title": "Q", "summary": "", "lessons": lessons[3:]}]}
+    assert course_gen.assemble_course(outline, lessons, [src(1), src(2)], language="en")["sources"] == []
+
+
+def test_json_with_html_escaped_quotes_is_recovered():
+    from backend.core.ai import _clean_json
+    assert _clean_json('{&quot;title&quot;: &quot;Hasła&quot;, &quot;n&quot;: [1, 2]}') == {"title": "Hasła", "n": [1, 2]}
+    with pytest.raises(ValueError):
+        _clean_json("no json here")

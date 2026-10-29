@@ -26,7 +26,7 @@ _NUMBER = re.compile(r"^\s*\d+[.)]\s+")
 
 LABELS = {
     "en": {
-        "start": "Start", "lessons": "Lessons", "test": "Final test", "sources": "Sources", "objectives": "In this lesson you will",
+        "start": "Start", "lessons": "Lessons", "lessons_gen": "lessons", "test": "Final test", "sources": "Sources", "objectives": "In this lesson you will",
         "example": "Worked example", "exercise": "Practice", "hint": "Hint", "show_answer": "Show model answer", "hide_answer": "Hide model answer",
         "your_answer": "Write your answer here. It is saved on this device.", "quiz": "Check yourself", "correct": "Correct.", "wrong": "Not quite.",
         "retry": "Try the quiz again", "takeaways": "Key takeaways", "sources_used": "Sources for this lesson", "next": "Next", "prev": "Back",
@@ -43,7 +43,7 @@ LABELS = {
         "answered": "answered", "how": "How it works", "how_text": "Work through the lessons in order. Each one has an explanation, an example, a practice task and a short quiz. A lesson counts as complete when you have answered its quiz.",
     },
     "pl": {
-        "start": "Start", "lessons": "Lekcje", "test": "Test końcowy", "sources": "Źródła", "objectives": "Po tej lekcji będziesz",
+        "start": "Start", "lessons": "Lekcje", "lessons_gen": "lekcji", "test": "Test końcowy", "sources": "Źródła", "objectives": "Po tej lekcji będziesz",
         "example": "Przykład krok po kroku", "exercise": "Ćwiczenie", "hint": "Podpowiedź", "show_answer": "Pokaż wzorcową odpowiedź", "hide_answer": "Ukryj wzorcową odpowiedź",
         "your_answer": "Wpisz tu swoją odpowiedź. Zapisze się na tym urządzeniu.", "quiz": "Sprawdź się", "correct": "Dobrze.", "wrong": "Nie tym razem.",
         "retry": "Rozwiąż quiz jeszcze raz", "takeaways": "Najważniejsze", "sources_used": "Źródła tej lekcji", "next": "Dalej", "prev": "Wstecz",
@@ -258,7 +258,7 @@ function navBtn(label,view,isDone,isCur,meta,disabled){var b=h('button',{class:'
 h('span',{class:'dot'+(isDone?' done':''),'aria-hidden':'true'},isDone?'✓':''),h('span',null,label,meta?h('span',{class:'note'},' · '+meta):null));return b;}
 
 function renderTop(){return h('header',{class:'top'},h('button',{class:'btn ghost menu',type:'button','aria-expanded':String(navOpen),'aria-controls':'nav',onclick:function(){navOpen=!navOpen;render();}},L.menu),
-h('h1',null,C.title),h('div',{class:'bar',role:'progressbar','aria-valuemin':'0','aria-valuemax':'100','aria-valuenow':String(percent()),'aria-label':L.progress},h('i',{style:'width:'+percent()+'%'})),h('span',{class:'pct'},L.progress+' '+percent()+'%'));}
+h('h1',null,C.title),h('div',{class:'bar',role:'progressbar','aria-valuemin':'0','aria-valuemax':'100','aria-valuenow':String(percent()),'aria-label':L.progress},h('i',{style:'width:'+percent()+'%'})),h('span',{class:'pct'},host==='nova'?doneCount()+' '+L.of+' '+lessons.length+' '+L.lessons_gen:L.progress+' '+percent()+'%'));}
 
 function viewHome(){var f=document.createDocumentFragment(),i=nextOpen();
 var hero=h('div',{class:'hero',style:D.cover?'background-image:linear-gradient(135deg,rgba(0,0,0,.55),rgba(0,0,0,.25)),url('+D.cover+')':null},h('div',{class:'eyebrow',style:'color:inherit;opacity:.85'},C.subtitle||''),h('h2',null,C.title),h('p',null,C.summary),

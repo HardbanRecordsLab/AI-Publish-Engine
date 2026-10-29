@@ -1,4 +1,6 @@
 """Agents of the interactive-course pipeline: research the web, design the course, write every lesson, assemble and check it."""
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from loguru import logger
 
 from backend.core import course_gen, webresearch
@@ -28,7 +30,7 @@ class CourseResearchAgent(BaseAgent):
         ctx.set_progress(8)
         sources = self._gather(queries, course_gen.lang_code(ctx.language) or "en", user_urls=webresearch.urls_in(ctx.text))
         ctx.web_sources = webresearch.sources_as_dicts(sources)
-        ctx.research = {"queries": queries, "providers": webresearch.active_providers(), "sources": len(sources)}
+        ctx.research = {"queries": [q["q"] + (f" [{q['lang']}]" if q.get("lang") else "") for q in queries], "providers": webresearch.active_providers(), "sources": len(sources)}
         if not sources:
             logger.warning("CourseResearchAgent: no web sources found; the course will rest on the author's material and general knowledge")
         ctx.set_progress(22)
@@ -56,7 +58,9 @@ class CourseArchitectAgent(BaseAgent):
 
 
 class LessonWriterAgent(BaseAgent):
-    """One model call per lesson, each grounded in the sources the outline assigned to it."""
+    """One model call per lesson, each grounded in the sources the outline assigned to it. Lessons are independent, so a few are written
+    at a time (the 5-lesson test took 13 minutes one by one); the model helpers throttle and meter calls from several threads safely."""
+    WORKERS = 3
 
     def __init__(self, llm=None):
         super().__init__("LessonWriterAgent")
@@ -67,15 +71,27 @@ class LessonWriterAgent(BaseAgent):
         outline = ctx.course["outline"]
         specs = [l for p in outline["phases"] for l in p["lessons"]]
         sources = _sources(ctx)
-        lessons = []
-        for i, spec in enumerate(specs):
-            if is_cancelled(ctx.job_id):
-                raise RuntimeError("Cancelled by user")
-            lessons.append(course_gen.write_lesson(llm, outline, spec, i, len(specs), sources, language=ctx.language, tone=ctx.tone))
-            pct = 30 + int(55 * (i + 1) / len(specs))
-            ctx.set_progress(pct)
-            update_job(ctx.job_id, "processing", pct)
-            logger.info(f"LessonWriterAgent: lesson {i + 1}/{len(specs)} written")
+        if is_cancelled(ctx.job_id):
+            raise RuntimeError("Cancelled by user")
+        lessons: list = [None] * len(specs)
+        with ThreadPoolExecutor(max_workers=self.WORKERS) as pool:
+            futures = {pool.submit(course_gen.write_lesson, llm, outline, spec, i, len(specs), sources, language=ctx.language, tone=ctx.tone): i
+                       for i, spec in enumerate(specs)}
+            finished = 0
+            try:
+                for f in as_completed(futures):
+                    lessons[futures[f]] = f.result()
+                    finished += 1
+                    pct = 30 + int(55 * finished / len(specs))
+                    ctx.set_progress(pct)
+                    update_job(ctx.job_id, "processing", pct)
+                    logger.info(f"LessonWriterAgent: {finished}/{len(specs)} lessons written")
+                    if is_cancelled(ctx.job_id):
+                        raise RuntimeError("Cancelled by user")
+            except BaseException:
+                for f in futures:
+                    f.cancel()
+                raise
         ctx.course["lessons"] = lessons
         return ctx
 

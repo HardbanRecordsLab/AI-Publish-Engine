@@ -30,7 +30,7 @@ from loguru import logger
 
 USER_AGENT = "HRL-AIPublish-Research/1.0 (+https://hardbanrecordslab.online; contact@hardbanrecordslab.online)"
 MAX_PAGE_BYTES = 1_500_000
-MAX_EXTRACT_CHARS = 3500
+MAX_EXTRACT_CHARS = 6000
 HTTP_TIMEOUT = 12.0
 MAX_REDIRECTS = 4
 _URL_RE = re.compile(r"https?://[^\s<>\"')\]]+")
@@ -43,6 +43,7 @@ class Hit:
     snippet: str = ""
     provider: str = ""
     license: str = ""
+    query: str = ""
 
 
 @dataclass
@@ -162,6 +163,35 @@ def _readable(raw: str, plain: bool = False) -> tuple[str, str]:
     return title[:200], text[:6000]
 
 
+# ---------------------------------------------------------------- relevance
+
+_STOP = set("jak dla oraz przez czyli czy jest sie przy bez nie tak lub the and for with how what why when from that this your are you "
+            "podstawy wprowadzenie poradnik kurs guide course basics intro introduction explained".split())
+
+
+def _words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[^\W\d_]{4,}", (text or "").lower()) if w not in _STOP}
+
+
+def _common_prefix(a: str, b: str) -> int:
+    n = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        n += 1
+    return n
+
+
+def relevance(query: str, text: str) -> float:
+    """Share of the query's words found in the text, ignoring inflection (a word matches when the shared beginning leaves at most two
+    letters over: Polish 'małej' matches 'mała', 'phishingu' matches 'phishing'). 0..1."""
+    q = _words(query)
+    if not q:
+        return 1.0
+    tw = _words(text)
+    return sum(1 for w in q if any(_common_prefix(w, t) >= max(3, len(w) - 2) for t in tw)) / len(q)
+
+
 # ---------------------------------------------------------------- providers
 
 def _brave(query: str, language: str) -> list[Hit]:
@@ -197,13 +227,29 @@ def _searx(query: str, language: str) -> list[Hit]:
 
 def _wikipedia(query: str, language: str) -> list[Hit]:
     lang = (language or "en")[:2].lower()
-    r = _get(f"https://{lang}.wikipedia.org/w/api.php", params={
-        "action": "query", "format": "json", "generator": "search", "gsrsearch": query, "gsrlimit": 4,
-        "prop": "extracts|info", "exintro": 1, "explaintext": 1, "exchars": MAX_EXTRACT_CHARS, "exlimit": "max", "inprop": "url"})
-    r.raise_for_status()
-    pages = sorted(((r.json().get("query") or {}).get("pages") or {}).values(), key=lambda p: p.get("index", 99))
-    return [Hit(p["title"], p["fullurl"], _plain(p.get("extract", "")), "wikipedia", "CC BY-SA 4.0 (Wikipedia)")
+    def search(q: str) -> list:
+        r = _get(f"https://{lang}.wikipedia.org/w/api.php", params={
+            "action": "query", "format": "json", "generator": "search", "gsrsearch": q, "gsrlimit": 4,
+            "prop": "extracts|info", "exintro": 1, "explaintext": 1, "exlimit": "max", "inprop": "url"})
+        r.raise_for_status()
+        return sorted(((r.json().get("query") or {}).get("pages") or {}).values(), key=lambda p: p.get("index", 99))
+    pages = search(query)
+    if len(pages) < 2:   # the search needs every word to appear in one article; a few significant words joined with OR find the right page
+        words = [w for w in re.findall(r"[^\W\d_]{4,}", query) if w.lower() not in _STOP]
+        if len(words) > 1:
+            pages = search(" OR ".join(words))
+    hits = [Hit(p["title"], p["fullurl"], _plain(p.get("extract", ""))[:MAX_EXTRACT_CHARS], "wikipedia", "CC BY-SA 4.0 (Wikipedia)")
             for p in pages if p.get("fullurl") and len(p.get("extract", "")) > 150]
+    for h in hits[:2]:   # the intro alone is a thin base for a lesson: read the article itself
+        try:
+            full = _get(f"https://{lang}.wikipedia.org/w/api.php", params={"action": "query", "format": "json", "prop": "extracts", "explaintext": 1,
+                                                                            "titles": h.title, "redirects": 1})
+            body = next(iter(((full.json().get("query") or {}).get("pages") or {}).values()), {}).get("extract", "")
+            if len(body) > len(h.snippet):
+                h.snippet = re.sub(r"\s*={2,}[^=\n]+={2,}\s*", " ", body)[:MAX_EXTRACT_CHARS]   # drop "== Heading ==" lines, keep the prose
+        except Exception as e:  # noqa: BLE001
+            logger.info(f"research: full Wikipedia text unavailable for {h.title}: {e}")
+    return hits
 
 
 def _openalex(query: str, language: str) -> list[Hit]:
@@ -263,7 +309,7 @@ def _norm(url: str) -> str:
     return f"{p.netloc.lower().removeprefix('www.')}{p.path.rstrip('/')}"
 
 
-def gather_sources(queries: list[str], language: str = "en", *, user_urls: list[str] | None = None,
+def gather_sources(queries: list, language: str = "en", *, user_urls: list[str] | None = None,
                    max_sources: int = 10, fetch_pages: int = 4, deadline_s: float = 120.0) -> list[Source]:
     """Search every query on every active provider, read the best pages, return numbered sources (S1, S2 ...)."""
     started = time.monotonic()
@@ -272,13 +318,18 @@ def gather_sources(queries: list[str], language: str = "en", *, user_urls: list[
         hits.append(Hit("", u, "", "author"))
     active = {name for name in active_providers()}
     per_query: list[list[Hit]] = []
-    for q in queries:
+    for item in queries:
+        # a query is a string or {"q": ..., "lang": ...}: English material is often richer than the learners' language
+        q, qlang = (item.get("q", ""), item.get("lang") or language) if isinstance(item, dict) else (item, language)
         found: list[Hit] = []
         for name, fn in PROVIDERS:
-            if name not in active or time.monotonic() - started > deadline_s:
+            if name not in active or time.monotonic() - started > deadline_s or not q:
                 continue
             try:
-                found += fn(q, language)
+                got = fn(q, qlang)
+                for h in got:
+                    h.query = q
+                found += got
             except Exception as e:  # noqa: BLE001 - one failing provider must not end the research
                 logger.warning(f"research: {name} failed for '{q[:50]}': {e}")
         per_query.append(found)
@@ -299,6 +350,12 @@ def gather_sources(queries: list[str], language: str = "en", *, user_urls: list[
             continue
         seen.add(key)
         title, text = h.title, h.snippet
+        # a hit that does not talk about what was searched for is noise (a Polish query returned a paper on welding robots)
+        if h.provider != "author" and h.query:
+            floor = 0.6 if h.provider in ("wikipedia", "openalex") else 0.34
+            # an encyclopaedia article must also be *about* the subject: its title shares a word with the query (a founder's biography matched on 'company')
+            if relevance(h.query, f"{title} {text}") < floor or (h.provider == "wikipedia" and relevance(h.query, title) == 0):
+                continue
         thin = len(text) < 500 and h.provider not in ("wikipedia", "openalex")
         if (thin or h.provider == "author") and fetched < fetch_pages + len(user_urls or []):
             page = fetch_page(h.url)

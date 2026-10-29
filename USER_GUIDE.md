@@ -151,6 +151,21 @@ An **embeddable** version of your book that can be inserted into any website via
 
 ---
 
+## Interactive Courses
+
+Choose the **Course** output type, describe the subject in the topic box (paste links or upload your own material; every link is read first),
+set the number of lessons in *Chapters* (4 to 14, default 8) and the language. The engine then:
+
+1. searches the web and reads real pages (Wikipedia and scholarly abstracts without a key; Brave, Tavily or SearXNG when configured);
+2. designs the course (phases and lessons) and writes every lesson: explanation, worked example, practice task, a 3-question quiz that explains each answer;
+3. builds a graded final test and a sources page (only sources a lesson really uses);
+4. produces one self-contained HTML page with a navigator, saved notes and progress.
+
+When the job is done: **Open the course** to review it, **Download HTML** to host it yourself, **Send to Nova (draft)** to create the course in HRL Nova Campus
+(lessons ticked off by finishing each quiz, graded test with certificate), or **Publish in Nova** to make it visible to learners. Sending the same job again
+updates the same Nova course. A lesson that cannot be written well enough fails the job with a message instead of shipping a thin course.
+Always read a generated course before publishing it: the model writes from the sources it found and from general knowledge.
+
 ## Publishing & Advanced Features
 
 ### Marketing Content Generation

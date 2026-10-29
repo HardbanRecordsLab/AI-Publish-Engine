@@ -225,6 +225,17 @@ def _try_providers(system: str, user: str, preferred: str | None = None, max_tok
 
 
 def _clean_json(raw: str) -> dict:
+    try:
+        return _clean_json_raw(raw)
+    except ValueError:
+        # one writer model sometimes answers with HTML-escaped quotes (&quot;) around the keys; undo that and try again
+        if "&quot;" in raw or "&#34;" in raw:
+            import html
+            return _clean_json_raw(html.unescape(raw))
+        raise
+
+
+def _clean_json_raw(raw: str) -> dict:
     raw = raw.strip()
     raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
     raw = re.sub(r"\s*```$", "", raw, flags=re.IGNORECASE)
@@ -257,6 +268,11 @@ def _clean_json(raw: str) -> dict:
                     candidate = raw[start:i+1]
                     try:
                         return json.loads(candidate)
+                    except json.JSONDecodeError:
+                        pass
+                    try:
+                        # long lesson texts often carry raw line breaks inside strings, which strict parsing refuses
+                        return json.loads(candidate, strict=False)
                     except json.JSONDecodeError:
                         pass
     raise ValueError("No valid JSON found in AI response")
@@ -328,7 +344,7 @@ def _writer_json(system: str, user: str, provider: str | None, *,
         try:
             return _clean_json(raw)
         except ValueError:
-            logger.warning(f"writer {WRITER_MODEL}: unparseable JSON, falling back")
+            logger.warning(f"writer {WRITER_MODEL}: unparseable JSON ({len(raw)} chars, ends with {raw[-80:]!r}), falling back")
     return _clean_json(_try_providers(system, user, preferred=provider, max_tokens=fallback_max_tokens,
                                       temperature=temperature, timeout=WRITING_TIMEOUT))
 

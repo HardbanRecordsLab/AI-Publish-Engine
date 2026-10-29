@@ -180,6 +180,21 @@ Configuration is in `/var/www/ai-publish-engine/.env`.
 | `WORKERS` | Number of uvicorn workers (default: 2) |
 | `LOG_LEVEL` | Logging level (debug, info, warning, error) |
 
+Interactive courses (optional, `content_type=interactive-course`):
+
+| Variable | Description |
+|----------|-------------|
+| `BRAVE_API_KEY` | Brave Search API for the research step (best results) |
+| `TAVILY_API_KEY` | Tavily search, used when set |
+| `SEARXNG_URL` | A SearXNG instance with JSON output enabled |
+| `NOVA_API_URL` | Where Nova Campus listens for course imports (same server: `http://127.0.0.1:3002`) |
+| `NOVA_SERVICE_KEY` | Shared secret for Nova's `/api/service/interactive-courses` (also stored in Nova's Infisical project) |
+| `NOVA_PUBLIC_URL` | Public Nova address used in the link returned after publishing |
+
+Without a search key the research step uses Wikipedia and OpenAlex only (no key needed); that is fine for encyclopaedic topics and thin for
+anything current or practical. See `backend/core/webresearch.py`. The course pipeline lives in `backend/agents/course_agents.py`,
+`backend/core/course_gen.py` (generation and validation) and `backend/core/course_engine.py` (the single-file HTML page).
+
 Per-provider model override (optional):
 - `GROQ_MODEL`, `GEMINI_MODEL`, `OPENROUTER_MODEL`, `MISTRAL_MODEL`, `OPENAI_MODEL`
 

@@ -686,9 +686,18 @@ def rewrite_unit(llm: LLM, outline: dict, course: dict, index: int, sources: lis
     specs = [l for ph in outline["phases"] for l in ph["lessons"]]
     if not 0 <= index < len(lessons) or len(specs) != len(lessons):
         raise ValueError("Nie ma takiego dnia w tym kursie.")
-    write = write_day if course.get("format") == "program" else write_lesson
+    program = course.get("format") == "program"
+    write = write_day if program else write_lesson
     lessons[index] = write(llm, outline, specs[index], index, len(lessons), sources, language=language, tone=tone, note=note, previous=lessons[index])
-    return assemble_course(outline, lessons, sources, language=language, frame=course.get("frame"))
+    # The quality report stays with the course; what it said about the unit that was just rewritten no longer applies to the new text.
+    label = f"{'Day' if program else 'Lesson'} {index + 1}"
+    report = copy.deepcopy(course.get("quality") or {})
+    if report:
+        report["unsupported"] = [u for u in report.get("unsupported", []) if u.get("unit") != label]
+        report["repeats"] = [r for r in report.get("repeats", []) if label not in (r.get("a"), r.get("b"))]
+        report["static"] = [x for x in report.get("static", []) if x.get("where") != label]
+        report["fixed"] = sum(1 for u in report["unsupported"] if u.get("fixed"))
+    return assemble_course(outline, lessons, sources, language=language, frame=course.get("frame"), quality=report)
 
 
 def validate_course(course: dict) -> list[str]:

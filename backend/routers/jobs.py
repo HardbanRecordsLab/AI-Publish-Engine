@@ -213,7 +213,8 @@ def get_status(request: Request, job_id: str):
         "style": job.get("style"),
         "error": job.get("error"),
         "quality": _quality_summary(job),
-        "resumable": job["status"] in ("failed", "cancelled") and checkpoint.has(job_id) and not is_running(job_id),
+        "resumable": (job["status"] in ("failed", "cancelled", "queued", "processing")   # "processing" without a live thread = the server restarted under it
+                      and checkpoint.has(job_id) and not is_running(job_id)),
         "awaiting_approval": job["status"] == "awaiting_approval",
         "rewritable": job["status"] == "done" and job.get("content_type") == "interactive-course" and checkpoint.stage(job_id, "outline") is not None,
     }

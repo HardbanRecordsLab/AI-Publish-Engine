@@ -242,8 +242,14 @@ def test_one_day_is_rewritten_with_the_authors_note_and_the_rest_is_untouched():
     assert [d for i, d in enumerate(new_days) if i != 2] == [d for i, d in enumerate(old_days) if i != 2]
     assert len(prompts) == 1 and "Add a real example from a small shop" in prompts[0] and "current version of this unit" in prompts[0]
     assert new["frame"] == course["frame"] and course_gen.validate_course(new) == []
+    assert new["quality"] == {}   # a course without a report stays without one
     with pytest.raises(ValueError):
         course_gen.rewrite_unit(llm, outline, course, 99, sources, note="x" * 10, language="English", tone="")
+    # the review of the other days survives; what it said about the rewritten day is dropped
+    course["quality"] = {"checked": 5, "fixed": 1, "static": [{"where": "Day 3", "issue": "placeholder"}], "repeats": [{"a": "Day 2", "b": "Day 4", "text": "x"}],
+                         "unsupported": [{"unit": "Day 3", "claim": "c", "why": "w", "fixed": True}, {"unit": "Day 4", "claim": "d", "why": "w", "fixed": False}]}
+    kept = course_gen.rewrite_unit(llm, outline, course, 2, sources, note="Add a real example from a small shop", language="English", tone="")["quality"]
+    assert [u["unit"] for u in kept["unsupported"]] == ["Day 4"] and kept["static"] == [] and kept["repeats"] == course["quality"]["repeats"] and kept["fixed"] == 0
 
 
 # ------------------------------------------------------------------ the HTTP side

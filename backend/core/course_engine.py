@@ -6,8 +6,10 @@ a sources page and a completion screen.
 
 Progress lives in the browser's localStorage when the page runs on its own. When the page is embedded in an iframe (HRL Nova
 Campus) it talks to the host with postMessage instead:
-    page -> host   {source: "hrl-course", type: "hrl-course-ready" | "hrl-course-progress" | "hrl-course-open-test", ...}
-    host -> page   {type: "hrl-course-init", host: "nova", completed: [lesson index, ...]}
+    page -> host   {source: "hrl-course", type: "hrl-course-ready" | "hrl-course-progress" | "hrl-course-open-test" | "hrl-course-state", ...}
+    host -> page   {type: "hrl-course-init", host: "nova", completed: [lesson index, ...], work: {note, steps, meas, ans, view}}
+"hrl-course-state" carries what the learner keeps inside the course (notes, ticked session steps, 0-10 ratings, quiz answers, where they are) as a patch
+{note: {key: text}, steps: {key: 1}, ..., view: "lesson:2"}; a null value deletes a key. The host stores it on the learner's account and returns it in "work".
 The host stores progress on the learner's account and runs the graded final test itself (that is what issues the certificate).
 
 All course text is escaped here at build time; the page never inserts model output as markup unescaped.
@@ -315,7 +317,14 @@ var lessons=[];C.phases.forEach(function(p){p.lessons.forEach(function(l){l.inde
 var host=null,embedded=window.parent!==window,S=load(),navOpen=false,hlSrc=null;
 function fresh(){return{done:{},ans:{},note:{},steps:{},meas:{},test:null,view:'home'};}
 function load(){try{var r=localStorage.getItem(KEY);return r?Object.assign(fresh(),JSON.parse(r)):fresh();}catch(e){return fresh();}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+var SYNC=['note','steps','meas','ans'],sent={},flushT;
+function real(v){return v!=null&&!(typeof v==='object'&&Object.keys(v).length===0);}   // an empty rating or answer list is just a place waiting for input
+function snap(){sent={view:S.view};SYNC.forEach(function(g){sent[g]={};Object.keys(S[g]||{}).forEach(function(k){if(real(S[g][k]))sent[g][k]=JSON.stringify(S[g][k]);});});}
+function flush(){var patch={},any=false;SYNC.forEach(function(g){var cur=S[g]||{},was=sent[g]=sent[g]||{},p={},n=0;
+Object.keys(cur).forEach(function(k){if(!real(cur[k]))return;var j=JSON.stringify(cur[k]);if(was[k]!==j){p[k]=cur[k];was[k]=j;n++;}});
+Object.keys(was).forEach(function(k){if(!real(cur[k])){p[k]=null;delete was[k];n++;}});if(n){patch[g]=p;any=true;}});
+if(S.view!==sent.view){patch.view=S.view;sent.view=S.view;any=true;}if(any)post({type:'hrl-course-state',patch:patch});}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}if(embedded){clearTimeout(flushT);flushT=setTimeout(flush,600);}}
 function post(m){if(!embedded)return;try{window.parent.postMessage(Object.assign({source:'hrl-course',course:D.key},m),'*');}catch(e){}}
 function h(tag,attrs){var e=document.createElement(tag);attrs=attrs||{};for(var k in attrs){var v=attrs[k];if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='html')e.innerHTML=v;else if(k.slice(0,2)==='on')e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v);}
 for(var i=2;i<arguments.length;i++)add(e,arguments[i]);return e;}
@@ -325,8 +334,12 @@ function doneCount(){return lessons.filter(done).length;}
 function percent(){return lessons.length?Math.round(100*doneCount()/lessons.length):0;}
 function allDone(){return doneCount()===lessons.length;}
 function setDone(l,v){if(!!S.done[l.id]===v)return;if(v)S.done[l.id]=true;else delete S.done[l.id];save();post({type:'hrl-course-progress',index:l.index,lessonId:l.id,completed:v,done:doneCount(),total:lessons.length,percent:percent()});}
+snap();
 window.addEventListener('message',function(ev){var m=ev.data;if(ev.source!==window.parent||!m||m.type!=='hrl-course-init')return;host=m.host||'nova';
-if(Array.isArray(m.completed)){m.completed.forEach(function(i){if(lessons[i])S.done[lessons[i].id]=true;});}save();render();});
+if(Array.isArray(m.completed)){m.completed.forEach(function(i){if(lessons[i])S.done[lessons[i].id]=true;});}
+if(m.work&&typeof m.work==='object'){SYNC.forEach(function(g){var w=m.work[g];if(!w||typeof w!=='object')return;S[g]=S[g]||{};Object.keys(w).forEach(function(k){S[g][k]=w[k];});});
+if(typeof m.work.view==='string'&&S.view==='home')S.view=m.work.view;snap();}   // what the account already holds is not sent back
+save();render();});
 function go(view){S.view=view;save();navOpen=false;render();var m=document.getElementById('main');if(m){m.focus({preventScroll:true});}window.scrollTo(0,0);}
 function nextOpen(){for(var i=0;i<lessons.length;i++)if(!done(lessons[i]))return i;return -1;}
 function levelName(){return L[C.level]||C.level;}

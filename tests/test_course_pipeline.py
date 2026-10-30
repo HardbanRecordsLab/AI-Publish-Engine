@@ -582,7 +582,7 @@ def test_a_frame_that_cannot_be_written_never_fails_the_course(monkeypatch, mode
 def test_a_thin_day_is_rewritten_once_and_a_hollow_one_fails_the_job(monkeypatch):
     ctx = run_pipeline(monkeypatch, llm=fake_llm(bad_first_lessons=1), course_format="program", chapters="6")
     assert course_gen.validate_course(ctx.course) == []
-    with pytest.raises(course_gen.CourseGenerationError, match="Day 1"):
+    with pytest.raises(course_gen.CourseGenerationError, match=r"Day \d"):   # days are written three at a time, so which one fails first varies
         run_pipeline(monkeypatch, llm=fake_llm(bad_first_lessons=99), course_format="program", chapters="6")
 
 

@@ -180,6 +180,7 @@ def _payload(course: dict) -> dict:
     return {"format": course.get("format") or "lessons", "title": course["title"], "subtitle": course["subtitle"], "summary": course["summary"], "level": course["level"],
             "minutes": course["minutes"], "outcomes": course["outcomes"], "phases": phases, "test": course["final_test"], "disclaimer": course.get("disclaimer", ""),
             "frame": _frame_payload(course.get("frame") or {}, nums), "year": course.get("year") or "",
+            "ui": {k: str(v)[:40] for k, v in (course.get("ui") or {}).items() if k in ("session", "reflection", "aha", "steps") and v},
             "sources": [{"n": nums[s["id"]], "title": s["title"], "url": s["url"], "license": s.get("license", "")} for s in course.get("sources", [])]}
 
 
@@ -309,6 +310,7 @@ details.faq{background:var(--card);border:1px solid var(--line);border-radius:12
 JS = r"""
 (function(){'use strict';
 var D=JSON.parse(document.getElementById('course-data').textContent),L=D.labels,C=D.course,KEY='hrl-course:'+D.key;
+['session','reflection','aha','steps'].forEach(function(k){if(C.ui&&typeof C.ui[k]==='string'&&C.ui[k])L[k]=C.ui[k];});   // names of the day's blocks, chosen to fit the subject
 var lessons=[];C.phases.forEach(function(p){p.lessons.forEach(function(l){l.index=lessons.length;l.phase=p.title;lessons.push(l);});});
 var host=null,embedded=window.parent!==window,S=load(),navOpen=false,hlSrc=null;
 function fresh(){return{done:{},ans:{},note:{},steps:{},meas:{},test:null,view:'home'};}

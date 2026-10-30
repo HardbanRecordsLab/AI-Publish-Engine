@@ -193,7 +193,9 @@ Interactive courses (optional, `content_type=interactive-course`):
 
 The form field `course_format` (`program`, the default, or `lessons`) selects the shape of a course; in `program` the `chapters` field is the number of
 days (3 to 60, empty = the architect chooses). `backend/core/course_gen.py` holds `write_day`, `write_frame` (welcome, for whom, worksheets, FAQ, what next) and
-`normalize_*` checks; `course_engine.py` renders the day, session and page views. Old lesson courses keep rendering unchanged.
+`normalize_*` checks; `course_engine.py` renders the day, session and page views. Old lesson courses keep rendering unchanged. The architect also
+returns a per-subject `style` (names of the session, reflection, insight and step blocks, and what a session is in this programme: gentle guided practice,
+hands-on task, experiment, drill), kept in `course["ui"]` and applied to the page labels, so the shape of a programme follows its subject.
 
 Without a search key the research step uses Wikipedia and OpenAlex only (no key needed); that is fine for encyclopaedic topics and thin for
 anything current or practical. See `backend/core/webresearch.py`. The course pipeline lives in `backend/agents/course_agents.py`,

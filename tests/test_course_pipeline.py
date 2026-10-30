@@ -29,7 +29,7 @@ def good_day(n: int, cite: str = "S1") -> dict:
     def q(i):
         return {"q": f"Day {n} question {i}?", "options": [f"right {i}", f"wrong a{i}", f"wrong b{i}", f"wrong c{i}"], "correct": 0,
                 "explanation": f"Because right {i} is what the day says [{cite}]."}
-    return {"title": f"Day {n} theme", "focus": "What the day works on", "minutes": 25,
+    return {"title": f"Theme {n}", "focus": "What the day works on", "minutes": 25,
             "sections": [{"heading": "Theme", "body": PARA * 3 + f"A fact from the web [{cite}]."}],
             "reflection": ["Where does this show up in your own project?"],
             "session": {"title": "Practice", "minutes": 15, "intention": "I look at one real webhook calmly and carefully.",
@@ -56,7 +56,7 @@ def good_frame(sensitive: bool = False) -> dict:
     return f
 
 
-def fake_llm(calls=None, bad_first_lessons=0, sensitive=False, frame="ok", prompts=None):
+def fake_llm(calls=None, bad_first_lessons=0, sensitive=False, frame="ok", prompts=None, style=None):
     state = {"lesson_calls": 0}
 
     def llm(system, user, max_tokens=6000):
@@ -74,8 +74,11 @@ def fake_llm(calls=None, bad_first_lessons=0, sensitive=False, frame="ok", promp
             for pi in range(2):
                 phases.append({"title": f"Phase {pi + 1}", "summary": "s", "lessons": [{"title": f"Topic {pi * per + i + 1}", "goal": "g", "source_hints": ["S1", "S9"]}
                                                                                        for i in range(per if pi == 0 else n - per)]})
-            return {"title": "Webhooks in practice", "subtitle": "From zero to production", "summary": "You learn webhooks.", "level": "beginner",
-                    "sensitive": sensitive, "outcomes": ["Explain webhooks", "Build one"], "phases": phases}
+            out = {"title": "Webhooks in practice", "subtitle": "From zero to production", "summary": "You learn webhooks.", "level": "beginner",
+                   "sensitive": sensitive, "outcomes": ["Explain webhooks", "Build one"], "phases": phases}
+            if style is not None:
+                out["style"] = style
+            return out
         if "writing one lesson" in system or "writing one day" in system:
             state["lesson_calls"] += 1
             if state["lesson_calls"] <= bad_first_lessons:
@@ -413,6 +416,26 @@ def test_lessons_are_written_in_parallel_and_stay_in_order(monkeypatch):
     assert titles == [f"Lesson {i}" for i in range(1, 7)] and len(seen) > 1
 
 
+def test_tavily_gets_the_key_as_a_bearer_token_and_the_query_language(monkeypatch):
+    seen = {}
+
+    class R:
+        def raise_for_status(self): pass
+        def json(self): return {"results": [{"title": "T", "url": "https://example.org/a", "content": "<b>snippet</b> text"}]}
+
+    def fake_get(url, *, headers=None, params=None, json_body=None, timeout=0):
+        seen.update(url=url, headers=headers, body=json_body)
+        return R()
+    monkeypatch.setattr(webresearch, "_get", fake_get)
+    monkeypatch.setenv("TAVILY_API_KEY", "tvly-test")
+    hits = webresearch._tavily("cyfrowy detoks", "pl")
+    assert seen["url"] == "https://api.tavily.com/search" and seen["headers"] == {"Authorization": "Bearer tvly-test"}
+    assert "api_key" not in seen["body"] and seen["body"]["language"] == "pl" and seen["body"]["query"] == "cyfrowy detoks"
+    assert hits[0].provider == "tavily" and "<" not in hits[0].snippet
+    monkeypatch.delenv("TAVILY_API_KEY")
+    assert webresearch._tavily("x", "pl") == []
+
+
 def test_each_query_is_searched_in_its_own_language(monkeypatch):
     calls = []
 
@@ -478,6 +501,40 @@ def test_without_a_number_the_architect_chooses(monkeypatch):
     outline_prompt = next(p for p in prompts if "day-by-day programme of" in p)
     assert "exactly" not in outline_prompt.split("Return exactly")[0] and "fits the subject" in outline_prompt
     assert sum(len(p["lessons"]) for p in ctx.course["phases"]) == 5      # whatever the architect returned, within MIN_DAYS..MAX_DAYS
+
+
+def test_the_shape_of_a_programme_follows_the_subject(monkeypatch):
+    style = {"session": "Zadanie praktyczne", "reflection": "Pytania do namysłu", "aha": "Do zapamiętania", "steps": "Jak to zrobić",
+             "session_kind": "A hands-on task with a concrete result."}
+    prompts = []
+    ctx = run_pipeline(monkeypatch, llm=fake_llm(style=style, prompts=prompts), course_format="program", chapters="6")
+    assert ctx.course["ui"] == {k: style[k] for k in ("session", "reflection", "aha", "steps")}
+    outline_prompt = next(p for p in prompts if "day-by-day programme of" in p)
+    assert "Shape the daily session to the subject" in outline_prompt and '"style"' in outline_prompt
+    day_prompt = next(p for p in prompts if "Day 1 of" in p)
+    assert "A hands-on task with a concrete result." in day_prompt and 'session "Zadanie praktyczne"' in day_prompt and 'aha "Do zapamiętania"' in day_prompt
+    assert "hands-on task" in next(p for p in prompts if 'Fit "how_to_use"' in p)
+    page = course_engine.build_course_html(ctx.course)
+    payload = json.loads(page.split('id="course-data">')[1].split("</script>")[0])
+    assert payload["course"]["ui"]["aha"] == "Do zapamiętania" and "C.ui" in page
+    # no style from the architect, or an unusable one: the default names stay
+    assert run_pipeline(monkeypatch, course_format="program", chapters="6").course["ui"] == {}
+    messy = run_pipeline(monkeypatch, llm=fake_llm(style={"session": "x" * 100, "aha": "", "bogus": "no", "steps": 5}), course_format="program", chapters="6")
+    assert messy.course["ui"]["session"] == "x" * 40 and set(messy.course["ui"]) == {"session", "steps"}
+    # the lessons format has no such blocks
+    lessons_prompts = []
+    run_pipeline(monkeypatch, llm=fake_llm(prompts=lessons_prompts, style=style), course_format="lessons")
+    assert not any("Shape the daily session" in p for p in lessons_prompts)
+
+
+def test_a_day_number_in_the_title_is_not_shown_twice():
+    assert course_gen.strip_day_label("Dzień 1. Mapa firmowych kont") == "Mapa firmowych kont"
+    assert course_gen.strip_day_label("DZIEŃ 12: Plan") == "Plan" and course_gen.strip_day_label("Day 3 - Habits") == "Habits"
+    assert course_gen.strip_day_label("Dzień dobry, hasło") == "Dzień dobry, hasło" and course_gen.strip_day_label("Day 7") == "Day 7"
+    raw = good_day(1)
+    raw["title"] = "Dzień 1. Mapa kont"
+    day, _ = course_gen.normalize_day(raw, {"title": "Dzień 1: Mapa kont", "goal": ""}, 0, {"S1"})
+    assert day["title"] == "Mapa kont"
 
 
 def test_every_day_has_theme_reflection_session_and_insight(monkeypatch):
@@ -561,9 +618,9 @@ def test_nova_stages_are_numbered_days_for_a_programme(monkeypatch):
     from backend.core import nova_publish
     ctx = run_pipeline(monkeypatch, course_format="program", chapters="6")
     p = nova_publish.nova_payload("j-1", ctx.course, "<html>", "draft")
-    assert p["stages"][0] == "Day 1: Day 1 theme" and len(p["stages"]) == 6
+    assert p["stages"][0] == "Day 1: Theme 1" and len(p["stages"]) == 6
     ctx.course["language"] = "pl"
-    assert nova_publish.nova_payload("j-1", ctx.course, "<html>", "draft")["stages"][1] == "Dzień 2: Day 2 theme"
+    assert nova_publish.nova_payload("j-1", ctx.course, "<html>", "draft")["stages"][1] == "Dzień 2: Theme 2"
     assert nova_publish.nova_payload("j-1", run_pipeline(monkeypatch).course, "<html>", "draft")["stages"][0] == "Lesson 1"   # lessons keep plain titles
 
 

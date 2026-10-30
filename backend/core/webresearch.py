@@ -209,7 +209,11 @@ def _tavily(query: str, language: str) -> list[Hit]:
     key = os.getenv("TAVILY_API_KEY")
     if not key:
         return []
-    r = _get("https://api.tavily.com/search", json_body={"api_key": key, "query": query, "max_results": 6, "search_depth": "basic"})
+    # Tavily's current API takes the key as a bearer token (not in the body); `language` only boosts matching results in the ranking.
+    body = {"query": query, "max_results": 6, "search_depth": "basic"}
+    if language:
+        body["language"] = language
+    r = _get("https://api.tavily.com/search", headers={"Authorization": f"Bearer {key}"}, json_body=body)
     r.raise_for_status()
     return [Hit(x.get("title", ""), x["url"], _plain(x.get("content", "")), "tavily")
             for x in (r.json().get("results") or []) if x.get("url")]

@@ -25,30 +25,68 @@ def good_lesson(n: int, extra_cite: str = "S1") -> dict:
             "quiz": [q(1), q(2), q(3)], "test_pool": [q(4), q(5)], "takeaways": ["Push beats polling", "Verify the sender"], "sources": [extra_cite]}
 
 
-def fake_llm(calls=None, bad_first_lessons=0):
+def good_day(n: int, cite: str = "S1") -> dict:
+    def q(i):
+        return {"q": f"Day {n} question {i}?", "options": [f"right {i}", f"wrong a{i}", f"wrong b{i}", f"wrong c{i}"], "correct": 0,
+                "explanation": f"Because right {i} is what the day says [{cite}]."}
+    return {"title": f"Day {n} theme", "focus": "What the day works on", "minutes": 25,
+            "sections": [{"heading": "Theme", "body": PARA * 3 + f"A fact from the web [{cite}]."}],
+            "reflection": ["Where does this show up in your own project?"],
+            "session": {"title": "Practice", "minutes": 15, "intention": "I look at one real webhook calmly and carefully.",
+                        "cues": ["slow down", "one event at a time", "write it down"],
+                        "steps": ["Open your project and list the events that change data.", "Pick one event and write who must know about it.",
+                                  "Decide how fast they must know.", "Write the message the sender would post."], "measure": "How confident do you feel"},
+            "aha": "Push beats polling when speed matters.", "quiz": [q(1), q(2)], "test_pool": [q(3), q(4)], "sources": [cite]}
+
+
+def good_frame(sensitive: bool = False) -> dict:
+    f = {"welcome": "Welcome to the programme. It takes you through one small, real task a day and keeps the pace gentle. " * 2, "about": "",
+         "for_you": ["you run an online shop", "you want fewer manual steps"], "not_for_you": ["you need a certified expert on site"],
+         "does": ["shows each step", "gives you a session a day"], "does_not": ["promises results"],
+         "how_to_use": ["Do one day at a time.", "Write your notes down.", "Repeat a day when it felt rushed."],
+         "worksheets": [{"title": "Daily check-in", "when": "At the start of a day", "steps": ["Sit down", "Read the intention"], "prompts": ["What is on your mind?"],
+                         "days": [1, 3, 99]}],
+         "faq": [{"q": f"Question {i}?", "a": "A direct answer that is long enough to be useful to the learner who asked it."} for i in range(4)],
+         "keep_going": {"intro": "Come back whenever you like.", "items": [{"title": "If it gets hard", "text": "Go back one day and repeat the session slowly."},
+                                                                         {"title": "After the programme", "text": "Keep one session a week to stay in practice."}]},
+         "closing": "You did the work. Keep the habit that helped you most and let the rest go for now."}
+    if sensitive:
+        f["safety"] = {"title": "When not to use this", "intro": "Do not use the programme instead of professional help.",
+                       "stop_when": ["it feels overwhelming"], "seek_help": ["a doctor or licensed professional", "the local emergency number"]}
+    return f
+
+
+def fake_llm(calls=None, bad_first_lessons=0, sensitive=False, frame="ok", prompts=None):
     state = {"lesson_calls": 0}
 
     def llm(system, user, max_tokens=6000):
         if calls is not None:
             calls.append(system[:30])
+        if prompts is not None:
+            prompts.append(user)
         if "plan web research" in system:
             return {"queries": ["webhooks explained", "webhook security", "api polling vs webhooks"]}
         if "instructional designer" in system:
-            m = re.search(r"exactly (\d+) lessons", user)
-            n = int(m.group(1))
+            m = re.search(r"exactly (\d+) (?:lessons|days)", user)
+            n = int(m.group(1)) if m else 5
             phases = []
             per = max(1, n // 2)
             for pi in range(2):
                 phases.append({"title": f"Phase {pi + 1}", "summary": "s", "lessons": [{"title": f"Topic {pi * per + i + 1}", "goal": "g", "source_hints": ["S1", "S9"]}
                                                                                        for i in range(per if pi == 0 else n - per)]})
             return {"title": "Webhooks in practice", "subtitle": "From zero to production", "summary": "You learn webhooks.", "level": "beginner",
-                    "sensitive": False, "outcomes": ["Explain webhooks", "Build one"], "phases": phases}
-        if "writing one lesson" in system:
+                    "sensitive": sensitive, "outcomes": ["Explain webhooks", "Build one"], "phases": phases}
+        if "writing one lesson" in system or "writing one day" in system:
             state["lesson_calls"] += 1
             if state["lesson_calls"] <= bad_first_lessons:
                 return {"title": "thin", "sections": [{"heading": "x", "body": "too short"}], "quiz": []}
-            n = int(re.search(r"Lesson (\d+) of", user).group(1))
-            return good_lesson(n)
+            if "writing one day" in system:
+                return good_day(int(re.search(r"Day (\d+) of", user).group(1)))
+            return good_lesson(int(re.search(r"Lesson (\d+) of", user).group(1)))
+        if "pages around a day-by-day programme" in system:
+            if frame == "error":
+                raise RuntimeError("model unavailable")
+            return {} if frame == "empty" else good_frame(sensitive)
         raise AssertionError("unexpected prompt: " + system[:60])
     return llm
 
@@ -199,15 +237,15 @@ def test_lesson_count_is_clamped():
 
 def make_ctx(**kw):
     base = dict(job_id="job-x", text="--- BOOK BRIEF ---\nWebhooks for shop owners. Read https://author.org/notes too.", style="minimal", content_type="interactive-course",
-                language="English", chapters="6")
+                language="English", chapters="6", course_format="lessons")
     base.update(kw)
     return PipelineContext(**base)
 
 
-def run_pipeline(monkeypatch, llm=None, gather=None):
+def run_pipeline(monkeypatch, llm=None, gather=None, **ctx_kw):
     monkeypatch.setattr(course_agents, "update_job", lambda *a, **k: None)
     monkeypatch.setattr(course_agents, "is_cancelled", lambda job_id: False)
-    ctx = make_ctx()
+    ctx = make_ctx(**ctx_kw)
     for agent in course_agents.course_pipeline(llm or fake_llm(), gather or (lambda qs, lang, user_urls=None: [src(1), src(2, provider="author")])):
         ctx = agent.run(ctx)
     return ctx
@@ -413,3 +451,123 @@ def test_json_with_html_escaped_quotes_is_recovered():
     assert _clean_json('{&quot;title&quot;: &quot;Hasła&quot;, &quot;n&quot;: [1, 2]}') == {"title": "Hasła", "n": [1, 2]}
     with pytest.raises(ValueError):
         _clean_json("no json here")
+
+
+# ------------------------------------------------------------------ programme format: days with sessions, wrapped in front and back matter
+
+def test_the_author_sets_the_number_of_days_or_leaves_it_to_the_architect():
+    assert course_gen.day_count("10") == 10 and course_gen.day_count(21) == 21 and course_gen.day_count("7") == 7
+    assert course_gen.day_count("") is None and course_gen.day_count("many") is None and course_gen.day_count(None) is None
+    assert course_gen.day_count("1") == course_gen.MIN_DAYS and course_gen.day_count("500") == course_gen.MAX_DAYS
+    assert course_gen.course_format("") == "program" and course_gen.course_format("lessons") == "lessons" and course_gen.course_format("whatever") == "program"
+
+
+@pytest.mark.parametrize("days", [3, 7, 14, 30])
+def test_programme_has_exactly_the_requested_number_of_days(monkeypatch, days):
+    prompts = []
+    ctx = run_pipeline(monkeypatch, llm=fake_llm(prompts=prompts), course_format="program", chapters=str(days))
+    c = ctx.course
+    assert any(f"exactly {days} days" in p for p in prompts)
+    assert c["format"] == "program" and sum(len(p["lessons"]) for p in c["phases"]) == days
+    assert course_gen.validate_course(c) == []
+
+
+def test_without_a_number_the_architect_chooses(monkeypatch):
+    prompts = []
+    ctx = run_pipeline(monkeypatch, llm=fake_llm(prompts=prompts), course_format="program", chapters="")
+    outline_prompt = next(p for p in prompts if "day-by-day programme of" in p)
+    assert "exactly" not in outline_prompt.split("Return exactly")[0] and "fits the subject" in outline_prompt
+    assert sum(len(p["lessons"]) for p in ctx.course["phases"]) == 5      # whatever the architect returned, within MIN_DAYS..MAX_DAYS
+
+
+def test_every_day_has_theme_reflection_session_and_insight(monkeypatch):
+    ctx = run_pipeline(monkeypatch, course_format="program", chapters="6")
+    days = [l for p in ctx.course["phases"] for l in p["lessons"]]
+    assert all(d["kind"] == "day" and d["sections"] and d["reflection"] and d["aha"] and len(d["quiz"]) == 2 for d in days)
+    ses = days[0]["session"]
+    assert len(ses["steps"]) >= 3 and ses["intention"] and ses["cues"] and ses["measure"] and 5 <= ses["minutes"] <= 90
+    assert len(ctx.course["final_test"]) >= 6 and ctx.course["version"] == 2
+
+
+def test_programme_is_wrapped_in_front_and_back_matter(monkeypatch):
+    ctx = run_pipeline(monkeypatch, llm=fake_llm(sensitive=True), course_format="program", chapters="6")
+    f = ctx.course["frame"]
+    for part in ("welcome", "for_you", "not_for_you", "does", "does_not", "how_to_use", "worksheets", "faq", "keep_going", "closing", "safety"):
+        assert f.get(part), part
+    assert f["worksheets"][0]["days"] == [1, 3]                       # day 99 does not exist in a 6-day programme
+    assert ctx.course["disclaimer"] and ctx.course["year"] >= 2026
+
+
+def test_safety_page_only_for_sensitive_subjects():
+    plain, problems = course_gen.normalize_frame(good_frame(sensitive=True), sensitive=False, units=6)
+    assert "safety" not in plain and problems == []
+    sens, problems = course_gen.normalize_frame(good_frame(sensitive=True), sensitive=True, units=6)
+    assert sens["safety"]["seek_help"] and problems == []
+    thin, problems = course_gen.normalize_frame(good_frame(), sensitive=True, units=6)
+    assert "safety is missing or too thin" in problems
+
+
+def test_frame_keeps_what_is_complete_and_names_what_is_not():
+    raw = good_frame()
+    raw["welcome"] = "short"
+    raw["faq"] = [{"q": "only one?", "a": "yes, and here is a proper answer for it."}]
+    frame, problems = course_gen.normalize_frame(raw, sensitive=False, units=6)
+    assert "welcome" not in frame and "faq" not in frame and frame["closing"] and frame["worksheets"]
+    assert sorted(problems) == ["faq is missing or too thin", "welcome is missing or too thin"]
+
+
+@pytest.mark.parametrize("mode", ["error", "empty"])
+def test_a_frame_that_cannot_be_written_never_fails_the_course(monkeypatch, mode):
+    ctx = run_pipeline(monkeypatch, llm=fake_llm(frame=mode), course_format="program", chapters="6")
+    assert ctx.course["frame"] == {} and course_gen.validate_course(ctx.course) == [] and len(ctx.course["phases"][0]["lessons"]) >= 3
+
+
+def test_a_thin_day_is_rewritten_once_and_a_hollow_one_fails_the_job(monkeypatch):
+    ctx = run_pipeline(monkeypatch, llm=fake_llm(bad_first_lessons=1), course_format="program", chapters="6")
+    assert course_gen.validate_course(ctx.course) == []
+    with pytest.raises(course_gen.CourseGenerationError, match="Day 1"):
+        run_pipeline(monkeypatch, llm=fake_llm(bad_first_lessons=99), course_format="program", chapters="6")
+
+
+def test_programme_page_carries_days_sessions_and_frame(monkeypatch):
+    ctx = run_pipeline(monkeypatch, course_format="program", chapters="6")
+    ctx.course["language"] = "pl"
+    ctx.course["phases"][0]["lessons"][0]["session"]["steps"][0] = "Krok <b>pierwszy</b> z [S1] i **pogrubieniem**"
+    page = course_engine.build_course_html(ctx.course)
+    payload = json.loads(page.split('id="course-data">')[1].split("</script>")[0])
+    course = payload["course"]
+    day = course["phases"][0]["lessons"][0]
+    assert course["format"] == "program" and day["session"]["steps"] and day["aha"] and day["reflection"] and day["focus"]
+    step = day["session"]["steps"][0]
+    assert "<b>" not in step and "&lt;b&gt;" in step and "<strong>pogrubieniem</strong>" in step and 'data-src="S1"' in step
+    assert course["frame"]["welcome"].startswith("<p>") and course["frame"]["worksheets"][0]["days"] == [1, 3]
+    assert payload["labels"]["complete_day"] == "Ukończ dzień" and payload["labels"]["session"] == "Sesja" and payload["labels"]["aha"] == "Moment AHA"
+    assert "viewDay" in page and "viewPage" in page and "<" not in page.split('id="course-data">')[1].split("</script>")[0]
+
+
+def test_engine_script_is_valid_javascript(tmp_path):
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is not installed")
+    f = tmp_path / "engine.js"
+    f.write_text(course_engine.JS, encoding="utf-8")
+    r = subprocess.run([node, "--check", str(f)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+
+
+def test_nova_stages_are_numbered_days_for_a_programme(monkeypatch):
+    from backend.core import nova_publish
+    ctx = run_pipeline(monkeypatch, course_format="program", chapters="6")
+    p = nova_publish.nova_payload("j-1", ctx.course, "<html>", "draft")
+    assert p["stages"][0] == "Day 1: Day 1 theme" and len(p["stages"]) == 6
+    ctx.course["language"] = "pl"
+    assert nova_publish.nova_payload("j-1", ctx.course, "<html>", "draft")["stages"][1] == "Dzień 2: Day 2 theme"
+    assert nova_publish.nova_payload("j-1", run_pipeline(monkeypatch).course, "<html>", "draft")["stages"][0] == "Lesson 1"   # lessons keep plain titles
+
+
+def test_the_form_choice_reaches_the_pipeline():
+    from backend.routers import jobs
+    import inspect
+    assert "course_format" in inspect.signature(jobs._queue_job).parameters and "course_format" in inspect.signature(jobs.generate).parameters

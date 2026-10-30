@@ -308,12 +308,13 @@ WRITING_TEMPERATURE = float(os.getenv("AI_WRITING_TEMPERATURE", "0.75"))
 WRITING_TIMEOUT = float(os.getenv("AI_WRITING_TIMEOUT_SECONDS", "180"))
 
 # Chapter writing is where model quality shows most, so it goes to a
-# dedicated model first: DeepSeek V4 Pro via OpenRouter — near-frontier
-# long-form writing at a small fraction of Claude/GPT prices. Without an
-# OPENROUTER_API_KEY (or if that call fails) it falls back to the normal
-# provider chain. Set AI_WRITER_PROVIDER="" to disable.
+# dedicated model first: GPT-6.1 Terra via OpenRouter — a step above DeepSeek V4
+# Pro (the previous writer, still the cheapest good choice:
+# AI_WRITER_MODEL=deepseek/deepseek-v4-pro) at half the price of Claude Sonnet 5.5.
+# Without an OPENROUTER_API_KEY (or if that call fails) it falls back to the
+# normal provider chain. Set AI_WRITER_PROVIDER="" to disable.
 WRITER_PROVIDER = os.getenv("AI_WRITER_PROVIDER", "openrouter")
-WRITER_MODEL = os.getenv("AI_WRITER_MODEL", "deepseek/deepseek-v4-pro")
+WRITER_MODEL = os.getenv("AI_WRITER_MODEL", "openai/gpt-6.1-terra")
 WRITER_MAX_TOKENS = int(os.getenv("AI_WRITER_MAX_TOKENS", "12000"))
 
 

@@ -21,6 +21,7 @@ class PipelineContext(BaseModel):
     audience: str = ""
     tone: str = ""
     chapters: str = ""
+    course_format: str = ""   # interactive-course only: "program" (days with sessions, the default) or "lessons"
     keywords: str = ""
     language: str = ""
     author: str = ""

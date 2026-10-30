@@ -48,8 +48,10 @@ class CourseArchitectAgent(BaseAgent):
 
     def run(self, ctx: PipelineContext) -> PipelineContext:
         llm = self._llm or make_llm(ctx.provider)
+        fmt = course_gen.course_format(ctx.course_format)
+        units = course_gen.day_count(ctx.chapters) if fmt == "program" else course_gen.lesson_count(ctx.chapters)
         outline = course_gen.design_outline(llm, ctx.text, _sources(ctx), language=ctx.language, audience=ctx.audience, tone=ctx.tone,
-                                            lessons=course_gen.lesson_count(ctx.chapters))
+                                            lessons=units, fmt=fmt)
         outline["_brief"] = ctx.text
         ctx.course = {"outline": outline}
         ctx.ebook_dict = {"title": outline["title"], "topic": "education", "kind": "course"}
@@ -74,8 +76,9 @@ class LessonWriterAgent(BaseAgent):
         if is_cancelled(ctx.job_id):
             raise RuntimeError("Cancelled by user")
         lessons: list = [None] * len(specs)
+        write = course_gen.write_day if outline.get("format") == "program" else course_gen.write_lesson
         with ThreadPoolExecutor(max_workers=self.WORKERS) as pool:
-            futures = {pool.submit(course_gen.write_lesson, llm, outline, spec, i, len(specs), sources, language=ctx.language, tone=ctx.tone): i
+            futures = {pool.submit(write, llm, outline, spec, i, len(specs), sources, language=ctx.language, tone=ctx.tone): i
                        for i, spec in enumerate(specs)}
             finished = 0
             try:
@@ -96,12 +99,32 @@ class LessonWriterAgent(BaseAgent):
         return ctx
 
 
+class CourseFrameAgent(BaseAgent):
+    """The pages around the days: welcome, for whom, what it does and does not promise, when not to use it, worksheets, FAQ, what next.
+    Never fails the job: without a usable frame the course is published with the days alone."""
+
+    def __init__(self, llm=None):
+        super().__init__("CourseFrameAgent")
+        self._llm = llm
+
+    def run(self, ctx: PipelineContext) -> PipelineContext:
+        llm = self._llm or make_llm(ctx.provider)
+        if is_cancelled(ctx.job_id):
+            raise RuntimeError("Cancelled by user")
+        ctx.course["frame"] = course_gen.write_frame(llm, ctx.course["outline"], ctx.course["lessons"], language=ctx.language, tone=ctx.tone,
+                                                     audience=ctx.audience, brief=ctx.text)
+        ctx.set_progress(87)
+        update_job(ctx.job_id, "processing", 87)
+        logger.info(f"CourseFrameAgent: {len(ctx.course['frame'])} frame parts")
+        return ctx
+
+
 class CourseAssemblyAgent(BaseAgent):
     def __init__(self):
         super().__init__("CourseAssemblyAgent")
 
     def run(self, ctx: PipelineContext) -> PipelineContext:
-        course = course_gen.assemble_course(ctx.course["outline"], ctx.course["lessons"], _sources(ctx), language=ctx.language)
+        course = course_gen.assemble_course(ctx.course["outline"], ctx.course["lessons"], _sources(ctx), language=ctx.language, frame=ctx.course.get("frame"))
         problems = course_gen.validate_course(course)
         if problems:
             raise course_gen.CourseGenerationError("The course is incomplete: " + "; ".join(problems[:6]))
@@ -114,4 +137,4 @@ class CourseAssemblyAgent(BaseAgent):
 
 
 def course_pipeline(llm=None, gather=None) -> list[BaseAgent]:
-    return [CourseResearchAgent(llm, gather), CourseArchitectAgent(llm), LessonWriterAgent(llm), CourseAssemblyAgent()]
+    return [CourseResearchAgent(llm, gather), CourseArchitectAgent(llm), LessonWriterAgent(llm), CourseFrameAgent(llm), CourseAssemblyAgent()]

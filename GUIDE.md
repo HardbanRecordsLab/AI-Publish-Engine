@@ -191,6 +191,10 @@ Interactive courses (optional, `content_type=interactive-course`):
 | `NOVA_SERVICE_KEY` | Shared secret for Nova's `/api/service/interactive-courses` (also stored in Nova's Infisical project) |
 | `NOVA_PUBLIC_URL` | Public Nova address used in the link returned after publishing |
 
+The form field `course_format` (`program`, the default, or `lessons`) selects the shape of a course; in `program` the `chapters` field is the number of
+days (3 to 60, empty = the architect chooses). `backend/core/course_gen.py` holds `write_day`, `write_frame` (welcome, for whom, worksheets, FAQ, what next) and
+`normalize_*` checks; `course_engine.py` renders the day, session and page views. Old lesson courses keep rendering unchanged.
+
 Without a search key the research step uses Wikipedia and OpenAlex only (no key needed); that is fine for encyclopaedic topics and thin for
 anything current or practical. See `backend/core/webresearch.py`. The course pipeline lives in `backend/agents/course_agents.py`,
 `backend/core/course_gen.py` (generation and validation) and `backend/core/course_engine.py` (the single-file HTML page).
@@ -239,9 +243,11 @@ Chapter writing (optional):
 - `AI_WRITING_TEMPERATURE` (default `0.75`) and `AI_WRITING_TIMEOUT_SECONDS`
   (default `180`) apply only to the per-chapter writing calls.
 - `AI_WRITER_PROVIDER` (default `openrouter`), `AI_WRITER_MODEL` (default
-  `deepseek/deepseek-v4-pro`), `AI_WRITER_MAX_TOKENS` (default `12000`):
-  the model chapters are written with first. Chosen for near-frontier
-  long-form writing quality at a low per-token price. Requires
+  `openai/gpt-6.1-terra`), `AI_WRITER_MAX_TOKENS` (default `12000`):
+  the model chapters, course lessons and reader-facing copy are written with
+  first. GPT-6.1 Terra costs about $1 / $5 per million tokens; the earlier
+  `deepseek/deepseek-v4-pro` (about $0.5 / $1) is the cheapest good choice and
+  `anthropic/claude-sonnet-5.5` ($2 / $10) the stronger, pricier one. Requires
   `OPENROUTER_API_KEY`; without it, or if the call fails or returns bad
   JSON, writing falls back to the normal provider chain. Empty
   `AI_WRITER_PROVIDER` disables it.

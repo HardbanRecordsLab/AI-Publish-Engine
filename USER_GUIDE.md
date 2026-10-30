@@ -154,11 +154,23 @@ An **embeddable** version of your book that can be inserted into any website via
 ## Interactive Courses
 
 Choose the **Course** output type, describe the subject in the topic box (paste links or upload your own material; every link is read first),
-set the number of lessons in *Chapters* (4 to 14, default 8) and the language. The engine then:
+pick the **Course format**, set the number of days (or lessons) in *Sections* and the language.
 
-1. searches the web and reads real pages (Wikipedia and scholarly abstracts without a key; Brave, Tavily or SearXNG when configured);
-2. designs the course (phases and lessons) and writes every lesson: explanation, worked example, practice task, a 3-question quiz that explains each answer;
-3. builds a graded final test and a sources page (only sources a lesson really uses);
+Formats:
+
+- **Programme: days with sessions** (the default, the shape of *Cyfrowy Zen* and *EFT po toksycznym związku*). Every day has a theme, a deep reflection, a guided
+  session (intention, cues, numbered steps you tick off, an optional before/after 0-10 rating) and an insight to keep, with two quick check questions. A day counts
+  as done when the learner presses *Complete day*. The number of days is yours: enter any number from 3 to 60 (7, 10, 14, 21, 30 ...), or leave *Sections* empty
+  and the engine chooses the number that fits the subject. The days are grouped into phases and wrapped in the pages around them: welcome, copyright and disclaimer,
+  when NOT to use it (for health, safety, legal and money topics), who it is for, what it does and does not promise, how to use it, then worksheets, FAQ, what next
+  and a closing word.
+- **Lessons**: explanation, worked example, practice task and a 3-question quiz per lesson (4 to 14 lessons, default 8); a lesson counts as done when its quiz is answered.
+
+The engine then:
+
+1. searches the web and reads real pages (Wikipedia and scholarly abstracts without a key; Tavily, Brave or SearXNG when configured);
+2. designs the course (phases and days or lessons) and writes every day or lesson, then the pages around them (a missing page is left out rather than failing the job);
+3. builds a graded final test from the days' questions and a sources page (only sources the course really uses);
 4. produces one self-contained HTML page with a navigator, saved notes and progress.
 
 When the job is done: **Open the course** to review it, **Download HTML** to host it yourself, **Send to Nova (draft)** to create the course in HRL Nova Campus

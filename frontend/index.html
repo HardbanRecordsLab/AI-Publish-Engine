@@ -205,8 +205,8 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Sections</label>
-              <input class="form-input" id="chaptersInput" placeholder="e.g., 5" type="number" min="1" max="20">
+              <label class="form-label">Sections <span id="chaptersUnit" style="font-weight:400;color:var(--text-muted)"></span></label>
+              <input class="form-input" id="chaptersInput" placeholder="e.g., 5" type="number" min="1" max="60">
             </div>
           </div>
           <div class="form-group">
@@ -225,7 +225,14 @@
             <button class="content-tab" data-type="interactive-book"><span class="tab-icon"><svg><use href="#i-gamepad"/></svg></span>Interactive</button>
             <button class="content-tab" data-type="interactive-course"><span class="tab-icon"><svg><use href="#i-target"/></svg></span>Course</button>
           </div>
-          <div id="courseHint" class="form-hint hidden" style="margin:-4px 0 10px">Interactive course: the engine searches the web and reads real pages, designs the course, writes every lesson (explanation, example, exercise, quiz with explanations), builds a final test and a sources page. Add your own material in the topic box or as files; any link you paste is read first. Then publish it to Nova Campus as a draft.</div>
+          <div id="courseHint" class="form-hint hidden" style="margin:-4px 0 10px">Interactive course: the engine searches the web and reads real pages, designs the course and writes every day or lesson, wraps it in the pages around it (welcome, who it is for, what it does and does not promise, worksheets, FAQ, what next), builds a final test and a sources page. In a programme, every day has a theme, a reflection, a guided session with steps and an insight to keep. The number of days is yours to set in "Sections" (3 to 60); leave it empty and the engine picks the number that fits the subject. Add your own material in the topic box or as files; any link you paste is read first. Then publish it to Nova Campus as a draft.</div>
+          <div id="courseOptions" class="form-group hidden" style="margin:0 0 10px">
+            <label class="form-label">Course format</label>
+            <select class="form-select" id="courseFormat">
+              <option value="program">Programme: days with sessions (like Cyfrowy Zen, EFT)</option>
+              <option value="lessons">Lessons with explanation, exercise and quiz</option>
+            </select>
+          </div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
             <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Template</span>
             <button class="btn btn-sm btn-secondary" onclick="showThemeGenerator()" style="font-size:10px;padding:4px 9px"><svg><use href="#i-sparkles"/></svg> AI Theme</button>

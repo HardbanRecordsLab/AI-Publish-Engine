@@ -32,7 +32,7 @@ def _queue_job(job_id: str, text: str, style: str, provider: str = None,
                content_type: str = "ebook", audience: str = "", tone: str = "",
                chapters: str = "", keywords: str = "", language: str = "",
                accent_color: str = "", bg_color: str = "",
-               heading_font: str = "", body_font: str = "", author: str = "", kind: str = ""):
+               heading_font: str = "", body_font: str = "", author: str = "", kind: str = "", course_format: str = ""):
     """Run a generation job in a background thread.
 
     Note: this used to try enqueueing to a Redis/arq queue first, but that
@@ -51,6 +51,7 @@ def _queue_job(job_id: str, text: str, style: str, provider: str = None,
         "heading_font": heading_font, "body_font": body_font,
         "author": sanitize_text(author, 200).strip(),
         "kind": get_kind(kind).id,
+        "course_format": "lessons" if str(course_format).strip().lower() in ("lessons", "lesson") else "program",
     }
     from backend.worker import process_job
 
@@ -82,6 +83,7 @@ async def generate(
     body_font: str = Form(""),
     author: str = Form(""),
     kind: str = Form(""),
+    course_format: str = Form(""),
 ):
     files = [f for f in (files or []) if f.filename]
     topic = sanitize_text(topic, 5000).strip()
@@ -114,7 +116,7 @@ async def generate(
         return JSONResponse({"error": rejection}, status_code=400)
     job_id = create_job(style, content_type, audience, tone, chapters, keywords, language)
     _queue_job(job_id, merged, style, provider, content_type, audience, tone, chapters, keywords, language,
-               accent_color, bg_color, heading_font, body_font, author=author, kind=kind)
+               accent_color, bg_color, heading_font, body_font, author=author, kind=kind, course_format=course_format)
     return {"job_id": job_id, "status": "queued", "provider": provider, "content_type": content_type}
 
 

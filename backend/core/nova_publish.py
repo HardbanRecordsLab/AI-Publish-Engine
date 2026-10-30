@@ -30,12 +30,13 @@ def source_key(job_id: str) -> str:
 
 def nova_payload(job_id: str, course: dict, html: str, status: str = "DRAFT") -> dict:
     lessons = [l for p in course["phases"] for l in p["lessons"]]
+    day = {"pl": "Dzień", "en": "Day"}.get(course.get("language") or "", "Day") if course.get("format") == "program" else ""
     outcomes = course.get("outcomes") or []
     description = course["summary"] + ((" Po kursie: " if course.get("language") == "pl" else " After the course you can: ") + "; ".join(outcomes[:3]) + ".") if outcomes else course["summary"]
     return {
         "source_key": source_key(job_id), "title": course["title"], "description": description[:2000], "language": course.get("language") or "pl",
         "level": course.get("level") or "beginner", "thumbnail": cover_data_uri(course), "html": html,
-        "stages": [l["title"][:200] for l in lessons],
+        "stages": [(f"{day} {i}: {l['title']}" if day else l["title"])[:200] for i, l in enumerate(lessons, 1)],
         "test": [{"question": q["q"][:500], "options": [o[:300] for o in q["options"]], "correct": q["correct"]} for q in course["final_test"]],
         "minutes": int(course.get("minutes") or 0) or None, "status": "PUBLISHED" if str(status).upper() == "PUBLISHED" else "DRAFT",
     }

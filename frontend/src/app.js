@@ -129,12 +129,25 @@ async function refreshDashboard() {
 let selectedType = 'ebook', selectedTemplate = 'minimal', selectedFormats = ['epub', 'pdf'];
 let selectedFiles = [];
 
+// For a course "Sections" are days (programme) or lessons; empty lets the engine choose the number of days.
+function updateChaptersHint() {
+  const input = document.getElementById('chaptersInput'), unit = document.getElementById('chaptersUnit');
+  if (selectedType !== 'interactive-course') { unit.textContent = ''; input.placeholder = 'e.g., 5'; return; }
+  const programme = document.getElementById('courseFormat').value === 'program';
+  unit.textContent = programme ? '(days)' : '(lessons)';
+  input.placeholder = programme ? 'e.g., 7, 14, 21, 30 (empty = engine decides)' : 'e.g., 8';
+}
+document.getElementById('courseFormat').addEventListener('change', updateChaptersHint);
+
 document.querySelectorAll('.content-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     selectedType = tab.dataset.type;
-    document.getElementById('courseHint').classList.toggle('hidden', selectedType !== 'interactive-course');
+    const isCourseTab = selectedType === 'interactive-course';
+    document.getElementById('courseHint').classList.toggle('hidden', !isCourseTab);
+    document.getElementById('courseOptions').classList.toggle('hidden', !isCourseTab);
+    updateChaptersHint();
     loadTemplates(selectedType);
   });
 });
@@ -223,6 +236,7 @@ async function generate() {
   formData.append('language', lang);
   formData.append('author', author);
   formData.append('kind', kind);
+  if (selectedType === 'interactive-course') formData.append('course_format', document.getElementById('courseFormat').value);
   formData.append('provider', provider);
   formData.append('formats', selectedFormats.join(','));
   selectedFiles.forEach(f => formData.append('files', f));

@@ -28,6 +28,9 @@ PRICING: dict[str, tuple[float, float]] = {
     "openrouter/qwen/qwen-2.5-72b-instruct": (0.35, 0.40),
     # Varies by the endpoint OpenRouter routes to; DeepSeek's own rate is ~0.44/0.87.
     "openrouter/deepseek/deepseek-v4-pro": (0.45, 1.00),
+    "openrouter/openai/gpt-6.1-terra": (1.00, 5.00),
+    "openrouter/anthropic/claude-sonnet-5.5": (2.00, 10.00),
+    "openrouter/anthropic/claude-opus-5.5": (4.00, 20.00),
     "mistral/mistral-small-latest": (0.20, 0.60),
     "openai/gpt-4o-mini": (0.15, 0.60),
     "cohere/command-r-plus": (2.50, 10.00),

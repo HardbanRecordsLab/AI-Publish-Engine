@@ -75,6 +75,7 @@ async def process_job(ctx):
     body_font = ctx.get("body_font", "")
     author = ctx.get("author", "")
     kind = get_kind(ctx.get("kind")).id
+    course_format = ctx.get("course_format", "")
 
     try:
         update_progress(job_id, "queued", 0)
@@ -90,7 +91,7 @@ async def process_job(ctx):
             content_type=content_type, audience=audience, tone=tone,
             chapters=chapters, keywords=keywords, language=language,
             accent_color=accent_color, bg_color=bg_color,
-            heading_font=heading_font, body_font=body_font, author=author, kind=kind,
+            heading_font=heading_font, body_font=body_font, author=author, kind=kind, course_format=course_format,
         )
 
         if content_type == "interactive-course":

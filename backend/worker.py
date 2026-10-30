@@ -21,6 +21,7 @@ from backend.agents import (
     ResearchAgent,
     StructureAgent,
 )
+from backend.core import checkpoint
 from backend.core.book_kinds import get_kind
 from backend.core.builder import build_ebook_html
 from backend.core.export import build_docx, build_epub
@@ -76,9 +77,14 @@ async def process_job(ctx):
     author = ctx.get("author", "")
     kind = get_kind(ctx.get("kind")).id
     course_format = ctx.get("course_format", "")
+    review_outline = bool(ctx.get("review_outline"))
 
     try:
         update_progress(job_id, "queued", 0)
+        try:
+            checkpoint.save_inputs(job_id, ctx)   # no-op when they are already stored (a resume) or the id is not a real job id
+        except (ValueError, OSError) as e:
+            logger.warning(f"Job {job_id}: not checkpointed ({e})")
 
         if is_cancelled(job_id):
             update_job(job_id, "cancelled", error="Cancelled by user")
@@ -92,10 +98,13 @@ async def process_job(ctx):
             chapters=chapters, keywords=keywords, language=language,
             accent_color=accent_color, bg_color=bg_color,
             heading_font=heading_font, body_font=body_font, author=author, kind=kind, course_format=course_format,
+            review_outline=review_outline,
         )
 
         if content_type == "interactive-course":
             pipeline_ctx = Orchestrator(course_pipeline()).run(pipeline_ctx)
+            if pipeline_ctx.awaiting_approval:
+                return   # parked at the outline; approving it resumes the job
             if pipeline_ctx.error:
                 update_job(job_id, "failed", error=pipeline_ctx.error)
                 update_progress(job_id, "failed", 0, error=pipeline_ctx.error)
@@ -107,7 +116,7 @@ async def process_job(ctx):
                 f.write(html)
             import json
             update_job(job_id, "done", 100, website_path=website_path, html=html, book_data=json.dumps(course),
-                       build_params=json.dumps({"style": style, "accent_color": accent_color, "quality": {"research": pipeline_ctx.research}}),
+                       build_params=json.dumps({"style": style, "accent_color": accent_color, "quality": {"research": pipeline_ctx.research, "review": course.get("quality") or {}}}),
                        topic=course["title"])
             update_progress(job_id, "done", 100, title=course["title"])
             logger.success(f"Job {job_id}: {course['title']} (interactive course: {os.path.getsize(website_path)} bytes)")
@@ -243,6 +252,7 @@ async def process_job(ctx):
             update_progress(job_id, "done", 100, title=pipeline_ctx.ebook_dict.get('title'))
             logger.success(f"Job {job_id}: {pipeline_ctx.ebook_dict.get('title')} (PDF: {os.path.getsize(pdf_path)} bytes)")
 
+        checkpoint.clear(job_id)   # a finished book needs no resume
     except Exception as e:
         logger.error(f"Job {job_id} failed: {e}")
         update_job(job_id, "failed", error=str(e))

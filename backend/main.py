@@ -19,6 +19,7 @@ from backend.routers import (
     design_tokens_router,
     editor_router,
     health_router,
+    job_control_router,
     jobs_router,
     publishing_router,
     series_router,
@@ -48,6 +49,7 @@ async def _stale_job_watchdog():
     restart killed their worker thread mid-run), so users never see an
     infinite spinner with no explanation."""
     from backend.core.jobs import fail_stale_jobs
+    tick = 0
     while True:
         try:
             failed_ids = fail_stale_jobs(settings.stale_job_timeout_minutes)
@@ -55,6 +57,15 @@ async def _stale_job_watchdog():
                 logger.warning(f"Watchdog: marked {len(failed_ids)} stale job(s) as failed: {failed_ids}")
         except Exception as e:
             logger.warning(f"Stale job watchdog error: {e}")
+        if tick % 60 == 0:
+            try:
+                from backend.core import checkpoint
+                gone = checkpoint.purge_older_than(settings.checkpoint_days)
+                if gone:
+                    logger.info(f"Checkpoints: removed {gone} file(s) older than {settings.checkpoint_days} days")
+            except Exception as e:
+                logger.warning(f"Checkpoint cleanup error: {e}")
+        tick += 1
         await asyncio.sleep(60)
 
 
@@ -99,6 +110,7 @@ if FRONTEND_DIR.exists():
 app.include_router(health_router)
 app.include_router(templates_router)
 app.include_router(jobs_router)
+app.include_router(job_control_router)
 app.include_router(admin_router)
 app.include_router(publishing_router)
 app.include_router(editor_router)

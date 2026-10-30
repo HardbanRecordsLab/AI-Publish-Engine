@@ -111,6 +111,7 @@ class TestEditorialAgent:
         monkeypatch.setattr(editorial_agent, "update_job", lambda *a, **k: None)
         monkeypatch.setattr(editorial_agent, "is_cancelled", lambda job_id: False)
         monkeypatch.setattr(editorial_agent, "REVIEW_ENABLED", False)
+        monkeypatch.setattr(editorial_agent.EditorialAgent, "WORKERS", 1)   # one after another: the next chapter is told what was actually written
 
         ctx = PipelineContext(job_id="t", text="x", style="m", language="Polish")
         ctx.ebook_dict = {

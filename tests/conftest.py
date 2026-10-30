@@ -4,6 +4,14 @@ import pytest
 os.environ["GROQ_API_KEY"] = "test-placeholder-key"
 os.environ["AI_PROVIDER"] = "mistral"
 
+
+
+@pytest.fixture(autouse=True)
+def _checkpoints_in_tmp(monkeypatch, tmp_path):
+    """Checkpoints (inputs and finished steps of a job) never go into the real jobs/ folder from a test."""
+    monkeypatch.setenv("AI_CHECKPOINT_DIR", str(tmp_path / "checkpoints"))
+
+
 SAMPLE_TEXT = """Artificial intelligence is transforming healthcare, finance, and education.
 Machine learning enables pattern recognition and predictive analytics.
 Deep learning uses neural networks to solve complex problems.

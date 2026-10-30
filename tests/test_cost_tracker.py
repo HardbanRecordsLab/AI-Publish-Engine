@@ -67,7 +67,7 @@ class TestBudgetCeiling:
     def test_over_budget_raises_and_blocks_the_next_call(self, tracker, monkeypatch):
         monkeypatch.setenv("DAILY_AI_BUDGET_USD", "0.001")
         tracker.record_usage("openai", "gpt-4o-mini", 100_000, 50_000)  # ~$0.045, over the $0.001 ceiling
-        with pytest.raises(RuntimeError, match="Daily AI budget exceeded"):
+        with pytest.raises(tracker.BudgetExceeded, match="limit kosztów AI wyczerpany"):
             tracker.check_budget()
 
     def test_negative_or_garbage_budget_treated_as_unlimited(self, tracker, monkeypatch):

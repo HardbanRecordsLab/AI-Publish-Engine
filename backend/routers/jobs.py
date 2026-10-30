@@ -8,15 +8,16 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from loguru import logger
 
 from backend.config import settings
+from backend.core import checkpoint
 from backend.core.ai import PROVIDERS
 from backend.core.book_kinds import get_kind, list_kinds
-from backend.core.jobs import create_job, get_job
+from backend.core.jobs import create_job, get_job, update_job
 from backend.core.moderation import check_content
 from backend.core.parser import extract_text
 from backend.core.prompt_safety import sanitize_text
 from backend.limiter import limiter
 from backend.routers.auth import require_admin
-from backend.ws_manager import cancel_job, get_progress, manager
+from backend.ws_manager import cancel_job, clear_cancel, get_progress, manager
 
 router = APIRouter()
 
@@ -32,7 +33,8 @@ def _queue_job(job_id: str, text: str, style: str, provider: str = None,
                content_type: str = "ebook", audience: str = "", tone: str = "",
                chapters: str = "", keywords: str = "", language: str = "",
                accent_color: str = "", bg_color: str = "",
-               heading_font: str = "", body_font: str = "", author: str = "", kind: str = "", course_format: str = ""):
+               heading_font: str = "", body_font: str = "", author: str = "", kind: str = "", course_format: str = "",
+               review_outline: bool = False):
     """Run a generation job in a background thread.
 
     Note: this used to try enqueueing to a Redis/arq queue first, but that
@@ -52,15 +54,54 @@ def _queue_job(job_id: str, text: str, style: str, provider: str = None,
         "author": sanitize_text(author, 200).strip(),
         "kind": get_kind(kind).id,
         "course_format": "lessons" if str(course_format).strip().lower() in ("lessons", "lesson") else "program",
+        "review_outline": bool(review_outline) and content_type == "interactive-course",
     }
+    _start(ctx)
+
+
+_running: set[str] = set()   # jobs with a live thread in this process (a resume must never start a second one)
+_running_lock = threading.Lock()
+
+
+def _start(ctx: dict) -> None:
     from backend.worker import process_job
+    job_id = ctx["job_id"]
+    with _running_lock:
+        _running.add(job_id)
 
     def _run():
-        asyncio.run(process_job(ctx))
+        try:
+            asyncio.run(process_job(ctx))
+        finally:
+            with _running_lock:
+                _running.discard(job_id)
 
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
     logger.info(f"Job {job_id} started in background thread")
+
+
+def is_running(job_id: str) -> bool:
+    with _running_lock:
+        return job_id in _running
+
+
+def resume_job(job_id: str) -> tuple[bool, str]:
+    """Run a stopped job again from its checkpoints (same inputs, finished steps are not repeated or paid for twice)."""
+    job = get_job(job_id)
+    if not job:
+        return False, "Nie ma takiego zadania."
+    if job["status"] == "done":
+        return False, "To zadanie jest już ukończone."
+    if is_running(job_id):
+        return False, "To zadanie właśnie trwa."
+    ctx = checkpoint.inputs(job_id)
+    if not ctx:
+        return False, "To zadanie nie ma zapisanych danych wejściowych (powstało przed wprowadzeniem wznawiania). Uruchom je od nowa."
+    clear_cancel(job_id)
+    update_job(job_id, "queued", job.get("progress") or 0, error="")
+    _start(ctx)
+    return True, "Wznawiam zadanie od ostatniego zapisanego kroku."
 
 
 @router.post("/api/generate", dependencies=[Depends(require_admin)])
@@ -84,6 +125,7 @@ async def generate(
     author: str = Form(""),
     kind: str = Form(""),
     course_format: str = Form(""),
+    review_outline: str = Form(""),
 ):
     files = [f for f in (files or []) if f.filename]
     topic = sanitize_text(topic, 5000).strip()
@@ -116,7 +158,8 @@ async def generate(
         return JSONResponse({"error": rejection}, status_code=400)
     job_id = create_job(style, content_type, audience, tone, chapters, keywords, language)
     _queue_job(job_id, merged, style, provider, content_type, audience, tone, chapters, keywords, language,
-               accent_color, bg_color, heading_font, body_font, author=author, kind=kind, course_format=course_format)
+               accent_color, bg_color, heading_font, body_font, author=author, kind=kind, course_format=course_format,
+               review_outline=review_outline.strip().lower() in ("1", "true", "yes", "on"))
     return {"job_id": job_id, "status": "queued", "provider": provider, "content_type": content_type}
 
 
@@ -170,6 +213,9 @@ def get_status(request: Request, job_id: str):
         "style": job.get("style"),
         "error": job.get("error"),
         "quality": _quality_summary(job),
+        "resumable": job["status"] in ("failed", "cancelled") and checkpoint.has(job_id) and not is_running(job_id),
+        "awaiting_approval": job["status"] == "awaiting_approval",
+        "rewritable": job["status"] == "done" and job.get("content_type") == "interactive-course" and checkpoint.stage(job_id, "outline") is not None,
     }
 
 
@@ -186,9 +232,10 @@ def _quality_summary(job: dict) -> dict | None:
     if not quality:
         return None
     qa, epub = quality.get("qa") or {}, quality.get("epub")
+    review = quality.get("review") or {}
     reviews = qa.get("chapter_reviews") or []
     scores = [r["score"] for r in reviews if r.get("score")]
-    return {
+    summary = {
         "qa_score": qa.get("score"),
         "qa_passed": qa.get("passed"),
         "chapter_scores": scores,
@@ -196,6 +243,15 @@ def _quality_summary(job: dict) -> dict | None:
         "epub_valid": epub.get("isValid") if epub else None,
         "epub_errors": [e["code"] for e in epub["errors"]][:20] if epub else [],
     }
+    if review:   # interactive courses: what the quality step found and fixed
+        summary["review"] = {
+            "checked": review.get("checked"), "fixed": review.get("fixed", 0), "unsupported": len(review.get("unsupported", [])),
+            "repeats": len(review.get("repeats", [])), "static": len(review.get("static", [])), "sensitive": bool(review.get("sensitive")),
+            "items": ([{"unit": u["unit"], "claim": u["claim"], "fixed": bool(u.get("fixed"))} for u in review.get("unsupported", [])][:8]
+                      + [{"unit": f"{r['a']} / {r['b']}", "claim": "repeated: " + r["text"][:100], "fixed": False} for r in review.get("repeats", [])][:4]
+                      + [{"unit": s["where"], "claim": s["issue"], "fixed": False} for s in review.get("static", [])][:4]),
+        }
+    return summary
 
 
 @router.get("/api/download/{job_id}")

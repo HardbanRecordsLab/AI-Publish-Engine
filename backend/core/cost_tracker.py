@@ -117,8 +117,13 @@ def get_daily_budget() -> float:
         return 0.0
 
 
+class BudgetExceeded(RuntimeError):
+    """Today's ceiling is reached. Unlike a provider hiccup this is not worth retrying or falling back from,
+    so the steps that catch broad errors let it through and the job stops (its progress is checkpointed)."""
+
+
 def check_budget() -> None:
-    """Raise RuntimeError if today's spend has already reached the
+    """Raise BudgetExceeded if today's spend has already reached the
     configured ceiling. Called before attempting a new AI call, not after —
     the call that would tip it over never gets a chance to run."""
     budget = get_daily_budget()
@@ -126,7 +131,7 @@ def check_budget() -> None:
         return  # unlimited
     spent = get_daily_spend()
     if spent >= budget:
-        raise RuntimeError(
-            f"Daily AI budget exceeded (${spent:.4f} spent of ${budget:.4f} limit). "
-            "Set DAILY_AI_BUDGET_USD higher in .env, or wait for the daily reset."
+        raise BudgetExceeded(
+            f"Dzienny limit kosztów AI wyczerpany (${spent:.2f} z ${budget:.2f}). Postęp zadania jest zapisany: "
+            "wznów je po północy (UTC) albo podnieś DAILY_AI_BUDGET_USD w .env."
         )

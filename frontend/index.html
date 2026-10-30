@@ -232,6 +232,10 @@
               <option value="program">Programme: days with sessions (like Cyfrowy Zen, EFT)</option>
               <option value="lessons">Lessons with explanation, exercise and quiz</option>
             </select>
+            <label style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+              <input type="checkbox" id="reviewOutline" checked style="margin-top:2px">
+              <span><strong>Show me the plan first.</strong> The engine drafts the days or lessons in a few seconds and waits: you rename, reorder, add or remove them and approve, and only then is the course written. A wrong plan is the most expensive mistake.</span>
+            </label>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
             <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Template</span>
@@ -279,14 +283,35 @@
             <div class="progress-stats"><span id="progressStatus">Starting...</span><span id="progressPct">0%</span></div>
           </div>
         </div>
+        <div class="outline-card" id="outlineCard">
+          <div class="result-title" id="outlineTitle">Plan</div>
+          <div class="result-meta" id="outlineMeta"></div>
+          <div id="outlineBody"></div>
+          <div class="outline-actions">
+            <button class="btn btn-primary" id="outlineApprove">Approve and write the course</button>
+            <button class="btn btn-secondary" id="outlineSave">Save changes</button>
+            <span id="outlineStatus" class="form-hint"></span>
+          </div>
+        </div>
         <div class="result-card tilt" id="resultCard">
           <div class="result-title" id="resultTitle">Ready</div>
           <div class="result-meta" id="resultMeta"></div>
           <div class="result-formats" id="resultFormats"></div>
+          <details class="review-box" id="reviewBox"><summary id="reviewSummary"></summary><ul id="reviewList"></ul></details>
+          <div class="rewrite-panel" id="rewritePanel">
+            <div class="form-label">Rewrite one day</div>
+            <div class="rewrite-row">
+              <select class="form-select" id="rewriteDay"></select>
+              <textarea class="form-textarea" id="rewriteNote" rows="2" placeholder="What should change? e.g. add a real example from a small shop, make the session shorter, simpler words"></textarea>
+              <button class="btn btn-secondary" id="rewriteBtn">Rewrite</button>
+            </div>
+            <div class="form-hint" id="rewriteStatus"></div>
+          </div>
         </div>
         <div class="error-card" id="errorCard">
           <div class="error-title" id="errorTitle">Error</div>
           <div class="error-msg" id="errorMsg"></div>
+          <div style="margin-top:12px"><button class="btn btn-primary hidden" id="resumeBtn">Resume where it stopped</button></div>
         </div>
       </div>
     </div>

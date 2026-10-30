@@ -1,6 +1,7 @@
 from loguru import logger
 
 from backend.core.ai import qa_check as _qa_check
+from backend.core import quality
 from backend.core.book_kinds import get_kind
 from backend.orchestrator.agent import BaseAgent, PipelineContext
 
@@ -15,7 +16,7 @@ class QAAgent(BaseAgent):
         logger.info("QAAgent: running quality checks")
 
         # 1. Local checks (no AI — fast)
-        local_issues = _local_checks(ctx)
+        local_issues = _local_checks(ctx) + _text_issues(ctx)
         if local_issues:
             logger.warning(f"QAAgent: {len(local_issues)} local issues found")
 
@@ -44,6 +45,16 @@ class QAAgent(BaseAgent):
 
         ctx.set_progress(85)
         return ctx
+
+
+def _text_issues(ctx: PipelineContext) -> list:
+    """Repeated paragraphs between chapters (chapters are written side by side now) and plain leftovers such as placeholder text."""
+    units = [(f"chapter {i + 1}", "\n\n".join(s.get("content", "") for s in ch.get("sections", [])))
+             for i, ch in enumerate(ctx.ebook_dict.get("chapters", []))]
+    issues = [{"type": "repetition", "severity": "medium", "location": f"{r['a']} / {r['b']}",
+               "description": f"Nearly the same paragraph in {r['a']} and {r['b']}: \u201c{r['text'][:100]}\u2026\u201d"} for r in quality.repeated_passages(units)]
+    issues += [{"type": "content", "severity": "high", "location": s["where"], "description": s["issue"]} for s in quality.static_issues(units)]
+    return issues
 
 
 def _local_checks(ctx: PipelineContext) -> list:

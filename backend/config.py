@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     # Watchdog: how long (minutes) a job can sit in "queued"/"processing"
     # without any progress update before it's auto-marked as failed.
     stale_job_timeout_minutes: int = 20
+    # How long the checkpoints of a job (inputs, finished steps) are kept: a stopped job can be resumed and a finished course can have a day rewritten.
+    checkpoint_days: int = 30
 
     # CORS — comma-separated allowed origins. Empty string = allow all ("*").
     cors_origins: str = ""

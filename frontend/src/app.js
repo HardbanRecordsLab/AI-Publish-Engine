@@ -236,7 +236,10 @@ async function generate() {
   formData.append('language', lang);
   formData.append('author', author);
   formData.append('kind', kind);
-  if (selectedType === 'interactive-course') formData.append('course_format', document.getElementById('courseFormat').value);
+  if (selectedType === 'interactive-course') {
+    formData.append('course_format', document.getElementById('courseFormat').value);
+    if (document.getElementById('reviewOutline').checked) formData.append('review_outline', '1');
+  }
   formData.append('provider', provider);
   formData.append('formats', selectedFormats.join(','));
   selectedFiles.forEach(f => formData.append('files', f));
@@ -262,11 +265,202 @@ function showProgress() {
   window.GENERATING = true;
 }
 
-function showError(title, msg) {
+function showError(title, msg, resumableJobId) {
   document.getElementById('progressSection').classList.remove('visible');
   document.getElementById('errorTitle').textContent = title;
   document.getElementById('errorMsg').textContent = msg;
+  const resume = document.getElementById('resumeBtn');
+  resume.classList.toggle('hidden', !resumableJobId);
+  resume.disabled = false;
+  resume.onclick = resumableJobId ? () => resumeJob(resumableJobId) : null;
   document.getElementById('errorCard').classList.add('visible');
+}
+
+// Calls that carry a message for the author: the job-control endpoints answer {error: "..."} in plain words.
+async function jobApi(path, method = 'GET', body) {
+  const headers = { ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) };
+  const res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.detail || `HTTP ${res.status}`);
+  return data;
+}
+
+// A stopped job (provider error, restart, the daily AI budget) continues from its last saved step; finished days are not paid for twice.
+async function resumeJob(jobId) {
+  const btn = document.getElementById('resumeBtn');
+  btn.disabled = true;
+  try {
+    await jobApi(`/api/jobs/${jobId}/resume`, 'POST');
+    showProgress();
+    pollJob(jobId);
+  } catch (e) {
+    btn.disabled = false;
+    document.getElementById('errorMsg').textContent = e.message;
+  }
+}
+
+// ==================== OUTLINE REVIEW ====================
+let outlineDraft = null;
+let outlineJobId = null;
+
+function showOutlineReview(jobId) {
+  outlineJobId = jobId;
+  document.getElementById('progressSection').classList.remove('visible');
+  document.getElementById('resultCard').classList.remove('visible');
+  document.getElementById('errorCard').classList.remove('visible');
+  const status = document.getElementById('outlineStatus');
+  status.textContent = 'Loading the plan...';
+  document.getElementById('outlineCard').classList.add('visible');
+  jobApi(`/api/jobs/${jobId}/outline`).then(data => {
+    outlineDraft = data.outline;
+    status.textContent = '';
+    renderOutline();
+  }).catch(e => { status.textContent = e.message; });
+}
+
+function renderOutline() {
+  const o = outlineDraft;
+  const unit = o.format === 'program' ? 'day' : 'lesson';
+  const total = o.phases.reduce((n, p) => n + p.lessons.length, 0);
+  document.getElementById('outlineTitle').textContent = 'Check the plan before it is written';
+  document.getElementById('outlineMeta').textContent = `${total} ${unit}s in ${o.phases.length} phase(s). Rename, reorder, add or remove; the writer follows this plan exactly.`;
+  let n = 0;
+  document.getElementById('outlineBody').innerHTML =
+    `<div class="outline-head"><input class="form-input" data-o="title" value="${escapeHtml(o.title || '')}" placeholder="Course title"><input class="form-input" data-o="subtitle" value="${escapeHtml(o.subtitle || '')}" placeholder="Subtitle"></div>` +
+    o.phases.map((p, pi) => `<div class="outline-phase">
+      <div class="outline-phase-head"><input class="form-input" data-o="phase-title" data-p="${pi}" value="${escapeHtml(p.title || '')}" placeholder="Phase title"></div>
+      ${p.lessons.map((l, li) => `<div class="outline-day">
+        <span class="outline-num">${++n}</span>
+        <div class="outline-fields">
+          <input class="form-input" data-o="title" data-p="${pi}" data-l="${li}" value="${escapeHtml(l.title || '')}" placeholder="Title of the ${unit}">
+          <input class="form-input" data-o="goal" data-p="${pi}" data-l="${li}" value="${escapeHtml(l.goal || '')}" placeholder="What this ${unit} is for">
+        </div>
+        <div class="outline-tools">
+          <button class="btn btn-sm btn-secondary" title="Move up" onclick="outlineMove(${pi},${li},-1)">↑</button>
+          <button class="btn btn-sm btn-secondary" title="Move down" onclick="outlineMove(${pi},${li},1)">↓</button>
+          <button class="btn btn-sm btn-secondary" title="Remove" onclick="outlineRemove(${pi},${li})">✕</button>
+        </div>
+      </div>`).join('')}
+      <button class="btn btn-sm btn-secondary" onclick="outlineAdd(${pi})">+ Add a ${unit}</button>
+    </div>`).join('');
+}
+
+// What is typed is read back into the draft before any structural change, so no edit is lost.
+function outlineCollect() {
+  if (!outlineDraft) return;
+  document.querySelectorAll('#outlineBody [data-o]').forEach(el => {
+    const kind = el.dataset.o, p = el.dataset.p, l = el.dataset.l;
+    if (kind === 'title' && p === undefined) outlineDraft.title = el.value;
+    else if (kind === 'subtitle') outlineDraft.subtitle = el.value;
+    else if (kind === 'phase-title') outlineDraft.phases[+p].title = el.value;
+    else if (kind === 'title') outlineDraft.phases[+p].lessons[+l].title = el.value;
+    else if (kind === 'goal') outlineDraft.phases[+p].lessons[+l].goal = el.value;
+  });
+}
+function outlineMove(pi, li, dir) {
+  outlineCollect();
+  const list = outlineDraft.phases[pi].lessons, to = li + dir;
+  if (to >= 0 && to < list.length) { [list[li], list[to]] = [list[to], list[li]]; }
+  else {
+    const other = outlineDraft.phases[pi + dir];   // past the edge of a phase: the day moves into the neighbouring phase
+    if (other) { const [item] = list.splice(li, 1); dir < 0 ? other.lessons.push(item) : other.lessons.unshift(item); }
+  }
+  renderOutline();
+}
+function outlineRemove(pi, li) {
+  outlineCollect();
+  outlineDraft.phases[pi].lessons.splice(li, 1);
+  renderOutline();
+}
+function outlineAdd(pi) {
+  outlineCollect();
+  outlineDraft.phases[pi].lessons.push({ title: '', goal: '', source_hints: [] });
+  renderOutline();
+}
+async function outlineSend(approve) {
+  outlineCollect();
+  const status = document.getElementById('outlineStatus');
+  const buttons = [document.getElementById('outlineApprove'), document.getElementById('outlineSave')];
+  buttons.forEach(b => { b.disabled = true; });
+  status.textContent = approve ? 'Approving...' : 'Saving...';
+  try {
+    const phases = outlineDraft.phases.map(p => ({ ...p, lessons: p.lessons.filter(l => (l.title || '').trim() || (l.goal || '').trim()) })).filter(p => p.lessons.length);
+    const body = { ...outlineDraft, phases };
+    if (approve) {
+      await jobApi(`/api/jobs/${outlineJobId}/approve`, 'POST', body);
+      document.getElementById('outlineCard').classList.remove('visible');
+      showProgress();
+      pollJob(outlineJobId);
+    } else {
+      const saved = await jobApi(`/api/jobs/${outlineJobId}/outline`, 'PUT', body);
+      outlineDraft = saved.outline;
+      renderOutline();
+      status.textContent = 'Saved.';
+    }
+  } catch (e) {
+    status.textContent = e.message;
+  } finally {
+    buttons.forEach(b => { b.disabled = false; });
+  }
+}
+document.getElementById('outlineApprove').addEventListener('click', () => outlineSend(true));
+document.getElementById('outlineSave').addEventListener('click', () => outlineSend(false));
+
+// ==================== REWRITE ONE DAY ====================
+let rewriteJobId = null;
+let rewriteTimer = null;
+
+function setupRewrite(job) {
+  const panel = document.getElementById('rewritePanel');
+  panel.classList.remove('visible');
+  clearInterval(rewriteTimer);
+  if (!job.rewritable) return;
+  rewriteJobId = job.id || job.job_id;
+  jobApi(`/api/jobs/${rewriteJobId}/outline`).then(data => {
+    const unit = data.outline.format === 'program' ? 'Day' : 'Lesson';
+    let n = 0;
+    document.getElementById('rewriteDay').innerHTML = data.outline.phases.flatMap(p => p.lessons).map(l => `<option value="${n}">${unit} ${++n}: ${escapeHtml(l.title)}</option>`).join('');
+    document.getElementById('rewriteNote').value = '';
+    document.getElementById('rewriteStatus').textContent = 'Only that day is written again; the rest of the course stays as it is. Send it to Nova again afterwards.';
+    panel.classList.add('visible');
+  }).catch(() => { /* no plan kept for this job: the panel stays hidden */ });
+}
+
+document.getElementById('rewriteBtn').addEventListener('click', async () => {
+  const status = document.getElementById('rewriteStatus');
+  const btn = document.getElementById('rewriteBtn');
+  const index = parseInt(document.getElementById('rewriteDay').value, 10);
+  btn.disabled = true;
+  status.textContent = 'Rewriting... this takes about half a minute.';
+  try {
+    await jobApi(`/api/jobs/${rewriteJobId}/rewrite`, 'POST', { index, note: document.getElementById('rewriteNote').value });
+    rewriteTimer = setInterval(async () => {
+      try {
+        const s = await jobApi(`/api/jobs/${rewriteJobId}/rewrite`);
+        if (s.status === 'running') return;
+        clearInterval(rewriteTimer);
+        btn.disabled = false;
+        status.textContent = s.status === 'done' ? `Day ${s.index + 1} rewritten. Open the course to read it; send it to Nova again to update.` : `Rewrite failed: ${s.error || 'unknown error'}. The course is unchanged.`;
+      } catch (e) { /* keep polling */ }
+    }, 3000);
+  } catch (e) {
+    btn.disabled = false;
+    status.textContent = e.message;
+  }
+});
+
+// What the quality step found: facts the sources did not back (rewritten once where possible), text repeated between days, plain leftovers.
+function showReview(review) {
+  const box = document.getElementById('reviewBox');
+  if (!review) { box.classList.remove('visible'); return; }
+  const open = review.unsupported - review.fixed + review.repeats + review.static;
+  document.getElementById('reviewSummary').textContent = open > 0
+    ? `Quality review: ${open} thing(s) for you to look at` + (review.fixed ? `, ${review.fixed} already rewritten` : '')
+    : `Quality review: nothing left to check` + (review.fixed ? ` (${review.fixed} rewritten)` : '');
+  document.getElementById('reviewList').innerHTML = (review.items || []).map(i =>
+    `<li><strong>${escapeHtml(i.unit)}</strong>: ${escapeHtml(i.claim)}${i.fixed ? ' <em>(rewritten, not re-checked)</em>' : ''}</li>`).join('')
+    + (review.sensitive ? '<li>This subject touches health, safety, law or money: read every day before you publish.</li>' : '');
+  box.classList.add('visible');
 }
 
 function showResult(job) {
@@ -277,7 +471,9 @@ function showResult(job) {
     q.qa_score != null ? `Quality: ${q.qa_score}/100` : '',
     q.chapter_scores && q.chapter_scores.length ? `Chapters: ${q.chapter_scores.join(', ')}/10${q.chapters_revised ? ` (${q.chapters_revised} revised)` : ''}` : '',
     q.epub_valid === true ? 'EPUB: valid ✓' : q.epub_valid === false ? `EPUB: ${q.epub_errors.length} issue(s) ⚠` : '',
+    q.review ? `Review: ${q.review.fixed} fixed, ${Math.max(0, q.review.unsupported - q.review.fixed)} to check${q.review.repeats ? `, ${q.review.repeats} repeated` : ''}` : '',
   ].filter(Boolean).join(' · ') : '';
+  showReview(q && q.review);
   document.getElementById('resultMeta').textContent =
     `Style: ${job.style || 'minimal'} · Type: ${job.content_type || 'ebook'}` + (qualityText ? ` · ${qualityText}` : '');
   // /api/status returns job_id (not id) — every download link on this card
@@ -294,6 +490,7 @@ function showResult(job) {
   (isInteractive ? `<a class="result-format-btn" href="${API}/api/reader/${id}" target="_blank">📖 Read Online</a>` : '') +
   `<button class="result-format-btn" onclick="showEmbedCode('${id}')">🔗 Embed</button>`;
   document.getElementById('resultCard').classList.add('visible');
+  setupRewrite(job);
 }
 
 // Interactive course: open it, keep the single HTML file, or publish it to HRL Nova Campus (draft first: the author decides when learners see it).
@@ -382,15 +579,18 @@ function pollJob(jobId) {
         el.querySelector('.progress-step-icon').textContent = i < stepIdx ? '✓' : i === stepIdx ? (job.status === 'failed' ? '✗' : '●') : '○';
       });
       document.getElementById('progressStatus').innerHTML = `<span>${job.status} (${pct}%)</span> ${pct < 100 ? `<button class="btn btn-sm btn-error" onclick="cancelJob('${jobId}')" style="font-size:9px;padding:2px 6px">Cancel</button>` : ''}`;
-      if (job.status === 'done' || job.status === 'completed') {
+      if (job.status === 'awaiting_approval') {
+        clearInterval(pollInterval);
+        showOutlineReview(jobId);
+      } else if (job.status === 'done' || job.status === 'completed') {
         clearInterval(pollInterval);
         showResult(job);
       } else if (job.status === 'failed' || job.status === 'error') {
         clearInterval(pollInterval);
-        showError('Generation failed', job.error || 'Unknown error');
+        showError('Generation failed', job.error || 'Unknown error', job.resumable ? jobId : null);
       } else if (job.status === 'cancelled') {
         clearInterval(pollInterval);
-        showError('Cancelled', 'Job was cancelled');
+        showError('Cancelled', 'Job was cancelled', job.resumable ? jobId : null);
       }
     } catch(e) { /* keep polling */ }
   }, 1000);

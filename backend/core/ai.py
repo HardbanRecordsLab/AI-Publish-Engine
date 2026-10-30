@@ -367,6 +367,12 @@ def writer_json(system: str, user: str, provider: str | None = None, *,
                         max_tokens=max_tokens, fallback_max_tokens=max_tokens)
 
 
+def checker_json(system: str, user: str, provider: str | None = None, *, max_tokens: int = 2500) -> dict:
+    """Low-temperature JSON call for verification steps (claim checks): the normal provider chain, not the writer model, because judging
+    a text against its sources is a smaller job than writing it and runs once per unit."""
+    return _clean_json(_try_providers(system, user, preferred=provider, max_tokens=max_tokens, temperature=0.0, timeout=WRITING_TIMEOUT))
+
+
 def words_per_section(content_type: str, kind: str | None = None) -> int:
     """Target words per section: the short web formats set their own length;
     for book formats it depends on the kind of book (a novel scene is not a

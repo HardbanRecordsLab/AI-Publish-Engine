@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse
 
 from backend.core import cost_tracker
-from backend.core.jobs import count_jobs, delete_job, get_all_jobs, get_job, update_job
+from backend.core.jobs import count_jobs, delete_job, get_all_jobs, get_job
 from backend.limiter import limiter
 from backend.routers.auth import require_admin
+from backend.routers.jobs import resume_job
 
 router = APIRouter()
 
@@ -51,9 +52,14 @@ def admin_retry_job(request: Request, job_id: str):
     job = get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
-    if job["status"] != "done":
-        update_job(job_id, "queued", 0, error="")
-    return {"status": "retrying"}
+    if job["status"] == "done":
+        return {"status": "done"}
+    # This used to only flip the status to "queued" and start nothing, so a retried job just sat there. It now really
+    # resumes from the job's checkpoints (same inputs, finished steps are kept).
+    ok, message = resume_job(job_id)
+    if not ok:
+        return JSONResponse({"error": message}, status_code=409)
+    return {"status": "retrying", "message": message}
 
 
 @router.get("/api/admin/jobs/export", dependencies=[Depends(require_admin)])

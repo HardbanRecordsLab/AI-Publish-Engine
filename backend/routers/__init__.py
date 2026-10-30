@@ -3,6 +3,7 @@ from backend.routers.auth import router as auth_router
 from backend.routers.design_tokens import router as design_tokens_router
 from backend.routers.editor import router as editor_router
 from backend.routers.health import router as health_router
+from backend.routers.job_control import router as job_control_router
 from backend.routers.jobs import router as jobs_router
 from backend.routers.publishing import router as publishing_router
 from backend.routers.series import router as series_router
@@ -15,6 +16,7 @@ __all__ = [
     "design_tokens_router",
     "editor_router",
     "health_router",
+    "job_control_router",
     "jobs_router",
     "publishing_router",
     "series_router",

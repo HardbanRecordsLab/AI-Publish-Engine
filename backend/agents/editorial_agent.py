@@ -1,10 +1,15 @@
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from loguru import logger
 
+from backend.core import checkpoint
 from backend.core.ai import build_brief, words_per_section
 from backend.core.ai import review_chapter as _review_chapter
 from backend.core.ai import write_chapter as _write_chapter
+from backend.core.book_kinds import get_kind
+from backend.core.cost_tracker import BudgetExceeded
 from backend.core.jobs import update_job
 from backend.models.content_block import ContentBlock
 from backend.orchestrator.agent import BaseAgent, PipelineContext
@@ -22,7 +27,13 @@ def _word_count(chapter: dict) -> int:
 
 
 class EditorialAgent(BaseAgent):
-    """Writes each chapter out in full from the outline, using the research notes."""
+    """Writes each chapter out in full from the outline, using the research notes.
+
+    Non-fiction chapters are independent given the outline, so a few are written at a time (AI_CHAPTER_WORKERS, default 3; 1 writes them one
+    after another as before). Each chapter is told what the earlier ones are *planned* to cover, and QAAgent looks for passages repeated
+    between chapters afterwards. Fiction stays sequential: a chapter needs the events and character state of the one before it.
+    Every finished chapter is checkpointed, so a job that stops resumes with the chapters it already has."""
+    WORKERS = max(1, int(os.getenv("AI_CHAPTER_WORKERS", "3")))
 
     def __init__(self):
         super().__init__("EditorialAgent")
@@ -32,43 +43,91 @@ class EditorialAgent(BaseAgent):
         logger.info(f"EditorialAgent: writing {len(chapters)} chapters")
         brief = build_brief(ctx.audience, ctx.tone, ctx.keywords, ctx.language)
         target_words = words_per_section(ctx.content_type, ctx.kind)
+        story = get_kind(ctx.kind).is_story
 
         research_chapters = {}
         if ctx.research:
             for rc in ctx.research.get("chapters", []):
                 research_chapters[rc.get("index")] = rc
 
-        improved = []
-        previous_summaries: list[str] = []
-        for i, ch in enumerate(chapters):
+        saved = checkpoint.has(ctx.job_id)
+        improved: list = [None] * len(chapters)
+        for i, item in (checkpoint.items(ctx.job_id, "chapters") if saved else {}).items():
+            if i < len(chapters) and isinstance(item, dict) and item.get("chapter"):
+                improved[i] = item["chapter"]   # written before the job stopped: keep it, do not pay for it twice
+                if item.get("review"):
+                    ctx.chapter_reviews.append(item["review"])
+        resumed = sum(1 for c in improved if c is not None)
+        if resumed:
+            logger.info(f"EditorialAgent: resuming, {resumed} of {len(chapters)} chapters already written")
+        finished = resumed
+        lock = threading.Lock()
+
+        def gist(ch: dict) -> str:
+            return ch.get("recap") or ch.get("key_takeaway") or ch.get("introduction", "")[:200]
+
+        def write_one(i: int, previous: list[str]) -> dict | None:
             if is_cancelled(ctx.job_id):
-                # The orchestrator marks the job cancelled before the next agent.
-                improved.extend(chapters[i:])
-                break
+                return None   # the orchestrator marks the job cancelled before the next agent
+            ch = chapters[i]
+            ok = True
             try:
                 written = _write_chapter(
                     ch, book=ctx.ebook_dict, chapter_index=i,
                     research_suggestions=research_chapters.get(i),
-                    previous_summaries=previous_summaries,
+                    previous_summaries=previous,
                     words_per_section=target_words, brief=brief,
                     language=ctx.language, provider=ctx.provider, kind=ctx.kind,
                 )
                 logger.info(f"  Ch{i+1}: written ({_word_count(written)} words)")
                 written = self._review_and_revise(ctx, written, i, research_chapters.get(i),
-                                                  previous_summaries, target_words, brief)
-                improved.append(written)
+                                                  previous, target_words, brief)
+            except BudgetExceeded:
+                raise
             except Exception as e:
                 logger.warning(f"  Ch{i+1}: kept outline draft ({e})")
-                written = ch
-                improved.append(ch)
-            # What later chapters are told has already happened: a fiction recap
-            # carries events and character state; otherwise the takeaway / intro.
-            gist = written.get("recap") or written.get("key_takeaway") or written.get("introduction", "")[:200]
-            previous_summaries.append(f"Ch{i+1} {written.get('title', '')}: {gist}")
-            # Intermediate progress: 37 → 53 over chapters (the longest step)
-            pct = 37 + int(16 * (i + 1) / max(len(chapters), 1))
-            ctx.set_progress(pct)
+                written, ok = ch, False
+            if saved and ok:
+                review = next((r for r in ctx.chapter_reviews if r.get("chapter") == i + 1), None)
+                checkpoint.save_item(ctx.job_id, "chapters", i, {"chapter": written, "review": review})
+            return written
+
+        def progress() -> None:
+            nonlocal finished
+            with lock:
+                finished += 1
+                # Intermediate progress: 37 -> 53 over chapters (the longest step)
+                pct = 37 + int(16 * finished / max(len(chapters), 1))
+                ctx.set_progress(pct)
             update_job(ctx.job_id, "processing", pct)
+
+        pending = [i for i, c in enumerate(improved) if c is None]
+        if story or self.WORKERS <= 1 or len(pending) <= 1:
+            # One after another; what later chapters are told has already happened: a fiction recap carries events and character
+            # state, otherwise the takeaway / intro.
+            previous_summaries = [f"Ch{j+1} {improved[j].get('title', '')}: {gist(improved[j])}" for j in range(len(chapters)) if improved[j] is not None and j < (pending[0] if pending else 0)]
+            for i in pending:
+                written = write_one(i, previous_summaries)
+                if written is None:
+                    break   # cancelled: the chapters not written keep their outline draft (filled in below)
+                improved[i] = written
+                previous_summaries.append(f"Ch{i+1} {written.get('title', '')}: {gist(written)}")
+                progress()
+        else:
+            planned = [f"Ch{j+1} {c.get('title', '')}: {gist(c)}" for j, c in enumerate(chapters)]
+            with ThreadPoolExecutor(max_workers=min(self.WORKERS, len(pending))) as pool:
+                futures = {pool.submit(write_one, i, planned[:i]): i for i in pending}
+                try:
+                    for f in as_completed(futures):
+                        i = futures[f]
+                        improved[i] = f.result() or chapters[i]
+                        progress()
+                except BaseException:
+                    for f in futures:
+                        f.cancel()
+                    raise
+        improved = [c if c is not None else chapters[i] for i, c in enumerate(improved)]
+        ctx.chapter_reviews.sort(key=lambda r: r.get("chapter", 0))
 
         ctx.ebook_dict["chapters"] = improved
 
@@ -100,6 +159,8 @@ class EditorialAgent(BaseAgent):
             record["score"] = review["score"]
             if review["score"] < REVIEW_MIN_SCORE:
                 notes.extend(review["issues"])
+        except BudgetExceeded:
+            raise
         except Exception as e:
             logger.warning(f"  Ch{i+1}: review skipped ({e})")
 
@@ -113,6 +174,8 @@ class EditorialAgent(BaseAgent):
                 )
                 record.update(revised=True, words=_word_count(chapter), notes=notes)
                 logger.info(f"  Ch{i+1}: revised after review ({record['words']} words)")
+            except BudgetExceeded:
+                raise
             except Exception as e:
                 logger.warning(f"  Ch{i+1}: revision failed, keeping first version ({e})")
         ctx.chapter_reviews.append(record)

@@ -86,6 +86,8 @@ def fake_llm(calls=None, bad_first_lessons=0, sensitive=False, frame="ok", promp
             if "writing one day" in system:
                 return good_day(int(re.search(r"Day (\d+) of", user).group(1)))
             return good_lesson(int(re.search(r"Lesson (\d+) of", user).group(1)))
+        if "careful fact-checker" in system:
+            return {"unsupported": []}
         if "pages around a day-by-day programme" in system:
             if frame == "error":
                 raise RuntimeError("model unavailable")
@@ -275,8 +277,9 @@ def test_pipeline_stops_on_cancel(monkeypatch):
     agents = course_agents.course_pipeline(fake_llm(), lambda *a, **k: [src(1)])
     ctx = agents[0].run(ctx)
     ctx = agents[1].run(ctx)
+    ctx = agents[2].run(ctx)   # the outline gate does nothing unless the author asked to review the outline
     with pytest.raises(RuntimeError, match="Cancelled"):
-        agents[2].run(ctx)
+        agents[3].run(ctx)
 
 
 # ------------------------------------------------------------------ HTML engine

@@ -50,6 +50,11 @@ class BookKind:
     scene_breaks: bool = False            # "* * *" between sections (fiction)
     glossary: bool = True
 
+    @property
+    def is_story(self) -> bool:
+        """Fiction carries a story bible and chapter recaps, so its chapters are written one after another."""
+        return "story" in self.outline_extra_json
+
 
 KINDS: dict[str, BookKind] = {k.id: k for k in [
     BookKind(
